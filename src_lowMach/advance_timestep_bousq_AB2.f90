@@ -32,7 +32,6 @@ module advance_timestep_bousq_AB2_module
                                   variance_coef_mom, barodiffusion_type, project_eos_int, &
                                   use_bl_rng, nspecies
   use probin_multispecies_module, only: midpoint_stoch_mass_flux_type
-  use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol, mg_verbose
   use probin_charged_module, only: use_charged_fluid
   use probin_chemistry_module, only: nreactions
 
@@ -107,11 +106,10 @@ contains
     type(multifab) :: stoch_mass_fluxdiv_old(mla%nlevel)
     type(multifab) :: stoch_mass_flux_old   (mla%nlevel,mla%dim)
 
-    integer :: i,dm,n,nlevs,comp
+    integer :: i,dm,n,nlevs
 
-    real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
-
-    real(kind=dp_t) :: weights(2), sum
+    real(kind=dp_t) :: theta_alpha, norm_pre_rhs
+    real(kind=dp_t) :: weights(2)
 
     weights(1) = 1.d0
     weights(2) = 0.d0
@@ -120,14 +118,10 @@ contains
        call bl_error("advance_timestep_bousq_AB2 does not support charges yet")
     end if
 
-    if (nreactions .gt. 0) then
-       call bl_error("advance_timestep_bousq_AB2 does not support reactions yet")
-    end if
-
     if (barodiffusion_type .ne. 0) then
        call bl_error("advance_timestep_bousq_AB2: barodiffusion not supported yet")
     end if
-       
+
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -190,6 +184,9 @@ contains
     ! FIXME compute reactions at t^n
     !
     !
+    if (nreactions .gt. 0) then
+       call bl_warn("advance_timestep_bousq_AB2 does not support reactions yet")
+    end if
 
     ! compute rho_i^{n+1/2} (store in rho_new)
     do n=1,nlevs
@@ -229,14 +226,18 @@ contains
        end do
     end do
 
-    ! compute adv_mom_fluxdiv_n
+    ! compute adv_mom_fluxdiv_n = -rho0*v^n,v^n
     call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv_n,.false., &
                                 dx,the_bc_tower%bc_tower_array)
 
     ! add momentum advection terms to gmres_rhs_v
     if (istep .eq. 1) then
        ! first time step, use forward Euler
-       call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,-1.d0,adv_mom_fluxdiv_n(n,i),1,1)
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,1.d0,adv_mom_fluxdiv_n(n,i),1,1)
+          end do
+       end do
     else
        ! use AB2
        do n=1,nlevs
@@ -377,15 +378,6 @@ contains
     ! call gmres to compute delta v and delta pi
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rho0_fc, &
                eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
-
-    ! restore eta and kappa
-    do n=1,nlevs
-       call multifab_mult_mult_s_c(eta(n)  ,1,2.d0,1,eta(n)%ng)
-       call multifab_mult_mult_s_c(kappa(n),1,2.d0,1,kappa(n)%ng)
-       do i=1,size(eta_ed,dim=2)
-          call multifab_mult_mult_s_c(eta_ed(n,i),1,2.d0,1,eta_ed(n,i)%ng)
-       end do
-    end do
        
     ! compute v^{n+1} = v^n + dumac
     ! compute pi^{n+1}= pi^n + dpi
@@ -419,17 +411,80 @@ contains
     if (istep .eq. 1) then
 
        ! subtract (1/2)*adv_mom_fluxdiv from gmres_rhs_v
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,-0.5d0,adv_mom_fluxdiv_n(n,i),1,1)
+          end do
+       end do
 
+       ! compute mtemp = (rho0*v)^{n+1,*}
+       call convert_m_to_umac(mla,rho0_fc,mtemp,umac,.false.)
 
-       ! compute adv_mom_fluxdiv = -rho*v^{n+1,*},v^{n+1,*}
-
+       ! compute adv_mom_fluxdiv = -rho0*v^{n+1,*},v^{n+1,*} (store in adv_mom_fluxdiv_nm1)
+       call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv_nm1,.false., &
+                                   dx,the_bc_tower%bc_tower_array)
 
        ! add (1/2)*adv_mom_fluxdiv to gmres_rhs_v
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,adv_mom_fluxdiv_nm1(n,i),1,1)
+          end do
+       end do
 
+       ! set the initial guess to zero
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_setval(dumac(n,i),0.d0,all=.true.)
+          end do
+          call multifab_setval(dpi(n),0.d0,all=.true.)
+       end do
 
+       do n=1,nlevs
+          call zero_edgeval_physical(gmres_rhs_v(n,:),1,1,the_bc_tower%bc_tower_array(n))
+       end do
 
+       ! call gmres to compute delta v and delta pi
+       call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rho0_fc, &
+                  eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
+       
+       ! compute v^{n+1} = v^n + dumac
+       ! compute pi^{n+1}= pi^n + dpi
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_plus_plus_c(umac(n,i),1,dumac(n,i),1,1,0)
+          end do
+          call multifab_plus_plus_c(pi(n),1,dpi(n),1,1,0)
+       end do
+       
+       do n=1,nlevs
+          ! presure ghost cells
+          call multifab_fill_boundary(pi(n))
+          call multifab_physbc(pi(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n), &
+                               dx_in=dx(n,:))
+          do i=1,dm
+             ! set normal velocity on physical domain boundaries
+             call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
+                                            the_bc_tower%bc_tower_array(n), &
+                                            dx(n,:),vel_bc_n(n,:))
+             ! set transverse velocity behind physical boundaries
+             call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
+                                         the_bc_tower%bc_tower_array(n), &
+                                         dx(n,:),vel_bc_t(n,:))
+             ! fill periodic and interior ghost cells
+             call multifab_fill_boundary(umac(n,i))
+          end do
+       end do
 
     end if
+
+    ! restore eta and kappa
+    do n=1,nlevs
+       call multifab_mult_mult_s_c(eta(n)  ,1,2.d0,1,eta(n)%ng)
+       call multifab_mult_mult_s_c(kappa(n),1,2.d0,1,kappa(n)%ng)
+       do i=1,size(eta_ed,dim=2)
+          call multifab_mult_mult_s_c(eta_ed(n,i),1,2.d0,1,eta_ed(n,i)%ng)
+       end do
+    end do
 
     ! copy momentum advective fluxes into the "nm1" multifab for use in the next time step
     do n=1,nlevs
@@ -489,6 +544,13 @@ contains
 
     end if
 
+    ! FIXME compute reactions at t^n
+    !
+    !
+    if (nreactions .gt. 0) then
+       call bl_warn("advance_timestep_bousq_AB2 does not support reactions yet")
+    end if
+
     ! compute rho_i^{n+1}
     do n=1,nlevs
        call multifab_copy_c(rho_new(n),1,rho_old(n),1,nspecies,0)
@@ -504,9 +566,6 @@ contains
 
     ! fill rho and rhotot ghost cells
     call fill_rho_rhotot_ghost(mla,rho_new,rhotot,dx,the_bc_tower)
-
-    ! average rho^{n+1} to faces
-    call average_cc_to_face(nlevs,rho_new,rho_fc,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
 
     do n=1,nlevs
        call multifab_destroy(rhotot(n))
