@@ -200,7 +200,9 @@ contains
 
        ! project the velocities
        ! only for non-restarting runs
-       call setval(mac_rhs(n),0.d0)
+       do n=1,nlevs
+          call setval(mac_rhs(n),0.d0)
+       end do
 
        if (algorithm_type .ne. 6) then
 
