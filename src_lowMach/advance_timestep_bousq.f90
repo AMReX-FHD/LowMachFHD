@@ -1,4 +1,4 @@
-module advance_timestep_bousq_AB2_module
+module advance_timestep_bousq_module
 
   use ml_layout_module
   use define_bc_module
@@ -37,36 +37,32 @@ module advance_timestep_bousq_AB2_module
 
   private
 
-  public :: advance_timestep_bousq_AB2
+  public :: advance_timestep_bousq
 
 contains
 
-  subroutine advance_timestep_bousq_AB2(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                        rho0,adv_mom_fluxdiv_nm1, &
-                                        gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                        Epot_mass_fluxdiv, &
-                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                        stoch_mass_flux, &
-                                        dx,dt,time,the_bc_tower,istep, &
-                                        grad_Epot_old,grad_Epot_new,charge_old,charge_new, &
-                                        Epot,permittivity)
+  subroutine advance_timestep_bousq(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                    rho0,gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                    Epot_mass_fluxdiv, &
+                                    diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                    stoch_mass_flux, &
+                                    dx,dt,time,the_bc_tower,istep, &
+                                    grad_Epot_old,grad_Epot_new,charge_old,charge_new, &
+                                    Epot,permittivity)
 
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(inout) :: umac(:,:)             ! persistent - enters as v^n, leaves as v^{n+1}
+    type(multifab) , intent(inout) :: umac(:,:)             ! enters as t^n, leaves as t^{n+1}
     type(multifab) , intent(inout) :: rho_old(:)
     type(multifab) , intent(inout) :: rho_new(:)
     type(multifab) , intent(inout) :: rhotot_old(:)
     type(multifab) , intent(inout) :: rhotot_new(:)
     real(kind=dp_t), intent(in   ) :: rho0
-    type(multifab) , intent(inout) :: adv_mom_fluxdiv_nm1(:,:) ! persistent - enters as ()^{n-1}, leaves as ()^n
     type(multifab) , intent(inout) :: gradp_baro(:,:)
     type(multifab) , intent(inout) :: pi(:)
-    type(multifab) , intent(inout) :: eta(:)                ! not persistent
-    ! nodal (2d); edge-centered (3d)
-    type(multifab) , intent(inout) :: eta_ed(:,:)           ! not persistent
-    type(multifab) , intent(inout) :: kappa(:)              ! not persistent
-    type(multifab) , intent(inout) :: Temp(:)               
-    ! nodal (2d); edge-centered (3d)
+    type(multifab) , intent(inout) :: eta(:)                ! enters as t^n, leaves as t^{n+1}
+    type(multifab) , intent(inout) :: eta_ed(:,:)           ! enters as t^n, leaves as t^{n+1}
+    type(multifab) , intent(inout) :: kappa(:)              ! enters as t^n, leaves as t^{n+1}
+    type(multifab) , intent(inout) :: Temp(:)
     type(multifab) , intent(inout) :: Temp_ed(:,:)          
     type(multifab) , intent(inout) :: Epot_mass_fluxdiv(:)  ! not persistent
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)  ! not persistent
@@ -79,8 +75,8 @@ contains
     type(multifab) , intent(inout) :: grad_Epot_new(:,:)
     type(multifab) , intent(inout) :: charge_old(:)
     type(multifab) , intent(inout) :: charge_new(:)
-    type(multifab) , intent(inout) :: Epot(:)
-    type(multifab) , intent(inout) :: permittivity(:)
+    type(multifab) , intent(inout) :: Epot(:)               ! not persistent
+    type(multifab) , intent(inout) :: permittivity(:)       ! not persistent
 
     ! local
     type(multifab) :: adv_mass_fluxdiv(mla%nlevel)
@@ -88,20 +84,22 @@ contains
     type(multifab) ::              dpi(mla%nlevel)
 
     type(multifab) ::             mtemp(mla%nlevel,mla%dim)
-    type(multifab) :: adv_mom_fluxdiv_n(mla%nlevel,mla%dim)
+    type(multifab) :: adv_mom_fluxdiv_old(mla%nlevel,mla%dim)
     type(multifab) ::  diff_mom_fluxdiv(mla%nlevel,mla%dim)
     type(multifab) :: stoch_mom_fluxdiv(mla%nlevel,mla%dim)
     type(multifab) ::       gmres_rhs_v(mla%nlevel,mla%dim)
     type(multifab) ::             dumac(mla%nlevel,mla%dim)
     type(multifab) ::            gradpi(mla%nlevel,mla%dim)
     type(multifab) ::            rho_fc(mla%nlevel,mla%dim)
-    type(multifab) ::           rho0_fc(mla%nlevel,mla%dim)
     type(multifab) ::    diff_mass_flux(mla%nlevel,mla%dim)
     type(multifab) ::    mom_grav_force(mla%nlevel,mla%dim)
 
     ! only used when variance_coef_mass>0 and midpoint_stoch_mass_flux_type=2
     type(multifab) :: stoch_mass_fluxdiv_old(mla%nlevel)
-    type(multifab) :: stoch_mass_flux_old   (mla%nlevel,mla%dim)
+    type(multifab) ::    stoch_mass_flux_old(mla%nlevel,mla%dim)
+
+    ! need a face-centered multifab of rho0 for gmres solver
+    type(multifab) :: rho0_fc(mla%nlevel,mla%dim)
 
     integer :: i,dm,n,nlevs
 
@@ -112,15 +110,15 @@ contains
     weights(2) = 0.d0
 
     if (use_charged_fluid) then
-       call bl_error("advance_timestep_bousq_AB2 does not support charges yet")
+       call bl_error("advance_timestep_bousq does not support charges yet")
     end if
 
     if (nreactions .gt. 0) then
-       call bl_error("advance_timestep_bousq_AB2 does not support reactions yet")
+       call bl_error("advance_timestep_bousq does not support reactions yet")
     end if
 
     if (barodiffusion_type .ne. 0) then
-       call bl_error("advance_timestep_bousq_AB2: barodiffusion not supported yet")
+       call bl_error("advance_timestep_bousq: barodiffusion not supported yet")
     end if
 
     nlevs = mla%nlevel
@@ -134,19 +132,19 @@ contains
        call multifab_build(             dpi(n),mla%la(n),1       ,1)
        do i=1,dm
           call multifab_build_edge(            mtemp(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(adv_mom_fluxdiv_n(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(adv_mom_fluxdiv_old(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge( diff_mom_fluxdiv(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(stoch_mom_fluxdiv(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(      gmres_rhs_v(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(            dumac(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(           gradpi(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(          rho0_fc(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(           rho_fc(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(   diff_mass_flux(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(   mom_grav_force(n,i),mla%la(n),1       ,0,i)
        end do
     end do
 
+    ! for ito interpretation we need to save stoch_mass_fluxdiv_old 
     if (variance_coef_mass .ne. 0.d0 .and. midpoint_stoch_mass_flux_type .eq. 2) then
        do n=1,nlevs
           call multifab_build(stoch_mass_fluxdiv_old(n),mla%la(n),nspecies,0)
@@ -159,6 +157,7 @@ contains
     ! create a multifab rho0_fc for use in gmres solver
     do n=1,nlevs
        do i=1,dm
+          call multifab_build_edge(rho0_fc(n,i),mla%la(n),1,1,i)
           call multifab_setval(rho0_fc(n,i),rho0,all=.true.)
        end do
     end do
@@ -225,27 +224,17 @@ contains
        end do
     end do
 
-    ! compute adv_mom_fluxdiv_n = -rho0*v^n,v^n
-    call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv_n,.false., &
+    ! compute adv_mom_fluxdiv_old = -rho0*v^n,v^n
+    call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv_old,.false., &
                                 dx,the_bc_tower%bc_tower_array)
 
     ! add momentum advection terms to gmres_rhs_v
-    if (istep .eq. 1) then
-       ! first time step, use forward Euler
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,1.d0,adv_mom_fluxdiv_n(n,i),1,1)
-          end do
+    ! use forward Euler
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,1.d0,adv_mom_fluxdiv_old(n,i),1,1)
        end do
-    else
-       ! use AB2
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1, 1.5d0,adv_mom_fluxdiv_n  (n,i),1,1)
-             call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,-0.5d0,adv_mom_fluxdiv_nm1(n,i),1,1)
-          end do
-       end do
-    end if
+    end do
 
     ! compute diff_mom_fluxdiv = L_0^n v^n
     call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv,.false.,umac,eta,eta_ed,kappa,dx, &
@@ -405,100 +394,12 @@ contains
        end do
     end do
 
-    ! do corrector velocity solve if this is the first time step
-    if (istep .eq. 1) then
-
-       !!!!!!!!!
-       ! set up correct GMRES solve for v^{n+1} and pi^{n+1/2} if this is the first time step
-
-       ! subtract (1/2)*adv_mom_fluxdiv from gmres_rhs_v
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,-0.5d0,adv_mom_fluxdiv_n(n,i),1,1)
-          end do
-       end do
-
-       ! compute mtemp = (rho0*v)^{n+1,*}
-       call convert_m_to_umac(mla,rho0_fc,mtemp,umac,.false.)
-
-       ! compute adv_mom_fluxdiv = -rho0*v^{n+1,*},v^{n+1,*} (store in adv_mom_fluxdiv_nm1)
-       call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv_nm1,.false., &
-                                   dx,the_bc_tower%bc_tower_array)
-
-       ! add (1/2)*adv_mom_fluxdiv to gmres_rhs_v
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,adv_mom_fluxdiv_nm1(n,i),1,1)
-          end do
-       end do
-
-       ! revert umac and pi
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_sub_sub_c(umac(n,i),1,dumac(n,i),1,1,0)
-          end do
-          call multifab_sub_sub_c(pi(n),1,dpi(n),1,1,0)
-       end do
-
-       ! set the initial guess to zero
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_setval(dumac(n,i),0.d0,all=.true.)
-          end do
-          call multifab_setval(dpi(n),0.d0,all=.true.)
-       end do
-
-       do n=1,nlevs
-          call zero_edgeval_physical(gmres_rhs_v(n,:),1,1,the_bc_tower%bc_tower_array(n))
-       end do
-
-       ! call gmres to compute delta v and delta pi
-       call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rho0_fc, &
-                  eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
-       
-       ! compute v^{n+1} = v^n + dumac
-       ! compute pi^{n+1}= pi^n + dpi
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_plus_plus_c(umac(n,i),1,dumac(n,i),1,1,0)
-          end do
-          call multifab_plus_plus_c(pi(n),1,dpi(n),1,1,0)
-       end do
-       
-       do n=1,nlevs
-          ! presure ghost cells
-          call multifab_fill_boundary(pi(n))
-          call multifab_physbc(pi(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n), &
-                               dx_in=dx(n,:))
-          do i=1,dm
-             ! set normal velocity on physical domain boundaries
-             call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
-                                            the_bc_tower%bc_tower_array(n), &
-                                            dx(n,:),vel_bc_n(n,:))
-             ! set transverse velocity behind physical boundaries
-             call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
-                                         the_bc_tower%bc_tower_array(n), &
-                                         dx(n,:),vel_bc_t(n,:))
-             ! fill periodic and interior ghost cells
-             call multifab_fill_boundary(umac(n,i))
-          end do
-       end do
-
-    end if ! end corrector velocity solve for first time step
-
     ! restore eta and kappa
     do n=1,nlevs
        call multifab_mult_mult_s_c(eta(n)  ,1,2.d0,1,eta(n)%ng)
        call multifab_mult_mult_s_c(kappa(n),1,2.d0,1,kappa(n)%ng)
        do i=1,size(eta_ed,dim=2)
           call multifab_mult_mult_s_c(eta_ed(n,i),1,2.d0,1,eta_ed(n,i)%ng)
-       end do
-    end do
-
-    ! copy momentum advective fluxes into the "nm1" multifab for use in the next time step
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_copy_c(adv_mom_fluxdiv_nm1(n,i),1,adv_mom_fluxdiv_n(n,i),1,1,0)
        end do
     end do
 
@@ -583,14 +484,13 @@ contains
        call multifab_destroy(dpi(n))
        do i=1,dm
           call multifab_destroy(mtemp(n,i))
-          call multifab_destroy(adv_mom_fluxdiv_n(n,i))
+          call multifab_destroy(adv_mom_fluxdiv_old(n,i))
           call multifab_destroy(diff_mom_fluxdiv(n,i))
           call multifab_destroy(stoch_mom_fluxdiv(n,i))
           call multifab_destroy(gmres_rhs_v(n,i))
           call multifab_destroy(dumac(n,i))
           call multifab_destroy(gradpi(n,i))
           call multifab_destroy(rho_fc(n,i))
-          call multifab_destroy(rho0_fc(n,i))
           call multifab_destroy(diff_mass_flux(n,i))
           call multifab_destroy(mom_grav_force(n,i))
        end do
@@ -605,6 +505,12 @@ contains
        end do
     end if
 
-  end subroutine advance_timestep_bousq_AB2
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_destroy(rho0_fc(n,i))
+       end do
+    end do
 
-end module advance_timestep_bousq_AB2_module
+  end subroutine advance_timestep_bousq
+
+end module advance_timestep_bousq_module

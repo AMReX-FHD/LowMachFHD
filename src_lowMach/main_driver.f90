@@ -5,7 +5,7 @@ subroutine main_driver()
   use compute_mixture_properties_module
   use initial_projection_module
   use write_plotfile_module
-  use advance_timestep_bousq_AB2_module
+  use advance_timestep_bousq_module
   use advance_timestep_inertial_module
   use advance_timestep_overdamped_module
   use advance_timestep_iterative_module
@@ -82,9 +82,8 @@ subroutine main_driver()
   type(multifab), allocatable  :: eta_ed(:,:)
   type(multifab), allocatable  :: kappa(:)
 
-  ! for use in bousinnesq AB2 algorithm
+  ! for use in bousinnesq algorithm
   real(kind=dp_t)              :: rho0
-  type(multifab), allocatable  :: adv_mom_fluxdiv_nm1(:,:)
 
   real(kind=dp_t)              :: total_charge
   type(multifab), allocatable  :: Epot_mass_fluxdiv(:)
@@ -142,9 +141,6 @@ subroutine main_driver()
   allocate(stoch_mass_flux(nlevs,dm))
   allocate(umac(nlevs,dm),mtemp(nlevs,dm),rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
   allocate(eta(nlevs),kappa(nlevs))
-
-  ! for use in bousineesq AB2 algorithm
-  allocate(adv_mom_fluxdiv_nm1(nlevs,dm))
 
   ! 1 component in 2D, 3 components in 3D
   allocate(eta_ed(nlevs,2*dm-3))
@@ -331,6 +327,13 @@ subroutine main_driver()
   ! fill rho and rhotot ghost cells
   call fill_rho_rhotot_ghost(mla,rho_old,rhotot_old,dx,the_bc_tower)
 
+  if (algorithm_type .eq. 6) then
+     ! set rho0 to be the average or rho_old
+     do n=1,nlevs
+        rho0 = multifab_sum_c(rhotot_old(n),1,1) / product(n_cells(1:dm))
+     end do
+  end if
+
   !=======================================================
   ! Build multifabs for all the variables
   !=======================================================
@@ -343,10 +346,9 @@ subroutine main_driver()
      call multifab_build(eta(n)              ,mla%la(n),1       ,1)
      call multifab_build(kappa(n)            ,mla%la(n),1       ,1)
      do i=1,dm
-        call multifab_build_edge(              mtemp(n,i),mla%la(n),1,0,i)
-        call multifab_build_edge(          rhotot_fc(n,i),mla%la(n),1,0,i)
-        call multifab_build_edge(         gradp_baro(n,i),mla%la(n),1,0,i)
-        call multifab_build_edge(adv_mom_fluxdiv_nm1(n,i),mla%la(n),1,0,i)
+        call multifab_build_edge(     mtemp(n,i),mla%la(n),1,0,i)
+        call multifab_build_edge( rhotot_fc(n,i),mla%la(n),1,0,i)
+        call multifab_build_edge(gradp_baro(n,i),mla%la(n),1,0,i)
      end do
   end do
 
@@ -742,21 +744,14 @@ subroutine main_driver()
                                                 permittivity)
      else if (algorithm_type .eq. 6) then
         ! algorithm_type=6: boussinesq
-
-        ! set rho0 to be the average or rho_old
-        do n=1,nlevs
-           rho0 = multifab_sum_c(rho_old(n),1,nspecies) / product(n_cells(1:dm))
-        end do
-
-        call advance_timestep_bousq_AB2(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                        rho0,adv_mom_fluxdiv_nm1, &
-                                        gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                        Epot_mass_fluxdiv, &
-                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, stoch_mass_flux, &
-                                        dx,dt,time,the_bc_tower,istep, &
-                                        grad_Epot_old,grad_Epot_new, &
-                                        charge_old,charge_new,Epot, &
-                                        permittivity)
+        call advance_timestep_bousq(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                    rho0,gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                    Epot_mass_fluxdiv, &
+                                    diff_mass_fluxdiv,stoch_mass_fluxdiv, stoch_mass_flux, &
+                                    dx,dt,time,the_bc_tower,istep, &
+                                    grad_Epot_old,grad_Epot_new, &
+                                    charge_old,charge_new,Epot, &
+                                    permittivity)
      else
         call bl_error("Error: invalid algorithm_type")
      end if
@@ -889,7 +884,6 @@ subroutine main_driver()
         call multifab_destroy(mtemp(n,i))
         call multifab_destroy(rhotot_fc(n,i))
         call multifab_destroy(gradp_baro(n,i))
-        call multifab_destroy(adv_mom_fluxdiv_nm1(n,i))
      end do
      do i=1,size(eta_ed,dim=2)
         call multifab_destroy(eta_ed(n,i))
