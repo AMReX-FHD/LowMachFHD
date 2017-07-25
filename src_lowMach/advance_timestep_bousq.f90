@@ -422,7 +422,6 @@ contains
     ! increment adv_mass_fluxdiv by -rho_i^{n+1/2} * v^{n+1,*}
     call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv,.true.,dx,1,nspecies)
 
-
     ! compute mass fluxes and reactions at t^{n+1/2}
     if (midpoint_stoch_mass_flux_type .eq. 1) then
        ! strato
