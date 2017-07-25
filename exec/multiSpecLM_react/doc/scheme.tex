@@ -329,7 +329,7 @@ $\mathcal{A}=\Theta\alpha\mathcal{I}-\mathcal{A}_0$ is defined by $\Theta=2/\D{t
 
 Given a reference density $\rho_0$, we assume that the deviation of the total density $\rho(\V{x},t) = \sum_i \rho_i(\V{x},t)$ from $\rho_0$ is small (for any $\V{x}$ and $t$).
 Hence, we use $\rho_0$ for the velocity equation except for the gravity term.
-For the latter term, the total density $\rho(\V{x},t)$ is computed from the following EOS:  
+For the latter term, the total density $\rho(\V{x},t)$ is computed from the following EOS:
 \begin{equation}
 \sum_i \frac{w_i}{\bar{\rho}_i} = \frac{1}{\rho}.
 \end{equation}
@@ -337,6 +337,22 @@ A typical situation is that there is a solvent species (say, the first species) 
 That is, $w_1\approx 1$, $w_i\ll 1$ ($i>1$), and $\rho\approx\bar{\rho}_1$; hence, $\rho_0$ is set to $\bar{\rho}_1$.
 
 \begin{enumerate}
+
+\item Solve for $\V{v}^{n+1,*}$ and $\pi^{n+\myhalf,*}$:
+\begin{align}
+\label{boussinesq_stokes_v_1st}
+\begin{split}
+\frac{\rho_0\V{v}^{n+1,*}-\rho_0\V{v}^n}{\D{t}} + \grad\pi^{n+\myhalf,*}
+& = \divg\left(-\rho_0\V{v}^n\V{v}^n\right) + 
+\frac{1}{2}\divg\left( \eta^n \overline{\grad}\V{v}^n + \eta^n \overline{\grad}\V{v}^{n+1,*} \right)
++ \divg\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}} } \overline{\V{W}}^n \right)
+\\
+& + (\rho^n-\rho_0)\V{g},
+\end{split}
+\\
+\label{boussinesq_stokes_p_1st}
+\divg\V{v}^{n+1,*} & = 0.
+\end{align}
 
 \item Calculate $\divg\V{F}^n$ and $R^n_i$:
 \begin{align}
@@ -348,58 +364,8 @@ That is, $w_1\approx 1$, $w_i\ll 1$ ($i>1$), and $\rho\approx\bar{\rho}_1$; henc
 
 \item Calculate $\rho^{n+\myhalf}_i$:
 \begin{equation}
-\rho^{n+\myhalf}_i = \rho^n_i + \frac{\D{t}}{2} \left[ -\divg\V{F}^n_i + m_i R^n_i + \divg\left( -\rho^n_i \V{v}^n \right) \right].
+\rho^{n+\myhalf}_i = \rho^n_i + \frac{\D{t}}{2} \left[ -\divg\V{F}^n_i + m_i R^n_i + \divg\left( -\rho^n_i \frac{\V{v}^n+\V{v}^{n+1,*}}{2} \right) \right].
 \end{equation}
-
-\item Solve for $\V{v}^{n+1}$ and $\pi^{n+\myhalf}$
-
-\begin{itemize}
-
-\item $n\ge1$ (after the first time stepping): AB2
-
-\begin{align}
-\begin{split}
-\frac{\rho_0\V{v}^{n+1}-\rho_0\V{v}^n}{\D{t}} + \grad\pi^{n+\myhalf}
-& = {\color{red}-\frac{3}{2}\divg\left(\rho_0\V{v}^n\V{v}^n\right) + \frac{1}{2}\divg\left(\rho_0\V{v}^{n-1}\V{v}^{n-1}\right)} + 
-\frac{1}{2}\divg\left( \eta^{n+\myhalf} \overline{\grad}\V{v}^n + \eta^{n+\myhalf} \overline{\grad}\V{v}^{n+1} \right) \\
-&+ \divg\left( \sqrt{\frac{\eta^{n+\myhalf} k_\mathrm{B}T}{\D{V}\D{t}} } \overline{\V{W}}^n \right)
-+ (\rho^{n+\myhalf}-\rho_0)\V{g},
-\end{split}
-\\
-\divg\V{v}^{n+1} & = 0.
-\end{align}
-
-\item $n=0$ (for the first time stepping): predictor-corrector
-
-\begin{itemize}
-\item predictor
-\begin{align}
-\begin{split}
-\frac{\rho_0\V{v}^{n+1,*}-\rho_0\V{v}^n}{\D{t}} + \grad\pi^{n+\myhalf,*}
-& = {\color{red}-\divg\left(\rho_0\V{v}^n\V{v}^n\right)}
-+ \frac{1}{2}\divg\left( \eta^{n+\myhalf} \overline{\grad}\V{v}^n + \eta^{n+\myhalf} \overline{\grad}\V{v}^{n+1,*} \right) \\
-& + \divg\left( \sqrt{\frac{\eta^{n+\myhalf} k_\mathrm{B}T}{\D{V}\D{t}} } \overline{\V{W}}^n \right)
-+ (\rho^{n+\myhalf}-\rho_0)\V{g},
-\end{split}
-\\
-\divg\V{v}^{n+1} & = 0.
-\end{align}
-\item corrector
-\begin{align}
-\begin{split}
-\frac{\rho_0\V{v}^{n+1}-\rho_0\V{v}^n}{\D{t}} + \grad\pi^{n+\myhalf}
-& = {\color{red}-\frac{1}{2}\divg\left(\rho_0\V{v}^n\V{v}^n + \rho_0\V{v}^{n+1,*}\V{v}^{n+1,*}\right)}  
-+ \frac{1}{2}\divg\left( \eta^{n+\myhalf} \overline{\grad}\V{v}^n + \eta^{n+\myhalf} \overline{\grad}\V{v}^{n+1} \right) \\
-&+ \divg\left( \sqrt{\frac{\eta^{n+\myhalf} k_\mathrm{B}T}{\D{V}\D{t}} } \overline{\V{W}}^n \right)
-+ (\rho^{n+\myhalf}-\rho_0)\V{g},
-\end{split}
-\\
-\divg\V{v}^{n+1} & = 0.
-\end{align}
-\end{itemize}
-
-\end{itemize}
-
 
 \item Calculate $\divg\V{F}^{n+\myhalf}$ and $R^{n+\myhalf}_i$:
 \begin{align}
@@ -420,8 +386,22 @@ That is, $w_1\approx 1$, $w_i\ll 1$ ($i>1$), and $\rho\approx\bar{\rho}_1$; henc
 \item Calculate $\rho^{n+1}_i$:
 \begin{equation}
 \rho^{n+1}_i = \rho^n_i + \D{t} \left[ -\divg\V{F}^{n+\myhalf}_i + m_i R^{n+\myhalf}_i 
-+ \divg\left( -\rho^{n+\myhalf}_i \frac{\V{v}^n + \V{v}^{n+1}}{2} \right) \right].
++ \divg\left( -\rho^{n+\myhalf}_i \frac{\V{v}^n + \V{v}^{n+1,*}}{2} \right) \right].
 \end{equation} 
+
+\item Solve for $\V{v}^{n+1}$ and $\pi^{n+\myhalf}$:
+\begin{align}
+\label{boussinesq_stokes_v_2nd}
+\begin{split}
+\frac{\rho_0\V{v}^{n+1}-\rho_0\V{v}^n}{\D{t}} + \grad\pi^{n+\myhalf}
+&= \frac{1}{2}\divg\left(-\rho_0\V{v}^n\V{v}^n-\rho_0\V{v}^{n+1,*}\V{v}^{n+1,*}\right) 
++ \frac{1}{2}\divg\left( \eta^n \overline{\grad}\V{v}^n + \eta^{n+1} \overline{\grad}\V{v}^{n+1} \right) \\
+&+ \frac{1}{2}\divg\left[\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}}} + \sqrt{\frac{\eta^{n+1} k_\mathrm{B}T}{\D{V}\D{t}}} \right) \overline{\V{W}}^n \right]
++ \left(\frac{\rho^n+\rho^{n+1}}{2}-\rho_0\right)\V{g},
+\end{split} \\
+\label{boussinesq_stokes_p_2nd}
+\divg\V{v}^{n+1} & = 0.
+\end{align}
 
 \end{enumerate}
 
