@@ -73,13 +73,15 @@ contains
     integer :: i,dm,n,nlevs
     real(kind=dp_t) :: dt_eff
 
-    type(multifab) :: mac_rhs(mla%nlevel)
-    type(multifab) :: divu(mla%nlevel)
-    type(multifab) :: phi(mla%nlevel)
-    type(multifab) :: rhotot_fc(mla%nlevel,mla%dim)
-    type(multifab) :: rhototinv_fc(mla%nlevel,mla%dim)
-    type(multifab) :: diff_mass_flux(mla%nlevel,mla%dim)
+    type(multifab) ::            mac_rhs(mla%nlevel)
+    type(multifab) ::               divu(mla%nlevel)
+    type(multifab) ::                phi(mla%nlevel)
+
+    type(multifab) ::       rhotot_fc(mla%nlevel,mla%dim)
+    type(multifab) ::    rhototinv_fc(mla%nlevel,mla%dim)
+    type(multifab) ::  diff_mass_flux(mla%nlevel,mla%dim)
     type(multifab) :: total_mass_flux(mla%nlevel,mla%dim)
+
 
     type(multifab) :: n_cc(mla%nlevel)
 
@@ -198,24 +200,29 @@ contains
 
        ! project the velocities
        ! only for non-restarting runs
+       call setval(mac_rhs(n),0.d0)
 
-       ! set mac_rhs to -S = sum_i div(F_i)/rhobar_i
-       do n=1,nlevs
-          call setval(mac_rhs(n),0.d0)
-          do i=1,nspecies
-             call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),diff_mass_fluxdiv(n),i,1)
-             if (use_charged_fluid) then
-                call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),Epot_mass_fluxdiv(n),i,1)
-             end if
-             if (variance_coef_mass .ne. 0.d0) then
-                call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
-             end if
-             if (nreactions > 0) then
-                ! if nreactions>0, also add sum_i -(m_i*R_i)/rhobar_i
-                call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),chem_rate(n),i,1)
-             end if
+       if (algorithm_type .ne. 6) then
+
+          ! set mac_rhs to -S = sum_i div(F_i)/rhobar_i
+          do n=1,nlevs
+
+             do i=1,nspecies
+                call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),diff_mass_fluxdiv(n),i,1)
+                if (use_charged_fluid) then
+                   call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),Epot_mass_fluxdiv(n),i,1)
+                end if
+                if (variance_coef_mass .ne. 0.d0) then
+                   call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+                end if
+                if (nreactions > 0) then
+                   ! if nreactions>0, also add sum_i -(m_i*R_i)/rhobar_i
+                   call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),chem_rate(n),i,1)
+                end if
+             end do
           end do
-       end do
+
+       end if
 
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
        ! build rhs = div(v^init) - S^0
