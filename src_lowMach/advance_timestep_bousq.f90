@@ -24,12 +24,14 @@ module advance_timestep_bousq_module
   use fill_rho_ghost_cells_module
   use ml_solve_module
   use bl_random_module
+  use chemical_rates_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
                                   variance_coef_mom, barodiffusion_type, project_eos_int, &
-                                  use_bl_rng, nspecies
-  use probin_multispecies_module, only: midpoint_stoch_mass_flux_type
+                                  molmass, use_bl_rng, nspecies
+  use probin_multispecies_module, only: midpoint_stoch_mass_flux_type, is_ideal_mixture
   use probin_charged_module, only: use_charged_fluid
-  use probin_chemistry_module, only: nreactions
+  use probin_chemistry_module, only: nreactions, use_Poisson_rng, include_discrete_LMA_correction, &
+                                     exclude_solvent_comput_rates, use_mole_frac_LMA
 
   use fabio_module
 
@@ -45,7 +47,7 @@ contains
                                     rho0,gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                     Epot_mass_fluxdiv, &
                                     diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                    stoch_mass_flux, &
+                                    stoch_mass_flux,chem_rate, &
                                     dx,dt,time,the_bc_tower,istep, &
                                     grad_Epot_old,grad_Epot_new,charge_old,charge_new, &
                                     Epot,permittivity)
@@ -68,6 +70,7 @@ contains
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)  ! not persistent
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:) ! not persistent
     type(multifab) , intent(inout) :: stoch_mass_flux(:,:)  ! not persistent
+    type(multifab) , intent(inout) :: chem_rate(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
     integer        , intent(in   ) :: istep
@@ -101,6 +104,11 @@ contains
     type(multifab) :: stoch_mass_fluxdiv_old(mla%nlevel)
     type(multifab) ::    stoch_mass_flux_old(mla%nlevel,mla%dim)
 
+    ! only used when nreactions>0
+    type(multifab) :: chem_rate_temp(mla%nlevel)
+    type(multifab) ::          n_old(mla%nlevel)
+    type(multifab) ::          n_new(mla%nlevel)
+
     ! need a face-centered multifab of rho0 for gmres solver
     type(multifab) :: rho0_fc(mla%nlevel,mla%dim)
 
@@ -109,6 +117,8 @@ contains
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs
     real(kind=dp_t) :: weights(2)
 
+    real(kind=dp_t), parameter :: mattingly_lin_comb_coef(1:2) = (/-1.d0, 2.d0/)
+
     weights(1) = 1.d0
     weights(2) = 0.d0
 
@@ -116,12 +126,26 @@ contains
        call bl_error("advance_timestep_bousq does not support charges yet")
     end if
 
-    if (nreactions .gt. 0) then
-       call bl_error("advance_timestep_bousq does not support reactions yet")
-    end if
-
     if (barodiffusion_type .ne. 0) then
        call bl_error("advance_timestep_bousq: barodiffusion not supported yet")
+    end if
+
+    if (nreactions > 0) then
+       if (use_Poisson_rng .eq. 2) then
+          call bl_error('Error: currently use_Poisson_rng=2 not allowed for algorith_type=6 and nreactions>0')
+       end if
+
+       if (use_mole_frac_LMA) then
+          if (.not. is_ideal_mixture) then
+             call bl_error('Error: use_mole_frac_LMA should be used with is_ideal_mixture = T')
+          end if
+          if (include_discrete_LMA_correction) then
+             call bl_error('Error: currently use_mole_frac_LMA can be used only with include_discrete_LMA_correction=F')
+          end if
+          if (exclude_solvent_comput_rates .ne. 0) then
+             call bl_error('Error: currently use_mole_frac_LMA can be used only with exclude_solvent_comput_rates=0')
+          end if
+       end if
     end if
 
     nlevs = mla%nlevel
@@ -157,6 +181,14 @@ contains
           do i=1,dm
              call multifab_build_edge(stoch_mass_flux_old(n,i),mla%la(n),nspecies,0,i)
           end do
+       end do
+    end if
+
+    if (nreactions > 0) then
+       do n=1,nlevs
+          call multifab_build(chem_rate_temp(n),mla%la(n),nspecies,0)
+          call multifab_build(         n_old(n),mla%la(n),nspecies,0)
+          call multifab_build(         n_new(n),mla%la(n),nspecies,0)
        end do
     end if
 
@@ -384,9 +416,28 @@ contains
                               charge_old,grad_Epot_old,Epot, &
                               permittivity)
 
-    ! FIXME compute reactions at t^n
-    !
-    !
+    ! compute chemical rates m_i*R^n_i
+    if (nreactions > 0) then
+       
+       ! convert rho_old (at t^n) (mass densities rho_i) into n_old (number densities n_i=rho_i/m_i)
+       do n=1,nlevs
+          call multifab_copy_c(n_old(n),1,rho_old(n),1,nspecies,0)
+          do i=1,nspecies
+             call multifab_div_div_s_c(n_old(n),i,molmass(i),1,0)
+          end do
+       end do
+
+       ! compute chemical rates R^n_i (units=[number density]/[time])
+       call chemical_rates(mla,n_old,chem_rate,dx,0.5d0*dt)
+
+       ! convert chemical rates R^n_i into m_i*R^n_i (units=[mass density]/[time])
+       do n=1,nlevs
+          do i=1,nspecies
+             call multifab_mult_mult_s_c(chem_rate(n),i,molmass(i),1,0)
+          end do
+       end do
+
+    end if
 
     ! Step 3: density prediction to t^{n+1/2}
 
@@ -398,6 +449,9 @@ contains
        call multifab_saxpy_3_cc(rho_new(n),1, 0.5d0*dt,diff_mass_fluxdiv(n),1,nspecies)
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_saxpy_3_cc(rho_new(n),1,0.5d0*dt,stoch_mass_fluxdiv(n),1,nspecies)
+       end if
+       if (nreactions > 0) then
+          call multifab_saxpy_3_cc(rho_new(n),1,0.5d0*dt,chem_rate(n),1,nspecies)
        end if
     end do
 
@@ -473,9 +527,35 @@ contains
 
     end if
 
-    ! FIXME compute reactions at t^{n+1}
-    !
-    !
+    ! compute chemical rates m_i*R^{n+1/2}_i
+    if (nreactions > 0) then
+       ! convert rho_old (at n) and rho_new (at n+1/2) (mass densities rho_i)
+       ! into n_old and n_new (number densities n_i=rho_i/m_i)
+       do n=1,nlevs
+          call multifab_copy_c(n_old(n),1,rho_old(n),1,nspecies,0)
+          call multifab_copy_c(n_new(n),1,rho_new(n),1,nspecies,0)
+          do i=1,nspecies
+             call multifab_div_div_s_c(n_old(n),i,molmass(i),1,0)
+             call multifab_div_div_s_c(n_new(n),i,molmass(i),1,0)
+          end do
+       end do
+
+       ! compute chemical rates R_i (units=[number density]/[time]) for the second half step
+       call chemical_rates(mla,n_old,chem_rate_temp,dx,0.5d0*dt,n_new,mattingly_lin_comb_coef)
+
+       ! convert chemical rates R_i into m_i*R_i (units=[mass density]/[time])
+       do n=1,nlevs
+          do i=1,nspecies
+             call multifab_mult_mult_s_c(chem_rate_temp(n),i,molmass(i),1,0)
+          end do
+       end do
+
+       ! compute chemical rates m_i*R^{n+1/2}_i for the full step
+       do n=1,nlevs
+          call multifab_plus_plus_c(chem_rate(n),1,chem_rate_temp(n),1,nspecies,0)
+          call multifab_mult_mult_s_c(chem_rate(n),1,0.5d0,nspecies,0)
+       end do
+    end if
 
     ! Step 5: density integration to t^{n+1}
 
@@ -487,6 +567,9 @@ contains
        call multifab_saxpy_3_cc(rho_new(n),1,      dt,diff_mass_fluxdiv(n),1,nspecies)
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_saxpy_3_cc(rho_new(n),1,dt,stoch_mass_fluxdiv(n),1,nspecies)
+       end if
+       if (nreactions > 0) then
+          call multifab_saxpy_3_cc(rho_new(n),1,dt,chem_rate(n),1,nspecies)
        end if
     end do
 
@@ -714,6 +797,14 @@ contains
           call multifab_destroy(mom_grav_force(n,i))
        end do
     end do
+
+    if (nreactions > 0) then
+       do n=1,nlevs
+          call multifab_destroy(chem_rate_temp(n))
+          call multifab_destroy(n_old(n))
+          call multifab_destroy(n_new(n))
+       end do
+    end if
 
     if (variance_coef_mass .ne. 0.d0 .and. midpoint_stoch_mass_flux_type .eq. 2) then
        do n=1,nlevs

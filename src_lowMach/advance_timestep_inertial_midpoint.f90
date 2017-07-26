@@ -28,6 +28,7 @@ module advance_timestep_inertial_midpoint_module
   use fill_rho_ghost_cells_module
   use bl_rng_module
   use bl_random_module
+  use chemical_rates_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
                                   variance_coef_mom, barodiffusion_type, project_eos_int, &
                                   molmass, use_bl_rng, nspecies
@@ -36,7 +37,6 @@ module advance_timestep_inertial_midpoint_module
   use probin_chemistry_module, only: nreactions, use_Poisson_rng, include_discrete_LMA_correction, &
                                      exclude_solvent_comput_rates, use_mole_frac_LMA
   use probin_multispecies_module, only: midpoint_stoch_mass_flux_type, is_ideal_mixture
-  use chemical_rates_module
 
   implicit none
 

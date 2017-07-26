@@ -748,6 +748,7 @@ subroutine main_driver()
                                     rho0,gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                     Epot_mass_fluxdiv, &
                                     diff_mass_fluxdiv,stoch_mass_fluxdiv, stoch_mass_flux, &
+                                    chem_rate, &
                                     dx,dt,time,the_bc_tower,istep, &
                                     grad_Epot_old,grad_Epot_new, &
                                     charge_old,charge_new,Epot, &
