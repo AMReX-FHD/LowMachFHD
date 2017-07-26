@@ -82,9 +82,6 @@ subroutine main_driver()
   type(multifab), allocatable  :: eta_ed(:,:)
   type(multifab), allocatable  :: kappa(:)
 
-  ! for use in bousinnesq algorithm
-  real(kind=dp_t)              :: rho0
-
   real(kind=dp_t)              :: total_charge
   type(multifab), allocatable  :: Epot_mass_fluxdiv(:)
   type(multifab), allocatable  :: charge_old(:)
@@ -326,13 +323,6 @@ subroutine main_driver()
 
   ! fill rho and rhotot ghost cells
   call fill_rho_rhotot_ghost(mla,rho_old,rhotot_old,dx,the_bc_tower)
-
-  if (algorithm_type .eq. 6) then
-     ! set rho0 to be the average or rho_old
-     do n=1,nlevs
-        rho0 = multifab_sum_c(rhotot_old(n),1,1) / product(n_cells(1:dm))
-     end do
-  end if
 
   !=======================================================
   ! Build multifabs for all the variables
@@ -745,7 +735,7 @@ subroutine main_driver()
      else if (algorithm_type .eq. 6) then
         ! algorithm_type=6: boussinesq
         call advance_timestep_bousq(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                    rho0,gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                    gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                     Epot_mass_fluxdiv, &
                                     diff_mass_fluxdiv,stoch_mass_fluxdiv, stoch_mass_flux, &
                                     chem_rate, &

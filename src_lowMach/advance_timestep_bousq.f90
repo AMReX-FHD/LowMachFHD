@@ -25,6 +25,7 @@ module advance_timestep_bousq_module
   use ml_solve_module
   use bl_random_module
   use chemical_rates_module
+  use fluid_charge_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
                                   variance_coef_mom, barodiffusion_type, project_eos_int, &
                                   molmass, use_bl_rng, nspecies
@@ -44,7 +45,7 @@ module advance_timestep_bousq_module
 contains
 
   subroutine advance_timestep_bousq(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                    rho0,gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                    gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                     Epot_mass_fluxdiv, &
                                     diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                     stoch_mass_flux,chem_rate, &
@@ -58,7 +59,6 @@ contains
     type(multifab) , intent(inout) :: rho_new(:)
     type(multifab) , intent(inout) :: rhotot_old(:)
     type(multifab) , intent(inout) :: rhotot_new(:)
-    real(kind=dp_t), intent(in   ) :: rho0
     type(multifab) , intent(inout) :: gradp_baro(:,:)
     type(multifab) , intent(inout) :: pi(:)
     type(multifab) , intent(inout) :: eta(:)                ! enters as t^n, leaves as t^{n+1}
@@ -97,6 +97,7 @@ contains
     type(multifab) ::                dumac(mla%nlevel,mla%dim)
     type(multifab) ::               gradpi(mla%nlevel,mla%dim)
     type(multifab) ::               rho_fc(mla%nlevel,mla%dim)
+    type(multifab) ::            rhotot_fc(mla%nlevel,mla%dim)
     type(multifab) ::       diff_mass_flux(mla%nlevel,mla%dim)
     type(multifab) ::       mom_grav_force(mla%nlevel,mla%dim)
 
@@ -109,8 +110,9 @@ contains
     type(multifab) ::          n_old(mla%nlevel)
     type(multifab) ::          n_new(mla%nlevel)
 
-    ! need a face-centered multifab of rho0 for gmres solver
-    type(multifab) :: rho0_fc(mla%nlevel,mla%dim)
+    ! only used when use_charged_fluid=T
+    type(multifab) :: Lorentz_force_old(mla%nlevel,mla%dim)
+    type(multifab) :: Lorentz_force_new(mla%nlevel,mla%dim)
 
     integer :: i,dm,n,nlevs
 
@@ -121,10 +123,6 @@ contains
 
     weights(1) = 1.d0
     weights(2) = 0.d0
-
-    if (use_charged_fluid) then
-       call bl_error("advance_timestep_bousq does not support charges yet")
-    end if
 
     if (barodiffusion_type .ne. 0) then
        call bl_error("advance_timestep_bousq: barodiffusion not supported yet")
@@ -169,6 +167,7 @@ contains
           call multifab_build_edge(                dumac(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(               gradpi(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(               rho_fc(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(            rhotot_fc(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(       diff_mass_flux(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(       mom_grav_force(n,i),mla%la(n),1       ,0,i)
        end do
@@ -192,13 +191,14 @@ contains
        end do
     end if
 
-    ! create a multifab rho0_fc for use in gmres solver
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_build_edge(rho0_fc(n,i),mla%la(n),1,1,i)
-          call multifab_setval(rho0_fc(n,i),rho0,all=.true.)
+    if (use_charged_fluid) then
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_build_edge(Lorentz_force_old(n,i),mla%la(n),1,0,i)
+             call multifab_build_edge(Lorentz_force_new(n,i),mla%la(n),1,0,i)
+          end do
        end do
-    end do
+    end if
 
     ! make a copy of umac at t^n
     do n=1,nlevs
@@ -209,8 +209,12 @@ contains
 
     ! Step 1: solve for v^{n+1,*} and pi^{n+1/2,*} using GMRES
 
-    ! compute mtemp = (rho0*v)^n
-    call convert_m_to_umac(mla,rho0_fc,mtemp,umac,.false.)
+    ! average rho_i^n and rho^n to faces
+    call average_cc_to_face(nlevs,   rho_old,   rho_fc,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,rhotot_old,rhotot_fc,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
+
+    ! compute mtemp = (rho*v)^n
+    call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
 
     ! set gmres_rhs_v = mtemp / dt
     do n=1,nlevs
@@ -220,12 +224,12 @@ contains
        end do
     end do
 
-    ! compute adv_mom_fluxdiv_old = -rho0*v^n*v^n
+    ! compute adv_mom_fluxdiv_old = -rho*v^n*v^n
     ! save this for use in the corrector GMRES solve
     call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv_old,.false., &
                                 dx,the_bc_tower%bc_tower_array)
 
-    ! add -rho0*v^n,v^n to gmres_rhs_v
+    ! add -rho*v^n,v^n to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
           call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,1.d0,adv_mom_fluxdiv_old(n,i),1,1)
@@ -263,25 +267,8 @@ contains
 
     end if
 
-    ! gravity (rho^n-rho0) * g
+    ! gravity - FIXME
     if (any(grav(1:dm) .ne. 0.d0)) then
-
-       ! put rho^n on faces (store in mom_grav_force)
-       call average_cc_to_face(nlevs,rhotot_old,mom_grav_force,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-       do n=1,nlevs
-          do i=1,dm
-             ! compute (rho^n-rho0)*g
-             call multifab_sub_sub_s(mom_grav_force(n,i),rho0)
-             call multifab_mult_mult_s(mom_grav_force(n,i),grav(i))
-          end do
-       end do
-
-       ! add gravity force to gmres_rhs_v
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_plus_plus_c(gmres_rhs_v(n,i),1,mom_grav_force(n,i),1,1,0)
-          end do
-       end do
 
     end if
 
@@ -313,8 +300,8 @@ contains
        end do
     end do
 
-    ! compute mtemp = (rho0*vbar)^n
-    call convert_m_to_umac(mla,rho0_fc,mtemp,umac,.false.)
+    ! compute mtemp = (rho*vbar)^n
+    call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
 
     ! add -(mtemp/dt) to gmres_rhs_v
     do n=1,nlevs
@@ -360,7 +347,7 @@ contains
     end do
 
     ! call gmres to compute delta v and delta pi
-    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rho0_fc, &
+    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc, &
                eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
        
     ! compute v^{n+1} = v^n + dumac
@@ -396,9 +383,6 @@ contains
     end do
 
     ! Step 2: compute mass fluxes and reactions at t^n
-
-    ! average rho_i^n to faces
-    call average_cc_to_face(nlevs,rho_old,rho_fc,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
 
     ! compute adv_mass_fluxdiv = -rho_i^n * v^n
     call mk_advective_s_fluxdiv(mla,umac_old,rho_fc,adv_mass_fluxdiv,.false.,dx,1,nspecies)
@@ -439,6 +423,12 @@ contains
 
     end if
 
+    if (use_charged_fluid) then
+       ! compute old Lorentz force
+       call compute_Lorentz_force(mla,Lorentz_force_old,grad_Epot_old,permittivity, &
+                                  charge_old,dx,the_bc_tower)
+    end if
+
     ! Step 3: density prediction to t^{n+1/2}
 
     ! compute rho_i^{n+1/2} (store in rho_new)
@@ -467,8 +457,9 @@ contains
 
     ! Step 4: compute mass fluxes and reactions at t^{n+1/2}
 
-    ! average rho_i^{n+1/2} to faces
-    call average_cc_to_face(nlevs,rho_new,rho_fc,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+    ! average rho_i^{n+1/2} and rhotot^{n+1/2} to faces
+    call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
     ! compute adv_mass_fluxdiv = -rho_i^{n+1/2} * v^n
     call mk_advective_s_fluxdiv(mla,umac_old,rho_fc,adv_mass_fluxdiv,.false.,dx,1,nspecies)
@@ -585,22 +576,22 @@ contains
 
     ! Step 6: solve for v^{n+1} and pi^{n+1/2} using GMRES
 
-    ! set gmres_rhs_v = (rho0*v)^n / dt
+    ! set gmres_rhs_v = (rho*v)^n / dt
     do n=1,nlevs
        do i=1,dm
-          call convert_m_to_umac(mla,rho0_fc,gmres_rhs_v,umac_old,.false.)
+          call convert_m_to_umac(mla,rhotot_fc,gmres_rhs_v,umac_old,.false.)
           call multifab_mult_mult_s_c(gmres_rhs_v(n,i),1,1.d0/dt,1,0)
        end do
     end do
 
-    ! compute mtemp = (rho0*v)^{n+1,*}
-    call convert_m_to_umac(mla,rho0_fc,mtemp,umac,.false.)
+    ! compute mtemp = (rho*v)^{n+1,*}
+    call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
 
-    ! compute adv_mom_fluxdiv_new = -rho0*v^{n+1,*}*v^{n+1,*}
+    ! compute adv_mom_fluxdiv_new = -rho*v^{n+1,*}*v^{n+1,*}
     call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv_new,.false., &
                                 dx,the_bc_tower%bc_tower_array)
 
-    ! add (1/2) (-rho0*v^n*v^n -rho0*v^{n+1,*}*v^{n+1,*}) to gmres_rhs_v
+    ! add (1/2) (-rho*v^n*v^n -rho*v^{n+1,*}*v^{n+1,*}) to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
           call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,adv_mom_fluxdiv_old(n,i),1,1)
@@ -630,32 +621,8 @@ contains
 
     end if
 
-    ! gravity [ (rho^n+rho^{n+1})/2 - rho0 ] * g
+    ! gravity - FIXME
     if (any(grav(1:dm) .ne. 0.d0)) then
-
-       ! rhotot_old is no needed anymore, so we put (1/2)*(rho_old + rho_new) in it
-       do n=1,nlevs
-          call multifab_plus_plus_c(rhotot_old(n),1,rhotot_new(n),1,1,rhotot_old(n)%ng)
-          call multifab_mult_mult_s_c(rhotot_old(n),1,0.5d0,1,rhotot_old(n)%ng)
-       end do
-
-       ! put (rho^n+rho^{n+1})/2 on faces (store in mom_grav_force)
-       call average_cc_to_face(nlevs,rhotot_old,mom_grav_force,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-       do n=1,nlevs
-          do i=1,dm
-             ! compute [(rho^n+rho^{n+1})/2-rho0]*g
-             call multifab_sub_sub_s(mom_grav_force(n,i),rho0)
-             call multifab_mult_mult_s(mom_grav_force(n,i),grav(i))
-          end do
-       end do
-
-       ! add gravity force to gmres_rhs_v
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_plus_plus_c(gmres_rhs_v(n,i),1,mom_grav_force(n,i),1,1,0)
-          end do
-       end do
-
     end if
 
     ! subtract grad pi^{n-1/2} from gmres_rhs_v
@@ -690,8 +657,8 @@ contains
        end do
     end do
 
-    ! compute mtemp = (rho0*vbar)^n
-    call convert_m_to_umac(mla,rho0_fc,mtemp,umac,.false.)
+    ! compute mtemp = (rho*vbar)^n
+    call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
 
     ! add -(mtemp/dt) to gmres_rhs_v
     do n=1,nlevs
@@ -737,7 +704,7 @@ contains
     end do
 
     ! call gmres to compute delta v and delta pi
-    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rho0_fc, &
+    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc, &
                eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
        
     ! compute v^{n+1} = vbar^n + dumac
@@ -793,6 +760,7 @@ contains
           call multifab_destroy(dumac(n,i))
           call multifab_destroy(gradpi(n,i))
           call multifab_destroy(rho_fc(n,i))
+          call multifab_destroy(rhotot_fc(n,i))
           call multifab_destroy(diff_mass_flux(n,i))
           call multifab_destroy(mom_grav_force(n,i))
        end do
@@ -815,9 +783,18 @@ contains
        end do
     end if
 
+    if (use_charged_fluid) then
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_destroy(Lorentz_force_old(n,i))
+             call multifab_destroy(Lorentz_force_new(n,i))
+          end do
+       end do
+    end if
+
     do n=1,nlevs
        do i=1,dm
-          call multifab_destroy(rho0_fc(n,i))
+          call multifab_destroy(rhotot_fc(n,i))
        end do
     end do
 
