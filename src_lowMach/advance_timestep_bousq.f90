@@ -26,7 +26,8 @@ module advance_timestep_bousq_module
   use bl_random_module
   use chemical_rates_module
   use fluid_charge_module
-  use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
+  use mk_grav_force_module
+  use probin_common_module, only: advection_type, grav, variance_coef_mass, &
                                   variance_coef_mom, barodiffusion_type, project_eos_int, &
                                   molmass, use_bl_rng, nspecies
   use probin_multispecies_module, only: midpoint_stoch_mass_flux_type, is_ideal_mixture
@@ -97,7 +98,8 @@ contains
     type(multifab) ::                dumac(mla%nlevel,mla%dim)
     type(multifab) ::               gradpi(mla%nlevel,mla%dim)
     type(multifab) ::               rho_fc(mla%nlevel,mla%dim)
-    type(multifab) ::            rhotot_fc(mla%nlevel,mla%dim)
+    type(multifab) ::        rhotot_fc_old(mla%nlevel,mla%dim)
+    type(multifab) ::        rhotot_fc_new(mla%nlevel,mla%dim)
     type(multifab) ::       diff_mass_flux(mla%nlevel,mla%dim)
     type(multifab) ::       mom_grav_force(mla%nlevel,mla%dim)
 
@@ -167,7 +169,8 @@ contains
           call multifab_build_edge(                dumac(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(               gradpi(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(               rho_fc(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(            rhotot_fc(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(        rhotot_fc_old(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(        rhotot_fc_new(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(       diff_mass_flux(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(       mom_grav_force(n,i),mla%la(n),1       ,0,i)
        end do
@@ -210,11 +213,11 @@ contains
     ! Step 1: solve for v^{n+1,*} and pi^{n+1/2,*} using GMRES
 
     ! average rho_i^n and rho^n to faces
-    call average_cc_to_face(nlevs,   rho_old,   rho_fc,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
-    call average_cc_to_face(nlevs,rhotot_old,rhotot_fc,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,   rho_old,   rho_fc    ,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,rhotot_old,rhotot_fc_old,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
     ! compute mtemp = (rho*v)^n
-    call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
+    call convert_m_to_umac(mla,rhotot_fc_old,mtemp,umac,.false.)
 
     ! set gmres_rhs_v = mtemp / dt
     do n=1,nlevs
@@ -267,9 +270,9 @@ contains
 
     end if
 
-    ! gravity - FIXME
+    ! gravity
     if (any(grav(1:dm) .ne. 0.d0)) then
-
+       call mk_grav_force_bousq(mla,gmres_rhs_v,.true.,rhotot_fc_old,rhotot_fc_old,the_bc_tower)
     end if
 
     ! compute grad pi^{n-1/2}
@@ -301,7 +304,7 @@ contains
     end do
 
     ! compute mtemp = (rho*vbar)^n
-    call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
+    call convert_m_to_umac(mla,rhotot_fc_old,mtemp,umac,.false.)
 
     ! add -(mtemp/dt) to gmres_rhs_v
     do n=1,nlevs
@@ -347,7 +350,7 @@ contains
     end do
 
     ! call gmres to compute delta v and delta pi
-    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc, &
+    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc_old, &
                eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
        
     ! compute v^{n+1} = v^n + dumac
@@ -457,9 +460,8 @@ contains
 
     ! Step 4: compute mass fluxes and reactions at t^{n+1/2}
 
-    ! average rho_i^{n+1/2} and rhotot^{n+1/2} to faces
+    ! average rho_i^{n+1/2} to faces
     call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
-    call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
     ! compute adv_mass_fluxdiv = -rho_i^{n+1/2} * v^n
     call mk_advective_s_fluxdiv(mla,umac_old,rho_fc,adv_mass_fluxdiv,.false.,dx,1,nspecies)
@@ -570,6 +572,9 @@ contains
     ! fill rho and rhotot ghost cells
     call fill_rho_rhotot_ghost(mla,rho_new,rhotot_new,dx,the_bc_tower)
 
+    ! average rhotot_new to faces
+    call average_cc_to_face(nlevs,rhotot_new,rhotot_fc_new,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+
     ! compute (eta,kappa)^{n+1}
     call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot_new,Temp,dx, &
                            the_bc_tower%bc_tower_array)
@@ -579,13 +584,13 @@ contains
     ! set gmres_rhs_v = (rho*v)^n / dt
     do n=1,nlevs
        do i=1,dm
-          call convert_m_to_umac(mla,rhotot_fc,gmres_rhs_v,umac_old,.false.)
+          call convert_m_to_umac(mla,rhotot_fc_old,gmres_rhs_v,umac_old,.false.)
           call multifab_mult_mult_s_c(gmres_rhs_v(n,i),1,1.d0/dt,1,0)
        end do
     end do
 
-    ! compute mtemp = (rho*v)^{n+1,*}
-    call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
+    ! compute mtemp = rho^{n+1}*v^{n+1,*}
+    call convert_m_to_umac(mla,rhotot_fc_new,mtemp,umac,.false.)
 
     ! compute adv_mom_fluxdiv_new = -rho*v^{n+1,*}*v^{n+1,*}
     call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv_new,.false., &
@@ -621,8 +626,9 @@ contains
 
     end if
 
-    ! gravity - FIXME
+    ! gravity
     if (any(grav(1:dm) .ne. 0.d0)) then
+       call mk_grav_force_bousq(mla,gmres_rhs_v,.true.,rhotot_fc_old,rhotot_fc_new,the_bc_tower)
     end if
 
     ! subtract grad pi^{n-1/2} from gmres_rhs_v
@@ -657,8 +663,8 @@ contains
        end do
     end do
 
-    ! compute mtemp = (rho*vbar)^n
-    call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
+    ! compute mtemp = rho^{n+1}*vbar^n
+    call convert_m_to_umac(mla,rhotot_fc_new,mtemp,umac,.false.)
 
     ! add -(mtemp/dt) to gmres_rhs_v
     do n=1,nlevs
@@ -704,7 +710,7 @@ contains
     end do
 
     ! call gmres to compute delta v and delta pi
-    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc, &
+    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc_new, &
                eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
        
     ! compute v^{n+1} = vbar^n + dumac
@@ -760,7 +766,8 @@ contains
           call multifab_destroy(dumac(n,i))
           call multifab_destroy(gradpi(n,i))
           call multifab_destroy(rho_fc(n,i))
-          call multifab_destroy(rhotot_fc(n,i))
+          call multifab_destroy(rhotot_fc_old(n,i))
+          call multifab_destroy(rhotot_fc_new(n,i))
           call multifab_destroy(diff_mass_flux(n,i))
           call multifab_destroy(mom_grav_force(n,i))
        end do
@@ -791,12 +798,6 @@ contains
           end do
        end do
     end if
-
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_destroy(rhotot_fc(n,i))
-       end do
-    end do
 
   end subroutine advance_timestep_bousq
 
