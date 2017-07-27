@@ -1,6 +1,12 @@
-scheme.pdf: scheme.tex
-	pdflatex scheme.tex
-	pdflatex scheme.tex
+ALL: scheme_LM.pdf scheme_Bousq.pdf
+
+scheme_LM.pdf: scheme_LM.tex
+	pdflatex scheme_LM.tex
+	pdflatex scheme_LM.tex
+
+scheme_Bousq.pdf: scheme_Bousq.tex
+	pdflatex scheme_Bousq.tex
+	pdflatex scheme_Bousq.tex
 
 clean:
-	$(RM) scheme.aux scheme.log schemeNotes.bib scheme.out scheme.pdf *~
+	$(RM) scheme_*.aux scheme_*.log scheme*Notes.bib scheme_*.out scheme_*.pdf *~
