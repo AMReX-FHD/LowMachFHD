@@ -12,8 +12,8 @@ module init_lowmach_module
   use BoxLibRNGs
   use bl_rng_module
   use probin_common_module, only: prob_lo, prob_hi, prob_type, k_B, grav, &
-                                  molmass, rhobar, smoothing_width, u_init, n_cells, &
-                                  use_bl_rng, nspecies
+                                  molmass, rhobar, rho0, smoothing_width, u_init, n_cells, &
+                                  use_bl_rng, nspecies, algorithm_type
   use probin_multispecies_module, only: alpha1, beta, delta, sigma, Dbar, Dtherm, &
                                         c_init, T_init, temp_type, sigma
  
@@ -708,8 +708,21 @@ contains
        end do
     end do
 
-    ! compute rho using the eos
-    do j=lo(2),hi(2)
+    if (algorithm_type .eq. 6) then
+
+       ! set rho=rho0
+       do j=lo(2),hi(2)
+       do i=lo(1),hi(1)
+
+          rho(i,j,1:nspecies) = rho0*c(i,j,1:nspecies)
+
+       end do
+       end do
+
+    else
+
+       ! compute rho using the eos
+       do j=lo(2),hi(2)
        do i=lo(1),hi(1)
 
           sum = 0.d0
@@ -720,7 +733,9 @@ contains
           rho(i,j,1:nspecies) = c(i,j,1:nspecies)/sum
 
        end do
-    end do
+       end do
+
+    end if
 
   end subroutine init_rho_and_umac_2d
 
@@ -1121,21 +1136,38 @@ contains
        end do
     end do
 
-    ! compute rho using the eos
-    do k=lo(3),hi(3)
+    if (algorithm_type .eq. 6) then
+
+       ! set rho=rho0
+       do k=lo(3),hi(3)
        do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
+       do i=lo(1),hi(1)
 
-             sum = 0.d0
-             do n=1,nspecies
-                ! sum represents rhoinv
-                sum = sum + c(i,j,k,n)/rhobar(n)
-             end do
-             rho(i,j,k,1:nspecies) = c(i,j,k,1:nspecies)/sum
+          rho(i,j,k,1:nspecies) = rho0*c(i,j,k,1:nspecies)
 
-          end do
        end do
-    end do
+       end do
+       end do
+
+    else
+
+       ! compute rho using the eos
+       do k=lo(3),hi(3)
+       do j=lo(2),hi(2)
+       do i=lo(1),hi(1)
+
+          sum = 0.d0
+          do n=1,nspecies
+             ! sum represents rhoinv
+             sum = sum + c(i,j,k,n)/rhobar(n)
+          end do
+          rho(i,j,k,1:nspecies) = c(i,j,k,1:nspecies)/sum
+
+       end do
+       end do
+       end do
+
+    end if
 
   end subroutine init_rho_and_umac_3d
 

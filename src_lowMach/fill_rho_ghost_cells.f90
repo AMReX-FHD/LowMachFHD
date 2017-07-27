@@ -5,7 +5,8 @@ module fill_rho_ghost_cells_module
   use define_bc_module
   use bc_module
   use convert_rhoc_to_c_module
-  use probin_common_module, only: rhobar, nspecies
+  use multifab_physbc_module
+  use probin_common_module, only: rhobar, nspecies, algorithm_type
 
   implicit none
 
@@ -46,7 +47,7 @@ contains
 
     ! fill rhotot ghost cells
     do n=1,nlevs
-       call fill_rhotot_ghost(conc(n),rhotot(n),the_bc_tower%bc_tower_array(n))
+       call fill_rhotot_ghost(conc(n),rhotot(n),dx(n,:),the_bc_tower%bc_tower_array(n))
     end do
 
     ! conc to rho - INCLUDING GHOST CELLS
@@ -58,10 +59,11 @@ contains
 
   end subroutine fill_rho_rhotot_ghost
 
-  subroutine fill_rhotot_ghost(conc,rhotot,the_bc_level)
+  subroutine fill_rhotot_ghost(conc,rhotot,dx,the_bc_level)
 
     type(multifab) , intent(in   ) :: conc
     type(multifab) , intent(inout) :: rhotot
+    real(kind=dp_t), intent(in   ) :: dx(:)
     type(bc_level) , intent(in   ) :: the_bc_level
 
     ! local
@@ -80,20 +82,31 @@ contains
 
     call multifab_fill_boundary(rhotot)
 
-    do i=1,nfabs(conc)
-       pp => dataptr(conc,i)
-       rp => dataptr(rhotot,i)
-       lo = lwb(get_box(conc,i))
-       hi = upb(get_box(conc,i))
-       select case (dm)
-       case (2)
-          call fill_rhotot_ghost_2d(pp(:,:,1,:),ng_c,rp(:,:,1,1),ng_r,lo,hi, &
-                                          the_bc_level%adv_bc_level_array(i,:,:,scal_bc_comp))
-       case (3)
-          call fill_rhotot_ghost_3d(pp(:,:,:,:),ng_c,rp(:,:,:,1),ng_r,lo,hi, &
-                                          the_bc_level%adv_bc_level_array(i,:,:,scal_bc_comp))
-       end select
-    end do
+    if (algorithm_type .eq. 6) then
+
+       ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
+       call multifab_fill_boundary(rhotot)
+       ! fill non-periodic domain boundary ghost cells
+       call multifab_physbc(rhotot,1,scal_bc_comp,1,the_bc_level,dx_in=dx)
+
+    else
+
+       do i=1,nfabs(conc)
+          pp => dataptr(conc,i)
+          rp => dataptr(rhotot,i)
+          lo = lwb(get_box(conc,i))
+          hi = upb(get_box(conc,i))
+          select case (dm)
+          case (2)
+             call fill_rhotot_ghost_2d(pp(:,:,1,:),ng_c,rp(:,:,1,1),ng_r,lo,hi, &
+                                       the_bc_level%adv_bc_level_array(i,:,:,scal_bc_comp))
+          case (3)
+             call fill_rhotot_ghost_3d(pp(:,:,:,:),ng_c,rp(:,:,:,1),ng_r,lo,hi, &
+                                       the_bc_level%adv_bc_level_array(i,:,:,scal_bc_comp))
+          end select
+       end do
+
+    end if
 
     call destroy(bpt)
 

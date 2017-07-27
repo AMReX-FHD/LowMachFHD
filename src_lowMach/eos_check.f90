@@ -2,7 +2,7 @@ module eos_check_module
 
   use multifab_module
   use ml_layout_module
-  use probin_common_module, only: rhobar, nspecies
+  use probin_common_module, only: rhobar, nspecies, algorithm_type, rho0
 
   implicit none
 
@@ -74,7 +74,24 @@ contains
 
     real(kind=dp_t) :: sum,error
 
-    do j=lo(2),hi(2)
+    if (algorithm_type .eq. 6) then
+
+       do j=lo(2),hi(2)
+       do i=lo(1),hi(1)
+
+          sum = 0.d0
+          do n=1,nspecies
+             sum = sum + rho(i,j,n)
+          end do
+          error = abs(rho0 - sum)
+          eos_error = max(eos_error,error)
+
+       end do
+       end do
+
+    else
+
+       do j=lo(2),hi(2)
        do i=lo(1),hi(1)
 
           sum = 0.d0
@@ -85,7 +102,9 @@ contains
           eos_error = max(eos_error,error)
 
        end do
-    end do
+       end do
+
+    end if
 
   end subroutine eos_check_2d
 
@@ -100,9 +119,28 @@ contains
 
     real(kind=dp_t) :: sum,error
 
-    do k=lo(3),hi(3)
+    if (algorithm_type .eq. 6) then
+
+       do k=lo(3),hi(3)
        do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
+       do i=lo(1),hi(1)
+
+          sum = 0.d0
+          do n=1,nspecies
+             sum = sum + rho(i,j,k,n)
+          end do
+          error = abs(rho0 - sum)
+          eos_error = max(eos_error,error)
+             
+       end do
+       end do
+       end do
+
+    else
+
+       do k=lo(3),hi(3)
+       do j=lo(2),hi(2)
+       do i=lo(1),hi(1)
 
           sum = 0.d0
           do n=1,nspecies
@@ -110,11 +148,12 @@ contains
           end do
           error = abs(1.d0 - sum)
           eos_error = max(eos_error,error)
-
              
-          end do
        end do
-    end do
+       end do
+       end do
+
+    end if
 
   end subroutine eos_check_3d
 

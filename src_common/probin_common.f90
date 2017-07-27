@@ -32,7 +32,7 @@ module probin_common_module
   integer,save    :: restart,print_int,project_eos_int,algorithm_type
   integer,save    :: barodiffusion_type
   real(dp_t),save :: molmass(MAX_SPECIES)
-  real(dp_t),save :: rhobar(MAX_SPECIES)
+  real(dp_t),save :: rhobar(MAX_SPECIES), rho0
   real(dp_t),save :: density_weights(MAX_SPECIES)
 
   integer(kind=ll_t)      :: n_cells_long(MAX_SPACEDIM)
@@ -74,6 +74,7 @@ module probin_common_module
   namelist /probin_common/ nspecies        ! number of species
   namelist /probin_common/ molmass         ! molecular masses for nspecies (mass per molecule, *not* molar mass)
   namelist /probin_common/ rhobar          ! pure component densities for all species
+  namelist /probin_common/ rho0            ! used in some Boussinesq algorithms
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
   namelist /probin_common/ variance_coef_mom  ! global scaling epsilon for stochastic momentum forcing
@@ -251,6 +252,7 @@ contains
     nspecies = 2
     molmass(:) = 1.0d0
     rhobar(:)  = 1.d0
+    rho0 = 1.d0
 
     variance_coef_mom = 1.d0
     variance_coef_mass = 1.d0
@@ -483,6 +485,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) rhobar(4)
+
+       case ('--rho0')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) rho0
 
        case ('--variance_coef_mom')
           farg = farg + 1
