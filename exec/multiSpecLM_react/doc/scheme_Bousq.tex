@@ -67,7 +67,7 @@ floatfix,
 
 \begin{document}
 
-\section*{Boussinesq Approximation Scheme for Reactive Multispecies}
+\section*{Boussinesq Approximation Scheme (Reactions + Electrolytes)}
 
 \noindent For a given initial mass density $\rho_0$, the scheme preserves constant total mass density $\rho(\V{x},t)=\sum_i \rho_i(\V{x},t)=\rho_0$.
 For gravity, we use $(\rho_\mathrm{EOS} - \rho_0)\V{g}$, where
@@ -77,6 +77,14 @@ For gravity, we use $(\rho_\mathrm{EOS} - \rho_0)\V{g}$, where
 
 \begin{enumerate}
 
+\item Calculate $\divg\V{F}^n$ and $R^n_i$:
+\begin{align}
+\label{boussinesq_fluxdiv_2nd}
+& \divg\V{F}^n \equiv \left[-\rho\V{W}\V{\chi}\V{\Gamma}\grad\V{x}\right]^n + \divg\left( \sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}/2} } \V{L}^n_{\frac12} \widetilde{\V{W}}^n_A \right), \\
+\label{boussinesq_chemrate_2nd}
+& R^n_i \equiv \frac{1}{\D{V}\D{t}/2}\sum_r \nu_{sr}\mathcal{P}_A(a^n_r\D{V}\D{t}/2).
+\end{align}
+
 \item Solve for $\V{v}^{n+1,*}$ and $\pi^{n+\myhalf,*}$:
 \begin{align}
 \label{boussinesq_stokes_v_1st}
@@ -84,21 +92,13 @@ For gravity, we use $(\rho_\mathrm{EOS} - \rho_0)\V{g}$, where
 \frac{\rho^n\V{v}^{n+1,*}-\rho^n\V{v}^n}{\D{t}} + \grad\pi^{n+\myhalf,*}
 & = \divg\left(-\rho^n\V{v}^n\V{v}^n\right) + 
 \frac{1}{2}\divg\left( \eta^n \overline{\grad}\V{v}^n + \eta^n \overline{\grad}\V{v}^{n+1,*} \right)
-+ \divg\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}} } \overline{\V{W}}^n \right)
++ \divg\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}} } \overline{\V{W}} \right)
 \\
 & + (\rho^n_\mathrm{EOS}-\rho_0)\V{g},
 \end{split}
 \\
 \label{boussinesq_stokes_p_1st}
 \divg\V{v}^{n+1,*} & = 0.
-\end{align}
-
-\item Calculate $\divg\V{F}^n$ and $R^n_i$:
-\begin{align}
-\label{boussinesq_fluxdiv_2nd}
-& \divg\V{F}^n \equiv \divg\V{F}_\mathrm{det}^n + \divg\left( \sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}/2} } \V{L}^n_{\frac12} \widetilde{\V{W}}^n_A \right), \\
-\label{boussinesq_chemrate_2nd}
-& R^n_i \equiv \frac{1}{\D{V}\D{t}/2}\sum_r \nu_{sr}\mathcal{P}_A(a^n_r\D{V}\D{t}/2).
 \end{align}
 
 \item Calculate $\rho^{n+\myhalf,*}_i$:
@@ -108,8 +108,8 @@ For gravity, we use $(\rho_\mathrm{EOS} - \rho_0)\V{g}$, where
 
 \item Calculate $\divg\V{F}^{n+\myhalf}$ and $R^{n+\myhalf}_i$:
 \begin{align}
-&\divg\V{F}^{n+\myhalf} \equiv \divg\V{F}_\mathrm{det}^{n+\myhalf,*} +
-\divg\left( \sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}} } \V{L}^{n+\myhalf,*}_{\frac12} \frac{\widetilde{\V{W}}^n_A+\widetilde{\V{W}}^n_B}{\sqrt{2}} \right),
+&\divg\V{F}^{n+\myhalf} \equiv \left[-\rho\V{W}\V{\chi}\V{\Gamma}\grad\V{x}\right]^{n+\myhalf,*} +
+\divg\left( \sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}} } \V{L}^{n+\myhalf,*}_{\frac12} \frac{\widetilde{\V{W}}_A+\widetilde{\V{W}}_B}{\sqrt{2}} \right),
 \\
 &R^{n+\myhalf}_i \equiv \frac{1}{2}\left[ \frac{1}{\D{V}\D{t}/2} \sum_r \nu_{sr} \mathcal{P}_A(a^n_r\D{V}\D{t}/2) + \frac{1}{\D{V}\D{t}/2} \sum_r \nu_{sr} \mathcal{P}_B\left( \left[ 2 a^{n+\myhalf,*}_r - a^n_r \right]^+ \D{V}\D{t}/2 \right) \right].
 \end{align}
@@ -127,7 +127,7 @@ For gravity, we use $(\rho_\mathrm{EOS} - \rho_0)\V{g}$, where
 \frac{\rho^{n+1}\V{v}^{n+1}-\rho^n\V{v}^n}{\D{t}} + \grad\pi^{n+\myhalf}
 &= \frac{1}{2}\divg\left(-\rho^n\V{v}^n\V{v}^n-\rho^{n+1}\V{v}^{n+1,*}\V{v}^{n+1,*}\right) 
 + \frac{1}{2}\divg\left( \eta^n \overline{\grad}\V{v}^n + \eta^{n+1} \overline{\grad}\V{v}^{n+1} \right) \\
-&+ \frac{1}{2}\divg\left[\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}}} + \sqrt{\frac{\eta^{n+1} k_\mathrm{B}T}{\D{V}\D{t}}} \right) \overline{\V{W}}^n \right]
+&+ \frac{1}{2}\divg\left[\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}}} + \sqrt{\frac{\eta^{n+1} k_\mathrm{B}T}{\D{V}\D{t}}} \right) \overline{\V{W}} \right]
 + 
 \begin{cases}
 \displaystyle \left(\frac{\rho^n_\mathrm{EOS}+\rho^{n+1}_\mathrm{EOS}}{2}-\rho_0\right)\V{g}, \\
@@ -159,7 +159,7 @@ For gravity, we use $(\rho_\mathrm{EOS} - \rho_0)\V{g}$, where
 & = \frac{\rho^n\V{v}^n-\rho^n\bar{\V{v}}}{\D{t}} - \grad\pi 
 + \divg\left(-\rho^n\V{v}^n\V{v}^n\right) \\
 & + \frac{1}{2}\divg\left( \eta^n\overline{\grad}\V{v}^n + \eta^n\overline{\grad}\bar{\V{v}} \right)
-+ \divg\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}} } \overline{\V{W}}^n \right) + \left(\rho^n_\mathrm{EOS}-\rho_0\right)\V{g},
++ \divg\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}} } \overline{\V{W}} \right) + \left(\rho^n_\mathrm{EOS}-\rho_0\right)\V{g},
 \end{split} \\
 \label{boussinesq_gmres_p_1st}
 -\divg\d{\V{v}} &= \divg\bar{\V{v}}.
@@ -180,7 +180,7 @@ For gravity, we use $(\rho_\mathrm{EOS} - \rho_0)\V{g}$, where
 & = \frac{\rho^n\V{v}^n-\rho^{n+1}\bar{\V{v}}}{\D{t}} - \grad\pi 
 + \frac{1}{2}\divg\left(-\rho^n\V{v}^n\V{v}^n-\rho^{n+1}\V{v}^{n+1,*}\V{v}^{n+1,*}\right) \\
 & + \frac{1}{2}\divg\left( \eta^n\overline{\grad}\V{v}^n + \eta^{n+1}\overline{\grad}\bar{\V{v}} \right) 
-+ \frac{1}{2}\divg\left[\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}}} + \sqrt{\frac{\eta^{n+1} k_\mathrm{B}T}{\D{V}\D{t}}} \right) \overline{\V{W}}^n \right] \\
++ \frac{1}{2}\divg\left[\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}}} + \sqrt{\frac{\eta^{n+1} k_\mathrm{B}T}{\D{V}\D{t}}} \right) \overline{\V{W}} \right] \\
 & +
 \begin{cases}
 \displaystyle \left(\frac{\rho^n_\mathrm{EOS}+\rho^{n+1}_\mathrm{EOS}}{2}-\rho_0\right)\V{g}, \\
