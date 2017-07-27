@@ -113,8 +113,7 @@ contains
     type(multifab) ::          n_new(mla%nlevel)
 
     ! only used when use_charged_fluid=T
-    type(multifab) :: Lorentz_force_old(mla%nlevel,mla%dim)
-    type(multifab) :: Lorentz_force_new(mla%nlevel,mla%dim)
+    type(multifab) :: Lorentz_force(mla%nlevel,mla%dim)
 
     integer :: i,dm,n,nlevs
 
@@ -197,8 +196,7 @@ contains
     if (use_charged_fluid) then
        do n=1,nlevs
           do i=1,dm
-             call multifab_build_edge(Lorentz_force_old(n,i),mla%la(n),1,0,i)
-             call multifab_build_edge(Lorentz_force_new(n,i),mla%la(n),1,0,i)
+             call multifab_build_edge(Lorentz_force(n,i),mla%la(n),1,0,i)
           end do
        end do
     end if
@@ -273,6 +271,31 @@ contains
     ! gravity
     if (any(grav(1:dm) .ne. 0.d0)) then
        call mk_grav_force_bousq(mla,gmres_rhs_v,.true.,rhotot_fc_old,rhotot_fc_old,the_bc_tower)
+    end if
+
+    ! compute diffusive, stochastic, potential mass fluxes
+    ! with barodiffusion and thermodiffusion
+    ! this computes "-F = rho W chi [Gamma grad x... ]"
+    call compute_mass_fluxdiv(mla,rho_old,rhotot_old,gradp_baro,Temp, &
+                              diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                              diff_mass_flux,stoch_mass_flux, &
+                              dt,time,dx,weights,the_bc_tower, &
+                              charge_old,grad_Epot_old,Epot, &
+                              permittivity)
+
+    if (use_charged_fluid) then
+
+       ! compute old Lorentz force
+       call compute_Lorentz_force(mla,Lorentz_force,grad_Epot_old,permittivity, &
+                                  charge_old,dx,the_bc_tower)
+
+       ! subtract Lorentz force from gmres_rhs_v
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_saxpy_3(gmres_rhs_v(n,i),-1.d0,Lorentz_force(n,i))
+          end do
+       end do
+
     end if
 
     ! compute grad pi^{n-1/2}
@@ -393,16 +416,6 @@ contains
     ! increment adv_mass_fluxdiv by -rho_i^n * v^{n+1,*}
     call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv,.true.,dx,1,nspecies)
 
-    ! compute diffusive, stochastic, potential mass fluxes
-    ! with barodiffusion and thermodiffusion
-    ! this computes "-F = rho W chi [Gamma grad x... ]"
-    call compute_mass_fluxdiv(mla,rho_old,rhotot_old,gradp_baro,Temp, &
-                              diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                              diff_mass_flux,stoch_mass_flux, &
-                              dt,time,dx,weights,the_bc_tower, &
-                              charge_old,grad_Epot_old,Epot, &
-                              permittivity)
-
     ! compute chemical rates m_i*R^n_i
     if (nreactions > 0) then
        
@@ -426,12 +439,6 @@ contains
 
     end if
 
-    if (use_charged_fluid) then
-       ! compute old Lorentz force
-       call compute_Lorentz_force(mla,Lorentz_force_old,grad_Epot_old,permittivity, &
-                                  charge_old,dx,the_bc_tower)
-    end if
-
     ! Step 3: density prediction to t^{n+1/2}
 
     ! compute rho_i^{n+1/2} (store in rho_new)
@@ -451,17 +458,24 @@ contains
     ! compute rhotot^{n+1/2} from rho^{n+1/2} in VALID REGION
     call compute_rhotot(mla,rho_new,rhotot_new)
 
-    ! fill rho and rhotot ghost cells
+    ! fill rho and rhotot ghost cells at t^{n+1/2}
     call fill_rho_rhotot_ghost(mla,rho_new,rhotot_new,dx,the_bc_tower)
+
+    ! average rho_i^{n+1/2} to faces
+    call average_cc_to_face(nlevs,rho_new,rho_fc,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+
+    if (use_charged_fluid) then
+       ! compute total charge at t^{n+1/2}
+       call dot_with_z(mla,rho_new,charge_new)
+       ! compute permittivity at t^{n+1/2}
+       call compute_permittivity(mla,permittivity,rho_new,rhotot_new,the_bc_tower)
+    end if
 
     ! compute (eta,kappa)^{n+1/2}
     call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot_new,Temp,dx, &
                            the_bc_tower%bc_tower_array)
 
     ! Step 4: compute mass fluxes and reactions at t^{n+1/2}
-
-    ! average rho_i^{n+1/2} to faces
-    call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
 
     ! compute adv_mass_fluxdiv = -rho_i^{n+1/2} * v^n
     call mk_advective_s_fluxdiv(mla,umac_old,rho_fc,adv_mass_fluxdiv,.false.,dx,1,nspecies)
@@ -520,6 +534,14 @@ contains
 
     end if
 
+    if (use_charged_fluid) then
+
+       ! compute Lorentz force (using midpoint value not trapezoidal, will add to gmres_rhs_v later)
+       call compute_Lorentz_force(mla,Lorentz_force,grad_Epot_new,permittivity, &
+                                  charge_new,dx,the_bc_tower)
+
+    end if
+
     ! compute chemical rates m_i*R^{n+1/2}_i
     if (nreactions > 0) then
        ! convert rho_old (at n) and rho_new (at n+1/2) (mass densities rho_i)
@@ -569,11 +591,18 @@ contains
     ! compute rhotot^{n+1} from rho^{n+1} in VALID REGION
     call compute_rhotot(mla,rho_new,rhotot_new)
 
-    ! fill rho and rhotot ghost cells
+    ! fill rho and rhotot ghost cells at t^{n+1}
     call fill_rho_rhotot_ghost(mla,rho_new,rhotot_new,dx,the_bc_tower)
 
-    ! average rhotot_new to faces
+    ! average rho^{n+1} to faces
     call average_cc_to_face(nlevs,rhotot_new,rhotot_fc_new,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+
+    if (use_charged_fluid) then
+       ! compute total charge at t^{n+1}
+       call dot_with_z(mla,rho_new,charge_new)
+       ! compute permittivity at t^{n+1}
+       call compute_permittivity(mla,permittivity,rho_new,rhotot_new,the_bc_tower)
+    end if
 
     ! compute (eta,kappa)^{n+1}
     call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot_new,Temp,dx, &
@@ -629,6 +658,17 @@ contains
     ! gravity
     if (any(grav(1:dm) .ne. 0.d0)) then
        call mk_grav_force_bousq(mla,gmres_rhs_v,.true.,rhotot_fc_old,rhotot_fc_new,the_bc_tower)
+    end if
+
+    if (use_charged_fluid) then
+
+       ! subtract Lorentz force from gmres_rhs_v
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_saxpy_3(gmres_rhs_v(n,i),-1.d0,Lorentz_force(n,i))
+          end do
+       end do
+
     end if
 
     ! subtract grad pi^{n-1/2} from gmres_rhs_v
@@ -793,8 +833,7 @@ contains
     if (use_charged_fluid) then
        do n=1,nlevs
           do i=1,dm
-             call multifab_destroy(Lorentz_force_old(n,i))
-             call multifab_destroy(Lorentz_force_new(n,i))
+             call multifab_destroy(Lorentz_force(n,i))
           end do
        end do
     end if
