@@ -53,6 +53,7 @@ floatfix,
 \global\long\def\myhalf{\sfrac{1}{2}}
 
 % misc
+\newcommand{\lapl}{{\nabla^2}}                            % Laplacian
 \newcommand{\dlapl}{{\nabla^2_\mathrm{d}}}                % discrete Laplacian
 \newcommand{\divg}{{\V\nabla\cdot}}                       % divergence
 \newcommand{\ddivg}{{\V{\nabla}_\mathrm{d}\cdot}}         % discrete divergence
@@ -77,10 +78,15 @@ For gravity, we use $(\rho_\mathrm{EOS} - \rho_0)\V{g}$, where
 
 \begin{enumerate}
 
+\item Solve the Poisson equation:
+\begin{equation}
+\epsilon\lapl\Phi^n = - \left(q^\mathrm{f}\right)^n.
+\end{equation}
+
 \item Calculate $\divg\V{F}^n$ and $R^n_i$:
 \begin{align}
 \label{boussinesq_fluxdiv_2nd}
-& \divg\V{F}^n \equiv \left[-\rho\V{W}\V{\chi}\V{\Gamma}\grad\V{x}\right]^n + \divg\left( \sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}/2} } \V{L}^n_{\frac12} \widetilde{\V{W}}^n_A \right), \\
+& \divg\V{F}^n \equiv \left[-\rho\M{W}\V{\chi}\left(\V{\Gamma}\grad\V{x}+\frac{\bar{m}\M{W}\V{z}}{k_\mathrm{B}T}\grad\Phi\right)\right]^n + \divg\left( \sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}/2} } \V{L}^n_{\frac12} \widetilde{\V{W}}^n_A \right), \\
 \label{boussinesq_chemrate_2nd}
 & R^n_i \equiv \frac{1}{\D{V}\D{t}/2}\sum_r \nu_{sr}\mathcal{P}_A(a^n_r\D{V}\D{t}/2).
 \end{align}
@@ -94,7 +100,7 @@ For gravity, we use $(\rho_\mathrm{EOS} - \rho_0)\V{g}$, where
 \frac{1}{2}\divg\left( \eta^n \overline{\grad}\V{v}^n + \eta^n \overline{\grad}\V{v}^{n+1,*} \right)
 + \divg\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}} } \overline{\V{W}} \right)
 \\
-& + (\rho^n_\mathrm{EOS}-\rho_0)\V{g},
+& + (\rho^n_\mathrm{EOS}-\rho_0)\V{g} - (q^\mathrm{f}\grad\Phi)^n,
 \end{split}
 \\
 \label{boussinesq_stokes_p_1st}
@@ -106,9 +112,14 @@ For gravity, we use $(\rho_\mathrm{EOS} - \rho_0)\V{g}$, where
 \rho^{n+\myhalf,*}_i = \rho^n_i + \frac{\D{t}}{2} \left[ -\divg\V{F}^n_i + m_i R^n_i + \divg\left( -\rho^n_i \frac{\V{v}^n+\V{v}^{n+1,*}}{2} \right) \right].
 \end{equation}
 
+\item Solve the Poisson equation:
+\begin{equation}
+\epsilon\lapl\Phi^{n+\myhalf,*} = - \left(q^\mathrm{f}\right)^{n+\myhalf,*}.
+\end{equation}
+
 \item Calculate $\divg\V{F}^{n+\myhalf}$ and $R^{n+\myhalf}_i$:
 \begin{align}
-&\divg\V{F}^{n+\myhalf} \equiv \left[-\rho\V{W}\V{\chi}\V{\Gamma}\grad\V{x}\right]^{n+\myhalf,*} +
+&\divg\V{F}^{n+\myhalf} \equiv \left[-\rho\V{W}\V{\chi}\left(\V{\Gamma}\grad\V{x}+\frac{\bar{m}\M{W}\V{z}}{k_\mathrm{B}T}\grad\Phi\right)\right]^{n+\myhalf,*} +
 \divg\left( \sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}} } \V{L}^{n+\myhalf,*}_{\frac12} \frac{\widetilde{\V{W}}_A+\widetilde{\V{W}}_B}{\sqrt{2}} \right),
 \\
 &R^{n+\myhalf}_i \equiv \frac{1}{2}\left[ \frac{1}{\D{V}\D{t}/2} \sum_r \nu_{sr} \mathcal{P}_A(a^n_r\D{V}\D{t}/2) + \frac{1}{\D{V}\D{t}/2} \sum_r \nu_{sr} \mathcal{P}_B\left( \left[ 2 a^{n+\myhalf,*}_r - a^n_r \right]^+ \D{V}\D{t}/2 \right) \right].
@@ -127,12 +138,8 @@ For gravity, we use $(\rho_\mathrm{EOS} - \rho_0)\V{g}$, where
 \frac{\rho^{n+1}\V{v}^{n+1}-\rho^n\V{v}^n}{\D{t}} + \grad\pi^{n+\myhalf}
 &= \frac{1}{2}\divg\left(-\rho^n\V{v}^n\V{v}^n-\rho^{n+1}\V{v}^{n+1,*}\V{v}^{n+1,*}\right) 
 + \frac{1}{2}\divg\left( \eta^n \overline{\grad}\V{v}^n + \eta^{n+1} \overline{\grad}\V{v}^{n+1} \right) \\
-&+ \frac{1}{2}\divg\left[\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}}} + \sqrt{\frac{\eta^{n+1} k_\mathrm{B}T}{\D{V}\D{t}}} \right) \overline{\V{W}} \right]
-+ 
-\begin{cases}
-\displaystyle \left(\frac{\rho^n_\mathrm{EOS}+\rho^{n+1}_\mathrm{EOS}}{2}-\rho_0\right)\V{g}, \\
-\big(\rho^{n+\myhalf,*}_\mathrm{EOS}-\rho_0\big)\V{g}, 
-\end{cases}
+&+ \frac{1}{2}\divg\left[\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}}} + \sqrt{\frac{\eta^{n+1} k_\mathrm{B}T}{\D{V}\D{t}}} \right) \overline{\V{W}} \right] \\
+&+ \big(\rho^{n+\myhalf,*}_\mathrm{EOS}-\rho_0\big)\V{g} - \left(q^\mathrm{f}\grad\Phi\right)^{n+\myhalf,*}, 
 \end{split} \\
 \label{boussinesq_stokes_p_2nd}
 \divg\V{v}^{n+1} & = 0.
