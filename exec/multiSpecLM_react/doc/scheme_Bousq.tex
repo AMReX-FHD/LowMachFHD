@@ -69,12 +69,11 @@ floatfix,
 
 \section*{Boussinesq Approximation Scheme for Reactive Multispecies}
 
-\noindent The scheme preserves constant total mass density $\rho(\V{x},t)=\sum_i \rho_i(\V{x},t)$.
+\noindent For a given initial mass density $\rho_0$, the scheme preserves constant total mass density $\rho(\V{x},t)=\sum_i \rho_i(\V{x},t)=\rho_0$.
 For gravity, we use $(\rho_\mathrm{EOS} - \rho_0)\V{g}$, where
 \begin{equation}
-\rho_\mathrm{EOS} = \left(\sum_i \frac{w_i}{\bar{\rho}_i}\right)^{-1}
+\rho_\mathrm{EOS} = \left(\sum_i \frac{w_i}{\bar{\rho}_i}\right)^{-1}.
 \end{equation}
-and $\rho_0$ is a reference density.
 
 \begin{enumerate}
 
@@ -99,7 +98,7 @@ and $\rho_0$ is a reference density.
 \label{boussinesq_fluxdiv_2nd}
 & \divg\V{F}^n \equiv \divg\V{F}_\mathrm{det}^n + \divg\left( \sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}/2} } \V{L}^n_{\frac12} \widetilde{\V{W}}^n_A \right), \\
 \label{boussinesq_chemrate_2nd}
-& R^n_i = \frac{1}{\D{V}\D{t}/2}\sum_r \nu_{sr}\mathcal{P}_A(a^n_r\D{V}\D{t}/2).
+& R^n_i \equiv \frac{1}{\D{V}\D{t}/2}\sum_r \nu_{sr}\mathcal{P}_A(a^n_r\D{V}\D{t}/2).
 \end{align}
 
 \item Calculate $\rho^{n+\myhalf,*}_i$:
@@ -109,10 +108,10 @@ and $\rho_0$ is a reference density.
 
 \item Calculate $\divg\V{F}^{n+\myhalf}$ and $R^{n+\myhalf}_i$:
 \begin{align}
-&\divg\V{F}^{n+\myhalf} \equiv \divg\V{F}_\mathrm{det}^{n+\myhalf} +
-\divg\left( \sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}} } \V{L}^{n+\myhalf}_{\frac12} \frac{\widetilde{\V{W}}^n_A+\widetilde{\V{W}}^n_B}{\sqrt{2}} \right),
+&\divg\V{F}^{n+\myhalf} \equiv \divg\V{F}_\mathrm{det}^{n+\myhalf,*} +
+\divg\left( \sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}} } \V{L}^{n+\myhalf,*}_{\frac12} \frac{\widetilde{\V{W}}^n_A+\widetilde{\V{W}}^n_B}{\sqrt{2}} \right),
 \\
-&R^{n+\myhalf}_i = \frac{1}{2}\left[ \frac{1}{\D{V}\D{t}/2} \sum_r \nu_{sr} \mathcal{P}_A(a^n_r\D{V}\D{t}/2) + \frac{1}{\D{V}\D{t}/2} \sum_r \nu_{sr} \mathcal{P}_B\left( \left[ 2 a^{n+\myhalf}_r - a^n_r \right]^+ \D{V}\D{t}/2 \right) \right].
+&R^{n+\myhalf}_i \equiv \frac{1}{2}\left[ \frac{1}{\D{V}\D{t}/2} \sum_r \nu_{sr} \mathcal{P}_A(a^n_r\D{V}\D{t}/2) + \frac{1}{\D{V}\D{t}/2} \sum_r \nu_{sr} \mathcal{P}_B\left( \left[ 2 a^{n+\myhalf,*}_r - a^n_r \right]^+ \D{V}\D{t}/2 \right) \right].
 \end{align}
 
 \item Calculate $\rho^{n+1}_i$:
@@ -132,7 +131,7 @@ and $\rho_0$ is a reference density.
 + 
 \begin{cases}
 \displaystyle \left(\frac{\rho^n_\mathrm{EOS}+\rho^{n+1}_\mathrm{EOS}}{2}-\rho_0\right)\V{g}, \\
-\big(\rho^{n+\myhalf}_\mathrm{EOS}-\rho_0\big)\V{g}, 
+\big(\rho^{n+\myhalf,*}_\mathrm{EOS}-\rho_0\big)\V{g}, 
 \end{cases}
 \end{split} \\
 \label{boussinesq_stokes_p_2nd}
@@ -185,7 +184,7 @@ and $\rho_0$ is a reference density.
 & +
 \begin{cases}
 \displaystyle \left(\frac{\rho^n_\mathrm{EOS}+\rho^{n+1}_\mathrm{EOS}}{2}-\rho_0\right)\V{g}, \\
-\big(\rho^{n+\myhalf}_\mathrm{EOS}-\rho_0\big)\V{g}, 
+\big(\rho^{n+\myhalf,*}_\mathrm{EOS}-\rho_0\big)\V{g}, 
 \end{cases}
 \end{split} \\
 \label{boussinesq_gmres_p_2nd}
