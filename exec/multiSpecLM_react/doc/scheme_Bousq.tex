@@ -78,15 +78,22 @@ For gravity, we use $(\rho_\mathrm{EOS} - \rho_0)\V{g}$, where
 
 \begin{enumerate}
 
-\item Calculate $\V{F}_\mathrm{d}^n$:
+\item Calculate diffusive fluxes (deterministic and stochastic) $\V{F}_\mathrm{d}^n$:
 \begin{equation}
 \V{F}_\mathrm{d}^n \equiv \big[-\rho\M{W}\V{\chi}\V{\Gamma}\grad\V{x}\big]^n + \sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}/2} } \V{L}^n_{\frac12} \widetilde{\V{\mathcal{W}}}^n_A.
 \end{equation}
 
 \item Solve the Poisson equation:
+For explicit method:
 \begin{equation}
 \big[\divg\left(\epsilon\grad\Phi\right)\big]^n = - \left(q^\mathrm{f}\right)^n.
 \end{equation}
+or if electroneutral:
+\begin{equation}
+ \nabla \cdot \left[ \left(\frac{\rho^2}{n k_B T} \V{z}^T \V{W} \V{\chi} \V{W} \V{z}\right)^n \nabla \Phi^{n} \right] = 
+ \nabla \cdot \left( \V{z}^T \V{F}_\mathrm{d}^n \right),
+\end{equation}
+
 
 \item Calculate $\divg\V{F}^n$ and $R^n_i$:
 \begin{align}
@@ -122,8 +129,14 @@ For gravity, we use $(\rho_\mathrm{EOS} - \rho_0)\V{g}$, where
 \end{equation}
 
 \item Solve the Poisson equation:
+For explicit:
 \begin{equation}
 \big[\divg\left(\epsilon\grad\Phi\right)\big]^{n+\myhalf,*} = - \left(q^\mathrm{f}\right)^{n+\myhalf,*}.
+\end{equation}
+or if electroneutral:
+\begin{equation}
+ \nabla \cdot \left[ \left(\frac{\rho^2}{n k_B T} \V{z}^T \V{W} \V{\chi} \V{W} \V{z}\right)^{n+\myhalf,*} \nabla \Phi^{n+\myhalf,*} \right] = 
+ \nabla \cdot \left( \V{z}^T \V{F}_\mathrm{d}^{n+\myhalf,*} \right),
 \end{equation}
 
 \item Calculate $\divg\V{F}^{n+\myhalf}$ and $R^{n+\myhalf}_i$:
@@ -132,12 +145,6 @@ For gravity, we use $(\rho_\mathrm{EOS} - \rho_0)\V{g}$, where
 \\
 &R^{n+\myhalf}_i \equiv \frac{1}{2}\left[ R_i^n + \frac{1}{\D{V}\D{t}/2} \sum_r \nu_{sr} \mathcal{P}_B\left( \left[ 2 a^{n+\myhalf,*}_r - a^n_r \right]^+ \D{V}\D{t}/2 \right) \right].
 \end{align}
-
-\item Calculate $\rho^{n+1}_i$:
-\begin{equation}
-\rho^{n+1}_i = \rho^n_i + \D{t} \left[ -\divg\V{F}^{n+\myhalf}_i + m_i R^{n+\myhalf}_i 
-+ \divg\left( -\rho^{n+\myhalf,*}_i \frac{\V{v}^n + \V{v}^{n+1,*}}{2} \right) \right].
-\end{equation} 
 
 \item Solve for $\V{v}^{n+1}$ and $\pi^{n+\myhalf}$:
 \begin{align}
@@ -153,6 +160,14 @@ For gravity, we use $(\rho_\mathrm{EOS} - \rho_0)\V{g}$, where
 \label{boussinesq_stokes_p_2nd}
 \divg\V{v}^{n+1} & = 0.
 \end{align}
+
+
+\item Calculate $\rho^{n+1}_i$:
+\begin{equation}
+\rho^{n+1}_i = \rho^n_i + \D{t} \left[ -\divg\V{F}^{n+\myhalf}_i + m_i R^{n+\myhalf}_i 
++ \divg\left( -\rho^{n+\myhalf,*}_i \frac{\V{v}^n + \V{v}^{n+1,*}}{2} \right) \right].
+\end{equation} 
+
 
 \end{enumerate}
 
