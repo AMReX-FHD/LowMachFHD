@@ -270,7 +270,7 @@ contains
 
     ! gravity
     if (any(grav(1:dm) .ne. 0.d0)) then
-       call mk_grav_force_bousq(mla,gmres_rhs_v,.true.,rhotot_fc_old,rhotot_fc_old,the_bc_tower)
+       call mk_grav_force_bousq(mla,gmres_rhs_v,.true.,rho_fc,the_bc_tower)
     end if
 
     ! compute diffusive, stochastic, potential mass fluxes
@@ -657,7 +657,7 @@ contains
 
     ! gravity
     if (any(grav(1:dm) .ne. 0.d0)) then
-       call mk_grav_force_bousq(mla,gmres_rhs_v,.true.,rhotot_fc_old,rhotot_fc_new,the_bc_tower)
+       call mk_grav_force_bousq(mla,gmres_rhs_v,.true.,rho_fc,the_bc_tower)
     end if
 
     if (use_charged_fluid) then

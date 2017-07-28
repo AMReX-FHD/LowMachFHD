@@ -206,13 +206,12 @@ contains
 
   end subroutine mk_grav_force_3d
 
-  subroutine mk_grav_force_bousq(mla,m_force,increment,rho_fc_old,rho_fc_new,the_bc_tower)
+  subroutine mk_grav_force_bousq(mla,m_force,increment,rho_fc,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: m_force(:,:)
     logical        , intent(in   ) :: increment
-    type(multifab) , intent(in   ) :: rho_fc_old(:,:)
-    type(multifab) , intent(in   ) :: rho_fc_new(:,:)
+    type(multifab) , intent(in   ) :: rho_fc(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! local
@@ -225,9 +224,6 @@ contains
     real(kind=dp_t), pointer :: sox(:,:,:,:)
     real(kind=dp_t), pointer :: soy(:,:,:,:)
     real(kind=dp_t), pointer :: soz(:,:,:,:)
-    real(kind=dp_t), pointer :: snx(:,:,:,:)
-    real(kind=dp_t), pointer :: sny(:,:,:,:)
-    real(kind=dp_t), pointer :: snz(:,:,:,:)
 
     type(bl_prof_timer),save :: bpt
 
@@ -236,32 +232,29 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
 
-    ng_s  = rho_fc_old(1,1)%ng
+    ng_s  = rho_fc(1,1)%ng
     ng_u  = m_force(1,1)%ng
 
     do n=1,nlevs
        do i=1, nfabs(m_force(n,1))
           fxp => dataptr(m_force(n,1), i)
           fyp => dataptr(m_force(n,2), i)
-          sox => dataptr(rho_fc_old(n,1), i)
-          soy => dataptr(rho_fc_old(n,2), i)
-          snx => dataptr(rho_fc_new(n,1), i)
-          sny => dataptr(rho_fc_new(n,2), i)
+          sox => dataptr(rho_fc(n,1), i)
+          soy => dataptr(rho_fc(n,2), i)
           lo = lwb(get_box(m_force(n,1), i))
           hi = upb(get_box(m_force(n,1), i))
           select case (dm)
           case (2)
              call mk_grav_force_bousq_2d(fxp(:,:,1,1), fyp(:,:,1,1), ng_u, &
                                          sox(:,:,1,:), soy(:,:,1,:), &
-                                         snx(:,:,1,:), sny(:,:,1,:), ng_s, lo, hi, &
+                                         ng_s, lo, hi, &
                                          increment)
           case (3)
              fzp => dataptr(m_force(n,3), i)
-             soz => dataptr(rho_fc_old(n,3), i)
-             snz => dataptr(rho_fc_new(n,3), i)
+             soz => dataptr(rho_fc(n,3), i)
              call mk_grav_force_bousq_3d(fxp(:,:,:,1), fyp(:,:,:,1), fzp(:,:,:,1), ng_u, &
                                          sox(:,:,:,:), soy(:,:,:,:), soz(:,:,:,:), &
-                                         snx(:,:,:,:), sny(:,:,:,:), snz(:,:,:,:), ng_s, lo, hi, &
+                                         ng_s, lo, hi, &
                                          increment)
           end select
        end do
@@ -275,21 +268,19 @@ contains
 
   end subroutine mk_grav_force_bousq
 
-  subroutine mk_grav_force_bousq_2d(m_forcex,m_forcey,ng_u,rho_oldx,rho_oldy,rho_newx,rho_newy, &
+  subroutine mk_grav_force_bousq_2d(m_forcex,m_forcey,ng_u,rhox,rhoy, &
                                     ng_s,lo,hi,increment)
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_u,ng_s
     real(kind=dp_t), intent(inout) :: m_forcex(lo(1)-ng_u:,lo(2)-ng_u:)
     real(kind=dp_t), intent(inout) :: m_forcey(lo(1)-ng_u:,lo(2)-ng_u:)
-    real(kind=dp_t), intent(in   ) :: rho_oldx(lo(1)-ng_s:,lo(2)-ng_s:,:)
-    real(kind=dp_t), intent(in   ) :: rho_oldy(lo(1)-ng_s:,lo(2)-ng_s:,:)
-    real(kind=dp_t), intent(in   ) :: rho_newx(lo(1)-ng_s:,lo(2)-ng_s:,:)
-    real(kind=dp_t), intent(in   ) :: rho_newy(lo(1)-ng_s:,lo(2)-ng_s:,:)
+    real(kind=dp_t), intent(in   ) ::     rhox(lo(1)-ng_s:,lo(2)-ng_s:,:)
+    real(kind=dp_t), intent(in   ) ::     rhoy(lo(1)-ng_s:,lo(2)-ng_s:,:)
     logical        , intent(in   ) :: increment
 
     ! local
     integer i,j,n,comp
-    real(kind=dp_t) :: rhotot,rhotot_old,rhotot_new
+    real(kind=dp_t) :: rhotot
     real(kind=dp_t) :: c(nspecies)
 
     if (increment) then
@@ -297,41 +288,23 @@ contains
        do j=lo(2),hi(2)
        do i=lo(1),hi(1)+1
 
-          ! for old density:
           ! compute rhotot via sum
           rhotot = 0.d0
           do n=1,nspecies
-             rhotot = rhotot + rho_oldx(i,j,comp)
+             rhotot = rhotot + rhox(i,j,comp)
           end do
           
           ! compute concentrations
-          c(1:nspecies) = rho_oldx(i,j,1:nspecies)/rhotot
+          c(1:nspecies) = rhox(i,j,1:nspecies)/rhotot
 
           ! compute rhotot via EOS
-          rhotot_old = 0.d0
-          do comp=1,nspecies
-             rhotot_old = rhotot_old + c(comp)/rhobar(comp)
-          end do
-          rhotot_old = 1.d0/rhotot_old
-
-          ! for new density:
-          ! compute rhotot via sum
           rhotot = 0.d0
-          do n=1,nspecies
-             rhotot = rhotot + rho_newx(i,j,comp)
-          end do
-          
-          ! compute concentrations
-          c(1:nspecies) = rho_newx(i,j,1:nspecies)/rhotot
-
-          ! compute rhotot via EOS
-          rhotot_new = 0.d0
           do comp=1,nspecies
-             rhotot_new = rhotot_new + c(comp)/rhobar(comp)
+             rhotot = rhotot + c(comp)/rhobar(comp)
           end do
-          rhotot_new = 1.d0/rhotot_new
+          rhotot = 1.d0/rhotot
 
-          m_forcex(i,j) = m_forcex(i,j) + 0.5d0*grav(1)*(rhotot_old+rhotot_new)
+          m_forcex(i,j) = m_forcex(i,j) + grav(1)*rhotot
 
        end do
        end do
@@ -339,41 +312,23 @@ contains
        do j=lo(2),hi(2)+1
        do i=lo(1),hi(1)
 
-          ! for old density:
           ! compute rhotot via sum
           rhotot = 0.d0
           do n=1,nspecies
-             rhotot = rhotot + rho_oldy(i,j,comp)
+             rhotot = rhotot + rhoy(i,j,comp)
           end do
           
           ! compute concentrations
-          c(1:nspecies) = rho_oldy(i,j,1:nspecies)/rhotot
+          c(1:nspecies) = rhoy(i,j,1:nspecies)/rhotot
 
           ! compute rhotot via EOS
-          rhotot_old = 0.d0
-          do comp=1,nspecies
-             rhotot_old = rhotot_old + c(comp)/rhobar(comp)
-          end do
-          rhotot_old = 1.d0/rhotot_old
-
-          ! for new density:
-          ! compute rhotot via sum
           rhotot = 0.d0
-          do n=1,nspecies
-             rhotot = rhotot + rho_newy(i,j,comp)
-          end do
-          
-          ! compute concentrations
-          c(1:nspecies) = rho_newy(i,j,1:nspecies)/rhotot
-
-          ! compute rhotot via EOS
-          rhotot_new = 0.d0
           do comp=1,nspecies
-             rhotot_new = rhotot_new + c(comp)/rhobar(comp)
+             rhotot = rhotot + c(comp)/rhobar(comp)
           end do
-          rhotot_new = 1.d0/rhotot_new
+          rhotot = 1.d0/rhotot
 
-          m_forcey(i,j) = m_forcey(i,j) + 0.5d0*grav(2)*(rhotot_old+rhotot_new)
+          m_forcey(i,j) = m_forcey(i,j) + grav(2)*rhotot
 
        end do
        end do
@@ -383,41 +338,23 @@ contains
        do j=lo(2),hi(2)
        do i=lo(1),hi(1)+1
 
-          ! for old density:
           ! compute rhotot via sum
           rhotot = 0.d0
           do n=1,nspecies
-             rhotot = rhotot + rho_oldx(i,j,comp)
+             rhotot = rhotot + rhox(i,j,comp)
           end do
           
           ! compute concentrations
-          c(1:nspecies) = rho_oldx(i,j,1:nspecies)/rhotot
+          c(1:nspecies) = rhox(i,j,1:nspecies)/rhotot
 
           ! compute rhotot via EOS
-          rhotot_old = 0.d0
-          do comp=1,nspecies
-             rhotot_old = rhotot_old + c(comp)/rhobar(comp)
-          end do
-          rhotot_old = 1.d0/rhotot_old
-
-          ! for new density:
-          ! compute rhotot via sum
           rhotot = 0.d0
-          do n=1,nspecies
-             rhotot = rhotot + rho_newx(i,j,comp)
-          end do
-          
-          ! compute concentrations
-          c(1:nspecies) = rho_newx(i,j,1:nspecies)/rhotot
-
-          ! compute rhotot via EOS
-          rhotot_new = 0.d0
           do comp=1,nspecies
-             rhotot_new = rhotot_new + c(comp)/rhobar(comp)
+             rhotot = rhotot + c(comp)/rhobar(comp)
           end do
-          rhotot_new = 1.d0/rhotot_new
+          rhotot = 1.d0/rhotot
 
-          m_forcex(i,j) = 0.5d0*grav(1)*(rhotot_old+rhotot_new)
+          m_forcex(i,j) = grav(1)*rhotot
 
        end do
        end do
@@ -425,41 +362,23 @@ contains
        do j=lo(2),hi(2)+1
        do i=lo(1),hi(1)
 
-          ! for old density:
           ! compute rhotot via sum
           rhotot = 0.d0
           do n=1,nspecies
-             rhotot = rhotot + rho_oldy(i,j,comp)
+             rhotot = rhotot + rhoy(i,j,comp)
           end do
           
           ! compute concentrations
-          c(1:nspecies) = rho_oldy(i,j,1:nspecies)/rhotot
+          c(1:nspecies) = rhoy(i,j,1:nspecies)/rhotot
 
           ! compute rhotot via EOS
-          rhotot_old = 0.d0
-          do comp=1,nspecies
-             rhotot_old = rhotot_old + c(comp)/rhobar(comp)
-          end do
-          rhotot_old = 1.d0/rhotot_old
-
-          ! for new density:
-          ! compute rhotot via sum
           rhotot = 0.d0
-          do n=1,nspecies
-             rhotot = rhotot + rho_newy(i,j,comp)
-          end do
-          
-          ! compute concentrations
-          c(1:nspecies) = rho_newy(i,j,1:nspecies)/rhotot
-
-          ! compute rhotot via EOS
-          rhotot_new = 0.d0
           do comp=1,nspecies
-             rhotot_new = rhotot_new + c(comp)/rhobar(comp)
+             rhotot = rhotot + c(comp)/rhobar(comp)
           end do
-          rhotot_new = 1.d0/rhotot_new
+          rhotot = 1.d0/rhotot
 
-          m_forcey(i,j) = 0.5d0*grav(2)*(rhotot_old+rhotot_new)
+          m_forcey(i,j) = grav(2)*rhotot
 
        end do
        end do
@@ -469,24 +388,20 @@ contains
   end subroutine mk_grav_force_bousq_2d
 
   subroutine mk_grav_force_bousq_3d(m_forcex,m_forcey,m_forcez,ng_u, &
-                                    rho_oldx,rho_oldy,rho_oldz, &
-                                    rho_newx,rho_newy,rho_newz,ng_s,lo,hi,increment)
+                                    rhox,rhoy,rhoz,ng_s,lo,hi,increment)
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_u,ng_s
     real(kind=dp_t), intent(inout) :: m_forcex(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
     real(kind=dp_t), intent(inout) :: m_forcey(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
     real(kind=dp_t), intent(inout) :: m_forcez(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
-    real(kind=dp_t), intent(in   ) :: rho_oldx(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
-    real(kind=dp_t), intent(in   ) :: rho_oldy(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
-    real(kind=dp_t), intent(in   ) :: rho_oldz(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
-    real(kind=dp_t), intent(in   ) :: rho_newx(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
-    real(kind=dp_t), intent(in   ) :: rho_newy(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
-    real(kind=dp_t), intent(in   ) :: rho_newz(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
+    real(kind=dp_t), intent(in   ) ::     rhox(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
+    real(kind=dp_t), intent(in   ) ::     rhoy(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
+    real(kind=dp_t), intent(in   ) ::     rhoz(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
     logical        , intent(in   ) :: increment
 
     ! local
     integer i,j,k,n,comp
-    real(kind=dp_t) :: rhotot,rhotot_old,rhotot_new
+    real(kind=dp_t) :: rhotot
     real(kind=dp_t) :: c(nspecies)
 
     if (increment) then
@@ -495,41 +410,23 @@ contains
        do j=lo(2),hi(2)
        do i=lo(1),hi(1)+1
 
-          ! for old density:
           ! compute rhotot via sum
           rhotot = 0.d0
           do n=1,nspecies
-             rhotot = rhotot + rho_oldx(i,j,k,comp)
+             rhotot = rhotot + rhox(i,j,k,comp)
           end do
           
           ! compute concentrations
-          c(1:nspecies) = rho_oldx(i,j,k,1:nspecies)/rhotot
+          c(1:nspecies) = rhox(i,j,k,1:nspecies)/rhotot
 
           ! compute rhotot via EOS
-          rhotot_old = 0.d0
-          do comp=1,nspecies
-             rhotot_old = rhotot_old + c(comp)/rhobar(comp)
-          end do
-          rhotot_old = 1.d0/rhotot_old
-
-          ! for new density:
-          ! compute rhotot via sum
           rhotot = 0.d0
-          do n=1,nspecies
-             rhotot = rhotot + rho_newx(i,j,k,comp)
-          end do
-          
-          ! compute concentrations
-          c(1:nspecies) = rho_newx(i,j,k,1:nspecies)/rhotot
-
-          ! compute rhotot via EOS
-          rhotot_new = 0.d0
           do comp=1,nspecies
-             rhotot_new = rhotot_new + c(comp)/rhobar(comp)
+             rhotot = rhotot + c(comp)/rhobar(comp)
           end do
-          rhotot_new = 1.d0/rhotot_new
+          rhotot = 1.d0/rhotot
 
-          m_forcex(i,j,k) = m_forcex(i,j,k) + 0.5d0*grav(1)*(rhotot_old+rhotot_new)
+          m_forcex(i,j,k) = m_forcex(i,j,k) + grav(1)*rhotot
 
        end do
        end do
@@ -539,41 +436,23 @@ contains
        do j=lo(2),hi(2)+1
        do i=lo(1),hi(1)
 
-          ! for old density:
           ! compute rhotot via sum
           rhotot = 0.d0
           do n=1,nspecies
-             rhotot = rhotot + rho_oldy(i,j,k,comp)
+             rhotot = rhotot + rhoy(i,j,k,comp)
           end do
           
           ! compute concentrations
-          c(1:nspecies) = rho_oldy(i,j,k,1:nspecies)/rhotot
+          c(1:nspecies) = rhoy(i,j,k,1:nspecies)/rhotot
 
           ! compute rhotot via EOS
-          rhotot_old = 0.d0
-          do comp=1,nspecies
-             rhotot_old = rhotot_old + c(comp)/rhobar(comp)
-          end do
-          rhotot_old = 1.d0/rhotot_old
-
-          ! for new density:
-          ! compute rhotot via sum
           rhotot = 0.d0
-          do n=1,nspecies
-             rhotot = rhotot + rho_newy(i,j,k,comp)
-          end do
-          
-          ! compute concentrations
-          c(1:nspecies) = rho_newy(i,j,k,1:nspecies)/rhotot
-
-          ! compute rhotot via EOS
-          rhotot_new = 0.d0
           do comp=1,nspecies
-             rhotot_new = rhotot_new + c(comp)/rhobar(comp)
+             rhotot = rhotot + c(comp)/rhobar(comp)
           end do
-          rhotot_new = 1.d0/rhotot_new
+          rhotot = 1.d0/rhotot
 
-          m_forcey(i,j,k) = m_forcey(i,j,k) + 0.5d0*grav(2)*(rhotot_old+rhotot_new)
+          m_forcey(i,j,k) = m_forcey(i,j,k) + grav(2)*rhotot
 
        end do
        end do
@@ -583,41 +462,23 @@ contains
        do j=lo(2),hi(2)
        do i=lo(1),hi(1)
 
-          ! for old density:
           ! compute rhotot via sum
           rhotot = 0.d0
           do n=1,nspecies
-             rhotot = rhotot + rho_oldz(i,j,k,comp)
+             rhotot = rhotot + rhoz(i,j,k,comp)
           end do
           
           ! compute concentrations
-          c(1:nspecies) = rho_oldz(i,j,k,1:nspecies)/rhotot
+          c(1:nspecies) = rhoz(i,j,k,1:nspecies)/rhotot
 
           ! compute rhotot via EOS
-          rhotot_old = 0.d0
-          do comp=1,nspecies
-             rhotot_old = rhotot_old + c(comp)/rhobar(comp)
-          end do
-          rhotot_old = 1.d0/rhotot_old
-
-          ! for new density:
-          ! compute rhotot via sum
           rhotot = 0.d0
-          do n=1,nspecies
-             rhotot = rhotot + rho_newz(i,j,k,comp)
-          end do
-          
-          ! compute concentrations
-          c(1:nspecies) = rho_newz(i,j,k,1:nspecies)/rhotot
-
-          ! compute rhotot via EOS
-          rhotot_new = 0.d0
           do comp=1,nspecies
-             rhotot_new = rhotot_new + c(comp)/rhobar(comp)
+             rhotot = rhotot + c(comp)/rhobar(comp)
           end do
-          rhotot_new = 1.d0/rhotot_new
+          rhotot = 1.d0/rhotot
 
-          m_forcez(i,j,k) = m_forcez(i,j,k) + 0.5d0*grav(3)*(rhotot_old+rhotot_new)
+          m_forcez(i,j,k) = m_forcez(i,j,k) + grav(3)*rhotot
 
        end do
        end do
@@ -629,41 +490,23 @@ contains
        do j=lo(2),hi(2)
        do i=lo(1),hi(1)+1
 
-          ! for old density:
           ! compute rhotot via sum
           rhotot = 0.d0
           do n=1,nspecies
-             rhotot = rhotot + rho_oldx(i,j,k,comp)
+             rhotot = rhotot + rhox(i,j,k,comp)
           end do
           
           ! compute concentrations
-          c(1:nspecies) = rho_oldx(i,j,k,1:nspecies)/rhotot
+          c(1:nspecies) = rhox(i,j,k,1:nspecies)/rhotot
 
           ! compute rhotot via EOS
-          rhotot_old = 0.d0
-          do comp=1,nspecies
-             rhotot_old = rhotot_old + c(comp)/rhobar(comp)
-          end do
-          rhotot_old = 1.d0/rhotot_old
-
-          ! for new density:
-          ! compute rhotot via sum
           rhotot = 0.d0
-          do n=1,nspecies
-             rhotot = rhotot + rho_newx(i,j,k,comp)
-          end do
-          
-          ! compute concentrations
-          c(1:nspecies) = rho_newx(i,j,k,1:nspecies)/rhotot
-
-          ! compute rhotot via EOS
-          rhotot_new = 0.d0
           do comp=1,nspecies
-             rhotot_new = rhotot_new + c(comp)/rhobar(comp)
+             rhotot = rhotot + c(comp)/rhobar(comp)
           end do
-          rhotot_new = 1.d0/rhotot_new
+          rhotot = 1.d0/rhotot
 
-          m_forcex(i,j,k) = 0.5d0*grav(1)*(rhotot_old+rhotot_new)
+          m_forcex(i,j,k) = grav(1)*rhotot
 
        end do
        end do
@@ -673,41 +516,23 @@ contains
        do j=lo(2),hi(2)+1
        do i=lo(1),hi(1)
 
-          ! for old density:
           ! compute rhotot via sum
           rhotot = 0.d0
           do n=1,nspecies
-             rhotot = rhotot + rho_oldy(i,j,k,comp)
+             rhotot = rhotot + rhoy(i,j,k,comp)
           end do
           
           ! compute concentrations
-          c(1:nspecies) = rho_oldy(i,j,k,1:nspecies)/rhotot
+          c(1:nspecies) = rhoy(i,j,k,1:nspecies)/rhotot
 
           ! compute rhotot via EOS
-          rhotot_old = 0.d0
-          do comp=1,nspecies
-             rhotot_old = rhotot_old + c(comp)/rhobar(comp)
-          end do
-          rhotot_old = 1.d0/rhotot_old
-
-          ! for new density:
-          ! compute rhotot via sum
           rhotot = 0.d0
-          do n=1,nspecies
-             rhotot = rhotot + rho_newy(i,j,k,comp)
-          end do
-          
-          ! compute concentrations
-          c(1:nspecies) = rho_newy(i,j,k,1:nspecies)/rhotot
-
-          ! compute rhotot via EOS
-          rhotot_new = 0.d0
           do comp=1,nspecies
-             rhotot_new = rhotot_new + c(comp)/rhobar(comp)
+             rhotot = rhotot + c(comp)/rhobar(comp)
           end do
-          rhotot_new = 1.d0/rhotot_new
+          rhotot = 1.d0/rhotot
 
-          m_forcey(i,j,k) = 0.5d0*grav(2)*(rhotot_old+rhotot_new)
+          m_forcey(i,j,k) = grav(2)*rhotot
 
        end do
        end do
@@ -717,41 +542,23 @@ contains
        do j=lo(2),hi(2)
        do i=lo(1),hi(1)
 
-          ! for old density:
           ! compute rhotot via sum
           rhotot = 0.d0
           do n=1,nspecies
-             rhotot = rhotot + rho_oldz(i,j,k,comp)
+             rhotot = rhotot + rhoz(i,j,k,comp)
           end do
           
           ! compute concentrations
-          c(1:nspecies) = rho_oldz(i,j,k,1:nspecies)/rhotot
+          c(1:nspecies) = rhoz(i,j,k,1:nspecies)/rhotot
 
           ! compute rhotot via EOS
-          rhotot_old = 0.d0
-          do comp=1,nspecies
-             rhotot_old = rhotot_old + c(comp)/rhobar(comp)
-          end do
-          rhotot_old = 1.d0/rhotot_old
-
-          ! for new density:
-          ! compute rhotot via sum
           rhotot = 0.d0
-          do n=1,nspecies
-             rhotot = rhotot + rho_newz(i,j,k,comp)
-          end do
-          
-          ! compute concentrations
-          c(1:nspecies) = rho_newz(i,j,k,1:nspecies)/rhotot
-
-          ! compute rhotot via EOS
-          rhotot_new = 0.d0
           do comp=1,nspecies
-             rhotot_new = rhotot_new + c(comp)/rhobar(comp)
+             rhotot = rhotot + c(comp)/rhobar(comp)
           end do
-          rhotot_new = 1.d0/rhotot_new
+          rhotot = 1.d0/rhotot
 
-          m_forcez(i,j,k) = 0.5d0*grav(3)*(rhotot_old+rhotot_new)
+          m_forcez(i,j,k) = grav(3)*rhotot
 
        end do
        end do
