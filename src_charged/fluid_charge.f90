@@ -408,7 +408,7 @@ contains
   subroutine implicit_potential_coef(mla,rho,Temp,A_Phi,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
-    type(multifab ), intent(inout) :: rho(:)
+    type(multifab ), intent(in   ) :: rho(:)
     type(multifab ), intent(in   ) :: Temp(:)
     type(multifab ), intent(inout) :: A_Phi(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
