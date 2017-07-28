@@ -101,7 +101,7 @@ or if electroneutral:
 & R^n_i \equiv \frac{1}{\D{V}\D{t}/2}\sum_r \nu_{sr}\mathcal{P}_A(a^n_r\D{V}\D{t}/2).
 \end{align}
 
-\item Solve for $\V{v}^{n+1,*}$ and $\pi^{n+1,*}$:
+\item Solve for $\V{v}^{n+1,*}$ and $\pi^{n+\myhalf,*}$:
 \begin{align}
 \label{boussinesq_stokes_v_1st}
 \begin{split}
@@ -146,6 +146,12 @@ or if electroneutral:
 &R^{n+\myhalf}_i \equiv \frac{1}{2}\left[ R_i^n + \frac{1}{\D{V}\D{t}/2} \sum_r \nu_{sr} \mathcal{P}_B\left( \left[ 2 a^{n+\myhalf,*}_r - a^n_r \right]^+ \D{V}\D{t}/2 \right) \right].
 \end{align}
 
+\item Calculate $\rho^{n+1}_i$:
+\begin{equation}
+\rho^{n+1}_i = \rho^n_i + \D{t} \left[ -\divg\V{F}^{n+\myhalf}_i + m_i R^{n+\myhalf}_i 
++ \divg\left( -\rho^{n+\myhalf,*}_i \frac{\V{v}^n + \V{v}^{n+1,*}}{2} \right) \right].
+\end{equation} 
+
 \item Solve for $\V{v}^{n+1}$ and $\pi^{n+\myhalf}$:
 \begin{align}
 \label{boussinesq_stokes_v_2nd}
@@ -161,25 +167,11 @@ or if electroneutral:
 \divg\V{v}^{n+1} & = 0.
 \end{align}
 
-
-\item Calculate $\rho^{n+1}_i$:
-\begin{equation}
-\rho^{n+1}_i = \rho^n_i + \D{t} \left[ -\divg\V{F}^{n+\myhalf}_i + m_i R^{n+\myhalf}_i 
-+ \divg\left( -\rho^{n+\myhalf,*}_i \frac{\V{v}^n + \V{v}^{n+1,*}}{2} \right) \right].
-\end{equation} 
-
-
 \end{enumerate}
-
-
 
 \clearpage
 
-
-
-\subsubsection*{Equations for the GMRES solver}
-
-{\color{red}needs to be updated.}
+\subsection*{Equations for the GMRES solver}
 
 \begin{enumerate}
 
@@ -207,8 +199,9 @@ or if electroneutral:
 \item Similarly, to solve Eqs.~\eqref{boussinesq_stokes_v_2nd} and \eqref{boussinesq_stokes_p_2nd}, we use $\V{v}^{n+1}=\bar{\V{v}}+\d\V{v}$ and $\pi^{n+\myhalf}=\pi+\d{\pi}$.
 
 \begin{itemize}
-\item $\bar{\V{v}}$ is obtained from $\V{v}^{n+1,*}$ so that it satisfies the boundary conditions.
-\item $\pi$ is $\pi^{n+\myhalf,*}$.
+\item $\bar{\V{v}}$ is obtained from $\V{v}^n$ (previous step) so that it satisfies the boundary conditions.  We could use $\V{v}^{n+1,*}$
+but a possible disadvantage is solver tolerance issues, particularly if $\pi$ is chosen to be $\pi^{n+\myhalf,*}$.
+\item $\pi$ is $\pi^{n-\myhalf}$ (previous step).
 \item $\d{\V{v}}$ and $\d{\pi}$ satisfy
 \begin{align}
 \label{boussinesq_gmres_v_2nd}
@@ -218,11 +211,7 @@ or if electroneutral:
 + \frac{1}{2}\divg\left(-\rho^n\V{v}^n\V{v}^n-\rho^{n+1}\V{v}^{n+1,*}\V{v}^{n+1,*}\right) \\
 & + \frac{1}{2}\divg\left( \eta^n\overline{\grad}\V{v}^n + \eta^{n+1}\overline{\grad}\bar{\V{v}} \right) 
 + \frac{1}{2}\divg\left[\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}}} + \sqrt{\frac{\eta^{n+1} k_\mathrm{B}T}{\D{V}\D{t}}} \right) \overline{\V{W}} \right] \\
-& +
-\begin{cases}
-\displaystyle \left(\frac{\rho^n_\mathrm{EOS}+\rho^{n+1}_\mathrm{EOS}}{2}-\rho_0\right)\V{g}, \\
-\big(\rho^{n+\myhalf,*}_\mathrm{EOS}-\rho_0\big)\V{g}, 
-\end{cases}
+& + \big(\rho^{n+\myhalf,*}_\mathrm{EOS}-\rho_0\big)\V{g}, 
 \end{split} \\
 \label{boussinesq_gmres_p_2nd}
 -\divg\d{\V{v}} &= \divg\bar{\V{v}}.
@@ -231,7 +220,5 @@ or if electroneutral:
 \end{itemize}
 
 \end{enumerate}
-
-
 
 \end{document}
