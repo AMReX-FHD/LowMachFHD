@@ -91,8 +91,8 @@
   ! For a complete list see bc.f90
 
 ! reservoir in y
-  bc_lo(1:3) = -1 201 100
-  bc_hi(1:3) = -1 201 100
+  bc_lo(1:3) = -1 100 100
+  bc_hi(1:3) = -1 100 100
 
   ! Control for analyze_spectra.90
   !----------------------

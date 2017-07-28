@@ -6,7 +6,7 @@ module inhomogeneous_bc_val_module
   use bl_constants_module
   use probin_multispecies_module, only: c_bc
   use probin_common_module, only: prob_lo, prob_hi, wallspeed_lo, wallspeed_hi, prob_type, &
-                                  nspecies
+                                  nspecies, algorithm_type, rho0
   use probin_charged_module, only: Epot_wall, Epot_wall_bc_type
 
   implicit none
@@ -148,6 +148,15 @@ contains
 
        ! pressure
        val = 0.d0
+
+    else if (comp .eq. scal_bc_comp) then
+
+       ! full density (only for boussinesq algorithm)
+       if (algorithm_type .eq. 6) then
+          val = rho0
+       else
+          call bl_error("calling inhomogeneous_bc_val_2d with scal_bc_comp (full rho")
+       end if
 
     else if (comp .ge. c_bc_comp .and. comp .le. c_bc_comp+nspecies-1) then
 
@@ -305,6 +314,15 @@ contains
 
        ! pressure
        val = 0.d0
+
+    else if (comp .eq. scal_bc_comp) then
+
+       ! full density (only for boussinesq algorithm)
+       if (algorithm_type .eq. 6) then
+          val = rho0
+       else
+          call bl_error("calling inhomogeneous_bc_val_3d with scal_bc_comp (full rho")
+       end if
 
     else if (comp .ge. c_bc_comp .and. comp .le. c_bc_comp+nspecies-1) then
 
