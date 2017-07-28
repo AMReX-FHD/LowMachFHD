@@ -14,7 +14,7 @@ module electrodiffusive_mass_fluxdiv_module
   use matvec_mul_module
   use probin_common_module, only: nspecies
   use probin_gmres_module, only: mg_verbose
-  use probin_charged_module, only: Epot_wall_bc_type, E_ext_type
+  use probin_charged_module, only: Epot_wall_bc_type, E_ext_type, electroneutral
   
   use fabio_module
 
@@ -29,7 +29,7 @@ contains
 
   subroutine electrodiffusive_mass_fluxdiv(mla,rho,diff_mass_fluxdiv,Temp,rhoWchi, &
                                            diff_mass_flux,dx,the_bc_tower,charge, &
-                                           grad_Epot,Epot,permittivity)
+                                           grad_Epot,Epot,permittivity,dt)
 
     ! this adds -div(F) = div(A_Phi grad Phi) to diff_mass_fluxdiv
     ! grad_Epot = grad Phi
@@ -46,6 +46,7 @@ contains
     type(multifab) , intent(inout)  :: grad_Epot(:,:)
     type(multifab) , intent(inout)  :: Epot(:)
     type(multifab) , intent(in   )  :: permittivity(:)
+    real(kind=dp_t), intent(in   )  :: dt
 
     ! local variables
     integer i,dm,n,nlevs
@@ -72,7 +73,7 @@ contains
     ! compute the face-centered flux (each direction: cells+1 faces while 
     ! cells contain interior+2 ghost cells) 
     call electrodiffusive_mass_flux(mla,rho,Temp,rhoWchi,flux,dx,the_bc_tower,charge, &
-                                    grad_Epot,Epot,permittivity)
+                                    grad_Epot,Epot,permittivity,dt)
     
     ! add fluxes to diff_mass_flux
     do n=1,nlevs
@@ -96,7 +97,8 @@ contains
   end subroutine electrodiffusive_mass_fluxdiv
  
   subroutine electrodiffusive_mass_flux(mla,rho,Temp,rhoWchi,flux,dx, &
-                                        the_bc_tower,charge,grad_Epot,Epot,permittivity)
+                                        the_bc_tower,charge,grad_Epot,Epot, &
+                                        permittivity,dt)
 
     ! this computes "-F = A_Phi grad Phi"
 
@@ -111,6 +113,7 @@ contains
     type(multifab) , intent(inout) :: grad_Epot(:,:)
     type(multifab) , intent(inout) :: Epot(:)
     type(multifab) , intent(in   ) :: permittivity(:)
+    real(kind=dp_t), intent(in   ) :: dt
 
     ! local variables
     integer :: n,i,s,dm,nlevs
@@ -118,14 +121,16 @@ contains
     ! local face-centered multifabs 
     type(multifab)  :: rhoWchi_face(mla%nlevel,mla%dim)
 
-    ! for electric potential Poisson solve
-    type(multifab)  :: alpha(mla%nlevel)
-    type(multifab)  :: beta(mla%nlevel,mla%dim)
+    type(multifab)  ::       alpha(mla%nlevel)
     type(multifab)  :: charge_coef(mla%nlevel)
+    type(multifab)  ::         rhs(mla%nlevel)
+
+    type(multifab)  ::             beta(mla%nlevel,mla%dim)
     type(multifab)  :: charge_coef_face(mla%nlevel,mla%dim)
-    type(multifab)  :: rhs(mla%nlevel)
-    type(multifab)  :: permittivity_fc(mla%nlevel,mla%dim)
-    type(multifab)  :: E_ext(mla%nlevel,mla%dim)
+    type(multifab)  ::  permittivity_fc(mla%nlevel,mla%dim)
+    type(multifab)  ::            E_ext(mla%nlevel,mla%dim)
+    type(multifab) ::             A_Phi(mla%nlevel,mla%dim)
+
     type(bndry_reg) :: fine_flx(mla%nlevel)
   
     real(kind=dp_t) :: sum
@@ -147,6 +152,7 @@ contains
           call multifab_build_edge(rhoWchi_face(n,i),mla%la(n),nspecies**2,0,i)
           call multifab_build_edge(permittivity_fc(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(E_Ext(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(A_Phi(n,i),mla%la(n),nspecies,0,i)
        end do
     end do
 
@@ -154,6 +160,18 @@ contains
     do n=1,nlevs
        call bndry_reg_build(fine_flx(n),mla%la(n),ml_layout_get_pd(mla,n))
     end do
+
+    ! if periodic, ensure charge sums to zero by subtracting off the averaeg
+    if (all(mla%pmask(1:dm))) then
+       sum = multifab_sum_c(charge(1),1,1) / multifab_volume(charge(1))
+       call multifab_sub_sub_s_c(charge(1),1,sum,1,0)
+       if (abs(sum) .gt. 1.d-12) then
+          if (parallel_IOProcessor()) then
+             print*,'average charge =',sum
+          end if
+          call bl_warn("Warning: average charge is not zero")
+       end if
+    end if
 
     ! compute face-centered rhoWchi from cell-centered values 
     call average_cc_to_face(nlevs, rhoWchi, rhoWchi_face, 1, tran_bc_comp, &
@@ -172,31 +190,54 @@ contains
        ! set alpha=0
        call setval(alpha(n),0.d0,all=.true.)
 
-       ! set beta=permittivity (epsilon)
-       call average_cc_to_face(nlevs,permittivity,beta,1,scal_bc_comp,1, &
-                               the_bc_tower%bc_tower_array)
-
     end do
-
-    if (all(mla%pmask(1:dm))) then
-       sum = multifab_sum_c(charge(1),1,1) / multifab_volume(charge(1))
-       call multifab_sub_sub_s_c(charge(1),1,sum,1,0)
-       if (abs(sum) .gt. 1.d-12) then
-          if (parallel_IOProcessor()) then
-             print*,'average charge =',sum
-          end if
-          call bl_warn("Warning: average charge is not zero")
-       end if
-    end if
 
     ! for inhomogeneous Neumann bc's for electric potential, put in homogeneous form
     if (Epot_wall_bc_type .eq. 2) then
        call inhomogeneous_neumann_fix(mla,charge,permittivity,dx,the_bc_tower)
     end if
 
-    do n=1,nlevs
-       call multifab_copy_c(rhs(n),1,charge(n),1,1,0)
-    end do
+    ! permittivity on faces
+    call average_cc_to_face(nlevs,permittivity,permittivity_fc,1,scal_bc_comp,1, &
+                            the_bc_tower%bc_tower_array)
+
+    if (electroneutral) then
+
+       ! compute A_Phi for Poisson solve (does not have z^T)
+       call implicit_potential_coef(mla,rho,Temp,A_Phi,the_bc_tower)
+       
+       
+       ! compute z^T A_Phi^n, store in solver_beta
+       call dot_with_z_face(mla,A_Phi,beta)
+
+       ! compute solver_beta = epsilon + dt theta z^T A_Phi^n
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_mult_mult_s_c(beta(n,i),1,dt,1,0)
+             call multifab_plus_plus_c(beta(n,i),1,permittivity_fc(n,i),1,1,0)
+          end do
+       end do
+
+       ! FIXME - compute RHS
+
+
+
+
+    else
+
+       ! set beta=permittivity (epsilon)
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_copy_c(beta(n,i),1,permittivity_fc(n,i),1,1,0)
+          end do
+       end do
+
+       ! set rhs equal to charge
+       do n=1,nlevs
+          call multifab_copy_c(rhs(n),1,charge(n),1,1,0)
+       end do
+
+    end if
 
     if (E_ext_type .ne. 0) then
        
@@ -297,6 +338,7 @@ contains
           call multifab_destroy(charge_coef_face(n,i))
           call multifab_destroy(permittivity_fc(n,i))
           call multifab_destroy(E_ext(n,i))
+          call multifab_destroy(A_Phi(n,i))
        end do
     end do
 

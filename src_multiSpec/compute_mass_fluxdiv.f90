@@ -108,7 +108,21 @@ contains
                                 diff_mass_flux,dx,the_bc_tower)
 
     ! compute external forcing for manufactured solution and add to diff_mass_fluxdiv
+    ! we should move this to occur before the call to compute_mass_fluxdiv and into
+    ! the advance_timestep routines
     call external_source(mla,rho,diff_mass_fluxdiv,dx,stage_time)
+
+    ! compute stochastic fluxdiv 
+    if (variance_coef_mass .ne. 0.d0) then
+
+       ! compute face-centered cholesky-factored Lonsager^(1/2)
+       call compute_sqrtLonsager_fc(mla,rho,rhotot,sqrtLonsager_fc,dx)
+
+       call stochastic_mass_fluxdiv(mla,rho,rhotot, &
+                                    sqrtLonsager_fc,stoch_mass_fluxdiv,stoch_mass_flux,&
+                                    dx,dt,weights,the_bc_tower%bc_tower_array)
+
+    end if
 
     ! Donev: I propose the following rewrite:
     ! call compute_mass_fluxdiv() ! Compute F=F_bar+F_tilde using existing routine
@@ -133,20 +147,8 @@ contains
           call electrodiffusive_mass_fluxdiv(mla,rho,diff_mass_fluxdiv,Temp,rhoWchi, &
                                              diff_mass_flux,dx,the_bc_tower, &
                                              charge,grad_Epot,Epot, &
-                                             permittivity)
+                                             permittivity,dt)
        end if
-    end if
-
-    ! compute stochastic fluxdiv 
-    if (variance_coef_mass .ne. 0.d0) then
-
-       ! compute face-centered cholesky-factored Lonsager^(1/2)
-       call compute_sqrtLonsager_fc(mla,rho,rhotot,sqrtLonsager_fc,dx)
-
-       call stochastic_mass_fluxdiv(mla,rho,rhotot, &
-                                    sqrtLonsager_fc,stoch_mass_fluxdiv,stoch_mass_flux,&
-                                    dx,dt,weights,the_bc_tower%bc_tower_array)
-
     end if
 
     ! free the multifab allocated memory

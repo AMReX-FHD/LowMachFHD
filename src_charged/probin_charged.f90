@@ -16,6 +16,7 @@ module probin_charged_module
   real(kind=dp_t)    :: dpdt_factor
   integer            :: E_ext_type
   real(kind=dp_t)    :: E_ext_value(1:3)
+  logical            :: electroneutral
 
   ! for charged fluid
   namelist /probin_charged/ use_charged_fluid
@@ -31,6 +32,8 @@ module probin_charged_module
   namelist /probin_charged/ dpdt_factor
   namelist /probin_charged/ E_ext_type         ! external electric field
   namelist /probin_charged/ E_ext_value
+
+  namelist /probin_charged/ electroneutral     ! use electroneutral diffusion fluxes
 
 contains
 
@@ -65,6 +68,8 @@ contains
     dpdt_factor        = 0.d0
     E_ext_type         = 0
     E_ext_value(:)     = 0.d0
+
+    electroneutral = .false.
  
     ! read from input file 
     need_inputs = .true.
@@ -126,6 +131,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) E_ext_type
+
+       case ('--electroneutral')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) electroneutral
 
        case ('--')
           farg = farg + 1
