@@ -144,8 +144,10 @@ contains
            present(grad_Epot) .and. &
            present(Epot) .and. &
            present(permittivity)) then
-          call electrodiffusive_mass_fluxdiv(mla,rho,diff_mass_fluxdiv,Temp,rhoWchi, &
-                                             diff_mass_flux,dx,the_bc_tower, &
+          call electrodiffusive_mass_fluxdiv(mla,rho,Temp,rhoWchi, &
+                                             diff_mass_flux,diff_mass_fluxdiv, &
+                                             stoch_mass_fluxdiv, &
+                                             dx,the_bc_tower, &
                                              charge,grad_Epot,Epot, &
                                              permittivity,dt)
        end if

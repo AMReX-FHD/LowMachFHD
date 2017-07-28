@@ -12,7 +12,7 @@ module electrodiffusive_mass_fluxdiv_module
   use ml_solve_module
   use multifab_physbc_module
   use matvec_mul_module
-  use probin_common_module, only: nspecies
+  use probin_common_module, only: nspecies, variance_coef_mass
   use probin_gmres_module, only: mg_verbose
   use probin_charged_module, only: Epot_wall_bc_type, E_ext_type, electroneutral
   
@@ -27,8 +27,10 @@ module electrodiffusive_mass_fluxdiv_module
 
 contains
 
-  subroutine electrodiffusive_mass_fluxdiv(mla,rho,diff_mass_fluxdiv,Temp,rhoWchi, &
-                                           diff_mass_flux,dx,the_bc_tower,charge, &
+  subroutine electrodiffusive_mass_fluxdiv(mla,rho,Temp,rhoWchi, &
+                                           diff_mass_flux,diff_mass_fluxdiv, &
+                                           stoch_mass_fluxdiv, &
+                                           dx,the_bc_tower,charge, &
                                            grad_Epot,Epot,permittivity,dt)
 
     ! this adds -div(F) = div(A_Phi grad Phi) to diff_mass_fluxdiv
@@ -36,10 +38,11 @@ contains
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
-    type(multifab) , intent(inout)  :: diff_mass_fluxdiv(:)
     type(multifab) , intent(in   )  :: Temp(:)
     type(multifab) , intent(in   )  :: rhoWchi(:)
     type(multifab) , intent(inout)  :: diff_mass_flux(:,:)
+    type(multifab) , intent(inout)  :: diff_mass_fluxdiv(:)
+    type(multifab) , intent(in   )  :: stoch_mass_fluxdiv(:)
     real(kind=dp_t), intent(in   )  :: dx(:,:)
     type(bc_tower) , intent(in   )  :: the_bc_tower
     type(multifab) , intent(inout)  :: charge(:)
@@ -52,7 +55,7 @@ contains
     integer i,dm,n,nlevs
 
     ! local array of multifabs for grad and div; one for each direction
-    type(multifab) :: flux(mla%nlevel,mla%dim)
+    type(multifab) :: electro_mass_flux(mla%nlevel,mla%dim)
     
     type(bl_prof_timer), save :: bpt
 
@@ -64,31 +67,33 @@ contains
     ! build the local multifabs
     do n=1,nlevs
        do i=1,dm
-          ! flux(i) is face-centered, has nspecies component, zero ghost 
+          ! electro_mass_flux(i) is face-centered, has nspecies component, zero ghost 
           ! cells & nodal in direction i
-          call multifab_build_edge(flux(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(electro_mass_flux(n,i),mla%la(n),nspecies,0,i)
        end do
     end do   
     
-    ! compute the face-centered flux (each direction: cells+1 faces while 
+    ! compute the face-centered electro_mass_flux (each direction: cells+1 faces while 
     ! cells contain interior+2 ghost cells) 
-    call electrodiffusive_mass_flux(mla,rho,Temp,rhoWchi,flux,dx,the_bc_tower,charge, &
-                                    grad_Epot,Epot,permittivity,dt)
+    call electrodiffusive_mass_flux(mla,rho,Temp,rhoWchi,electro_mass_flux, &
+                                    diff_mass_fluxdiv,stoch_mass_fluxdiv,dx,the_bc_tower, &
+                                    charge,grad_Epot,Epot,permittivity,dt)
     
     ! add fluxes to diff_mass_flux
     do n=1,nlevs
        do i=1,dm
-          call multifab_plus_plus_c(diff_mass_flux(n,i),1,flux(n,i),1,nspecies,0)
+          call multifab_plus_plus_c(diff_mass_flux(n,i),1,electro_mass_flux(n,i),1,nspecies,0)
        end do
     end do
 
     ! add flux divergence to diff_mass_fluxdiv
-    call compute_div(mla,flux,diff_mass_fluxdiv,dx,1,1,nspecies,increment_in=.true.)
+    call compute_div(mla,electro_mass_flux,diff_mass_fluxdiv,dx,1,1,nspecies, &
+                     increment_in=.true.)
     
     ! destroy the multifab to free the memory
     do n=1,nlevs
        do i=1,dm
-          call multifab_destroy(flux(n,i))
+          call multifab_destroy(electro_mass_flux(n,i))
        end do
     end do
 
@@ -96,8 +101,9 @@ contains
 
   end subroutine electrodiffusive_mass_fluxdiv
  
-  subroutine electrodiffusive_mass_flux(mla,rho,Temp,rhoWchi,flux,dx, &
-                                        the_bc_tower,charge,grad_Epot,Epot, &
+  subroutine electrodiffusive_mass_flux(mla,rho,Temp,rhoWchi,electro_mass_flux, &
+                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                        dx,the_bc_tower,charge,grad_Epot,Epot, &
                                         permittivity,dt)
 
     ! this computes "-F = A_Phi grad Phi"
@@ -106,7 +112,9 @@ contains
     type(multifab) , intent(in   ) :: rho(:) 
     type(multifab) , intent(in   ) :: Temp(:)  
     type(multifab) , intent(in   ) :: rhoWchi(:)
-    type(multifab) , intent(inout) :: flux(:,:)
+    type(multifab) , intent(inout) :: electro_mass_flux(:,:)
+    type(multifab) , intent(in   ) :: diff_mass_fluxdiv(:)
+    type(multifab) , intent(in   ) :: stoch_mass_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
     type(multifab) , intent(inout) :: charge(:)
@@ -124,6 +132,7 @@ contains
     type(multifab)  ::       alpha(mla%nlevel)
     type(multifab)  :: charge_coef(mla%nlevel)
     type(multifab)  ::         rhs(mla%nlevel)
+    type(multifab)  ::      rhsvec(mla%nlevel)
 
     type(multifab)  ::             beta(mla%nlevel,mla%dim)
     type(multifab)  :: charge_coef_face(mla%nlevel,mla%dim)
@@ -143,16 +152,17 @@ contains
     nlevs = mla%nlevel  ! number of levels 
     
     do n=1,nlevs
-       call multifab_build(alpha(n),mla%la(n),1,0)
+       call multifab_build(      alpha(n),mla%la(n),       1,0)
        call multifab_build(charge_coef(n),mla%la(n),nspecies,1)
-       call multifab_build(rhs(n),mla%la(n),1,0)
+       call multifab_build(        rhs(n),mla%la(n),       1,0)
+       call multifab_build( rhsvec(n),mla%la(n),nspecies,0)
        do i=1,dm
-          call multifab_build_edge(beta(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(charge_coef_face(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(rhoWchi_face(n,i),mla%la(n),nspecies**2,0,i)
-          call multifab_build_edge(permittivity_fc(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(E_Ext(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(A_Phi(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(            beta(n,i),mla%la(n),          1,0,i)
+          call multifab_build_edge(charge_coef_face(n,i),mla%la(n),   nspecies,0,i)
+          call multifab_build_edge(    rhoWchi_face(n,i),mla%la(n),nspecies**2,0,i)
+          call multifab_build_edge( permittivity_fc(n,i),mla%la(n),          1,0,i)
+          call multifab_build_edge(           E_Ext(n,i),mla%la(n),          1,0,i)
+          call multifab_build_edge(           A_Phi(n,i),mla%la(n),   nspecies,0,i)
        end do
     end do
 
@@ -197,31 +207,29 @@ contains
        call inhomogeneous_neumann_fix(mla,charge,permittivity,dx,the_bc_tower)
     end if
 
-    ! permittivity on faces
-    call average_cc_to_face(nlevs,permittivity,permittivity_fc,1,scal_bc_comp,1, &
-                            the_bc_tower%bc_tower_array)
+    if (.not. electroneutral .or. E_ext_type .ne. 0) then
+       ! permittivity on faces
+       call average_cc_to_face(nlevs,permittivity,permittivity_fc,1,scal_bc_comp,1, &
+                               the_bc_tower%bc_tower_array)
+    end if
 
     if (electroneutral) then
 
        ! compute A_Phi for Poisson solve (does not have z^T)
        call implicit_potential_coef(mla,rho,Temp,A_Phi,the_bc_tower)
-       
-       
+              
        ! compute z^T A_Phi^n, store in solver_beta
        call dot_with_z_face(mla,A_Phi,beta)
 
-       ! compute solver_beta = epsilon + dt theta z^T A_Phi^n
+       ! compute RHS = div (z^T (F_d + F_s)) FIXME - compute RHS
        do n=1,nlevs
-          do i=1,dm
-             call multifab_mult_mult_s_c(beta(n,i),1,dt,1,0)
-             call multifab_plus_plus_c(beta(n,i),1,permittivity_fc(n,i),1,1,0)
-          end do
+          call multifab_copy_c(rhsvec(n),1,diff_mass_fluxdiv(n),1,nspecies,0)
+          if (variance_coef_mass .ne. 0.d0) then
+             call multifab_plus_plus_c(rhsvec(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
+          end if
        end do
 
-       ! FIXME - compute RHS
-
-
-
+       call dot_with_z(mla,rhsvec,rhs)
 
     else
 
@@ -240,10 +248,6 @@ contains
     end if
 
     if (E_ext_type .ne. 0) then
-       
-       ! compute permittivity on edges
-       call average_cc_to_face(nlevs,permittivity,permittivity_fc,1,scal_bc_comp,1, &
-                               the_bc_tower%bc_tower_array)
 
        ! compute external electric field on edges
        call compute_E_ext(mla,E_ext)
@@ -298,14 +302,14 @@ contains
     call compute_charge_coef(mla,rho,Temp,charge_coef)
 
     ! average charge flux coefficient to faces, store in flux
-    call average_cc_to_face(nlevs,charge_coef,flux,1,c_bc_comp,nspecies, &
+    call average_cc_to_face(nlevs,charge_coef,electro_mass_flux,1,c_bc_comp,nspecies, &
                             the_bc_tower%bc_tower_array,.true.)
 
     ! multiply flux coefficient by gradient of electric potential
     do n=1,nlevs
        do i=1,dm
           do s=1,nspecies
-             call multifab_mult_mult_c(flux(n,i), s, grad_Epot(n,i), 1, 1)
+             call multifab_mult_mult_c(electro_mass_flux(n,i), s, grad_Epot(n,i), 1, 1)
           end do
        end do
     end do
@@ -313,14 +317,14 @@ contains
     ! compute -rhoWchi * (... ) on faces
     do n=1,nlevs
        do i=1,dm
-          call matvec_mul(mla, flux(n,i), rhoWchi_face(n,i), nspecies)
+          call matvec_mul(mla, electro_mass_flux(n,i), rhoWchi_face(n,i), nspecies)
        end do
     end do    
 
     ! zero the total mass flux on walls to make sure 
     ! that the potential gradient matches the species gradient
     do n=1,nlevs
-       call zero_edgeval_walls(flux(n,:),1,nspecies, &
+       call zero_edgeval_walls(electro_mass_flux(n,:),1,nspecies, &
                                the_bc_tower%bc_tower_array(n))
     end do
 
@@ -332,6 +336,7 @@ contains
        call multifab_destroy(alpha(n))
        call multifab_destroy(charge_coef(n))
        call multifab_destroy(rhs(n))
+       call multifab_destroy(rhsvec(n))
        do i=1,dm
           call multifab_destroy(rhoWchi_face(n,i))
           call multifab_destroy(beta(n,i))
