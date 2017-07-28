@@ -279,7 +279,7 @@ contains
     logical        , intent(in   ) :: increment
 
     ! local
-    integer i,j,n,comp
+    integer i,j,comp
     real(kind=dp_t) :: rhotot
     real(kind=dp_t) :: c(nspecies)
 
@@ -290,7 +290,7 @@ contains
 
           ! compute rhotot via sum
           rhotot = 0.d0
-          do n=1,nspecies
+          do comp=1,nspecies
              rhotot = rhotot + rhox(i,j,comp)
           end do
           
@@ -314,7 +314,7 @@ contains
 
           ! compute rhotot via sum
           rhotot = 0.d0
-          do n=1,nspecies
+          do comp=1,nspecies
              rhotot = rhotot + rhoy(i,j,comp)
           end do
           
@@ -340,7 +340,7 @@ contains
 
           ! compute rhotot via sum
           rhotot = 0.d0
-          do n=1,nspecies
+          do comp=1,nspecies
              rhotot = rhotot + rhox(i,j,comp)
           end do
           
@@ -364,7 +364,7 @@ contains
 
           ! compute rhotot via sum
           rhotot = 0.d0
-          do n=1,nspecies
+          do comp=1,nspecies
              rhotot = rhotot + rhoy(i,j,comp)
           end do
           
@@ -400,7 +400,7 @@ contains
     logical        , intent(in   ) :: increment
 
     ! local
-    integer i,j,k,n,comp
+    integer i,j,k,comp
     real(kind=dp_t) :: rhotot
     real(kind=dp_t) :: c(nspecies)
 
@@ -412,7 +412,7 @@ contains
 
           ! compute rhotot via sum
           rhotot = 0.d0
-          do n=1,nspecies
+          do comp=1,nspecies
              rhotot = rhotot + rhox(i,j,k,comp)
           end do
           
@@ -438,10 +438,10 @@ contains
 
           ! compute rhotot via sum
           rhotot = 0.d0
-          do n=1,nspecies
+          do comp=1,nspecies
              rhotot = rhotot + rhoy(i,j,k,comp)
           end do
-          
+
           ! compute concentrations
           c(1:nspecies) = rhoy(i,j,k,1:nspecies)/rhotot
 
@@ -464,7 +464,7 @@ contains
 
           ! compute rhotot via sum
           rhotot = 0.d0
-          do n=1,nspecies
+          do comp=1,nspecies
              rhotot = rhotot + rhoz(i,j,k,comp)
           end do
           
@@ -492,7 +492,7 @@ contains
 
           ! compute rhotot via sum
           rhotot = 0.d0
-          do n=1,nspecies
+          do comp=1,nspecies
              rhotot = rhotot + rhox(i,j,k,comp)
           end do
           
@@ -518,7 +518,7 @@ contains
 
           ! compute rhotot via sum
           rhotot = 0.d0
-          do n=1,nspecies
+          do comp=1,nspecies
              rhotot = rhotot + rhoy(i,j,k,comp)
           end do
           
@@ -544,7 +544,7 @@ contains
 
           ! compute rhotot via sum
           rhotot = 0.d0
-          do n=1,nspecies
+          do comp=1,nspecies
              rhotot = rhotot + rhoz(i,j,k,comp)
           end do
           
