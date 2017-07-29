@@ -308,6 +308,10 @@ contains
        end do
     end do
 
+   ! we don't support true "reservoirs" yet but this handles moving walls
+    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time+dt, &
+                                   the_bc_tower%bc_tower_array)
+
     ! modify umac to respect the boundary conditions we want after the next gmres solve
     ! thus when we add L_0^n vbar^n to gmres_rhs_v and add div vbar^n to gmres_rhs_p we
     ! are automatically putting the system in delta form WITH homogeneous boundary conditions
