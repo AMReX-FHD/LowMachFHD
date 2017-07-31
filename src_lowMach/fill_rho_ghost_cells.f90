@@ -84,8 +84,6 @@ contains
 
     if (algorithm_type .eq. 6) then
 
-       ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
-       call multifab_fill_boundary(rhotot)
        ! fill non-periodic domain boundary ghost cells
        call multifab_physbc(rhotot,1,scal_bc_comp,1,the_bc_level,dx_in=dx)
 
