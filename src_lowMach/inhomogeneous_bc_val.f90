@@ -153,7 +153,7 @@ contains
 
        ! full density (only for boussinesq algorithm)
        if (algorithm_type .eq. 6) then
-          val = rho0
+          val = 0.d0 ! homogeneous Neumann walls
        else
           call bl_error("calling inhomogeneous_bc_val_2d with scal_bc_comp (full rho")
        end if
@@ -319,7 +319,7 @@ contains
 
        ! full density (only for boussinesq algorithm)
        if (algorithm_type .eq. 6) then
-          val = rho0
+          val = 0.d0 ! homogeneous Neumann walls
        else
           call bl_error("calling inhomogeneous_bc_val_3d with scal_bc_comp (full rho")
        end if
