@@ -5,7 +5,7 @@ module mk_grav_force_module
   use ml_layout_module
   use define_bc_module
   use zero_edgeval_module
-  use probin_common_module, only: grav, rhobar, nspecies
+  use probin_common_module, only: grav, rhobar, nspecies, rho0
 
   implicit none
 
@@ -304,7 +304,7 @@ contains
           end do
           rhotot = 1.d0/rhotot
 
-          m_forcex(i,j) = m_forcex(i,j) + grav(1)*rhotot
+          m_forcex(i,j) = m_forcex(i,j) + grav(1)*(rhotot-rho0)
 
        end do
        end do
@@ -328,7 +328,7 @@ contains
           end do
           rhotot = 1.d0/rhotot
 
-          m_forcey(i,j) = m_forcey(i,j) + grav(2)*rhotot
+          m_forcey(i,j) = m_forcey(i,j) + grav(2)*(rhotot-rho0)
 
        end do
        end do
@@ -354,7 +354,7 @@ contains
           end do
           rhotot = 1.d0/rhotot
 
-          m_forcex(i,j) = grav(1)*rhotot
+          m_forcex(i,j) = grav(1)*(rhotot-rho0)
 
        end do
        end do
@@ -378,7 +378,7 @@ contains
           end do
           rhotot = 1.d0/rhotot
 
-          m_forcey(i,j) = grav(2)*rhotot
+          m_forcey(i,j) = grav(2)*(rhotot-rho0)
 
        end do
        end do
@@ -426,7 +426,7 @@ contains
           end do
           rhotot = 1.d0/rhotot
 
-          m_forcex(i,j,k) = m_forcex(i,j,k) + grav(1)*rhotot
+          m_forcex(i,j,k) = m_forcex(i,j,k) + grav(1)*(rhotot-rho0)
 
        end do
        end do
@@ -452,7 +452,7 @@ contains
           end do
           rhotot = 1.d0/rhotot
 
-          m_forcey(i,j,k) = m_forcey(i,j,k) + grav(2)*rhotot
+          m_forcey(i,j,k) = m_forcey(i,j,k) + grav(2)*(rhotot-rho0)
 
        end do
        end do
@@ -478,7 +478,7 @@ contains
           end do
           rhotot = 1.d0/rhotot
 
-          m_forcez(i,j,k) = m_forcez(i,j,k) + grav(3)*rhotot
+          m_forcez(i,j,k) = m_forcez(i,j,k) + grav(3)*(rhotot-rho0)
 
        end do
        end do
@@ -506,7 +506,7 @@ contains
           end do
           rhotot = 1.d0/rhotot
 
-          m_forcex(i,j,k) = grav(1)*rhotot
+          m_forcex(i,j,k) = grav(1)*(rhotot-rho0)
 
        end do
        end do
@@ -532,7 +532,7 @@ contains
           end do
           rhotot = 1.d0/rhotot
 
-          m_forcey(i,j,k) = grav(2)*rhotot
+          m_forcey(i,j,k) = grav(2)*(rhotot-rho0)
 
        end do
        end do
@@ -558,7 +558,7 @@ contains
           end do
           rhotot = 1.d0/rhotot
 
-          m_forcez(i,j,k) = grav(3)*rhotot
+          m_forcez(i,j,k) = grav(3)*(rhotot-rho0)
 
        end do
        end do
