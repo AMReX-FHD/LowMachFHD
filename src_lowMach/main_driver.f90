@@ -83,6 +83,8 @@ subroutine main_driver()
   type(multifab), allocatable  :: kappa(:)
 
   real(kind=dp_t)              :: total_charge
+  ! this is only used for implicit potential algorithms where we can't add this to
+  ! the diffusive mass fluxes.
   type(multifab), allocatable  :: Epot_mass_fluxdiv(:)
   type(multifab), allocatable  :: charge_old(:)
   type(multifab), allocatable  :: charge_new(:)
