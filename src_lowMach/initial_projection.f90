@@ -42,7 +42,6 @@ contains
   ! From this perspective it may be useful to keep initial_projection even in overdamped
   ! because different gmres tolerances may be needed in the first step than in the rest
   subroutine initial_projection(mla,umac,rho,rhotot,gradp_baro, &
-                                Epot_mass_fluxdiv, &
                                 diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                 stoch_mass_flux,chem_rate, &
                                 Temp,eta,eta_ed,dt,dx,the_bc_tower, &
@@ -53,7 +52,6 @@ contains
     type(multifab) , intent(inout) :: rho(:)
     type(multifab) , intent(inout) :: rhotot(:)
     type(multifab) , intent(in   ) :: gradp_baro(:,:)
-    type(multifab) , intent(inout) :: Epot_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: stoch_mass_flux(:,:)
@@ -141,21 +139,13 @@ contains
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,0.d0, &
                                    the_bc_tower%bc_tower_array)
 
-    ! compute diffusive, stochastic, and potential mass fluxes
-    ! with barodiffusion and thermodiffusion
-    ! this computes "-F = rho W chi [Gamma grad x... ]"
-    if (use_charged_fluid) then
-       do n=1,nlevs
-          call multifab_setval(Epot_mass_fluxdiv(n),0.d0,all=.true.)
-          call multifab_setval(Epot(n),0.d0,all=.true.)
-       end do
-
-    end if
-
     if (variance_coef_mass .ne. 0.d0) then
        call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
     end if
 
+    ! compute diffusive, stochastic, and potential mass fluxes
+    ! with barodiffusion and thermodiffusion
+    ! this computes "-F = rho W chi [Gamma grad x... ]"
     call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro,Temp, &
                               diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                               diff_mass_flux,stoch_mass_flux, &
@@ -211,9 +201,6 @@ contains
 
              do i=1,nspecies
                 call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),diff_mass_fluxdiv(n),i,1)
-                if (use_charged_fluid) then
-                   call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),Epot_mass_fluxdiv(n),i,1)
-                end if
                 if (variance_coef_mass .ne. 0.d0) then
                    call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
                 end if

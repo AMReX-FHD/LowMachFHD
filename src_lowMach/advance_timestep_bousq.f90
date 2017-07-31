@@ -47,7 +47,6 @@ contains
 
   subroutine advance_timestep_bousq(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                     gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                    Epot_mass_fluxdiv, &
                                     diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                     stoch_mass_flux,chem_rate, &
                                     dx,dt,time,the_bc_tower,istep, &
@@ -67,7 +66,6 @@ contains
     type(multifab) , intent(inout) :: kappa(:)              ! enters as t^n, leaves as t^{n+1}
     type(multifab) , intent(inout) :: Temp(:)
     type(multifab) , intent(inout) :: Temp_ed(:,:)          
-    type(multifab) , intent(inout) :: Epot_mass_fluxdiv(:)  ! not persistent
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)  ! not persistent
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:) ! not persistent
     type(multifab) , intent(inout) :: stoch_mass_flux(:,:)  ! not persistent

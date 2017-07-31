@@ -233,12 +233,6 @@ subroutine main_driver()
         end do
      end do
 
-     if (use_charged_fluid) then
-        do n=1,nlevs        
-           call multifab_build(Epot_mass_fluxdiv(n), mla%la(n),nspecies,0) 
-        end do
-     end if
-
   end if
 
   ! data structures to help with reservoirs
@@ -377,10 +371,11 @@ subroutine main_driver()
 
   if (use_charged_fluid) then
      do n=1,nlevs
-        call multifab_build(charge_old(n)  ,mla%la(n),1,1)
-        call multifab_build(charge_new(n)  ,mla%la(n),1,1)
-        call multifab_build(permittivity(n),mla%la(n),1,1)
-        call multifab_build(Epot(n)        ,mla%la(n),1,1)
+        call multifab_build(charge_old(n)       ,mla%la(n),1,1)
+        call multifab_build(charge_new(n)       ,mla%la(n),1,1)
+        call multifab_build(permittivity(n)     ,mla%la(n),1,1)
+        call multifab_build(Epot(n)             ,mla%la(n),1,1)
+        call multifab_build(Epot_mass_fluxdiv(n),mla%la(n),nspecies,0) 
         do i=1,dm
            call multifab_build_edge(grad_Epot_old(n,i),mla%la(n),1,1,i)
            call multifab_build_edge(grad_Epot_new(n,i),mla%la(n),1,1,i)
@@ -424,13 +419,11 @@ subroutine main_driver()
      do n=1,nlevs
         call multifab_setval(charge_old(n),0.d0,all=.true.)
         call multifab_setval(charge_new(n),0.d0,all=.true.)
-        do i=1,dm
-           call multifab_setval(grad_Epot_old(n,i),0.d0,all=.true.)
-           call multifab_setval(grad_Epot_new(n,i),0.d0,all=.true.)
-        end do
         call multifab_setval(Epot(n),0.d0,all=.true.)
         call multifab_setval(Epot_mass_fluxdiv(n),0.d0,all=.true.)
         do i=1,dm
+           call multifab_setval(grad_Epot_old(n,i),0.d0,all=.true.)
+           call multifab_setval(grad_Epot_new(n,i),0.d0,all=.true.)
            call multifab_setval(gradPhiApprox(n,i),0.d0,all=.true.)
         end do
      end do
@@ -588,7 +581,7 @@ subroutine main_driver()
   ! because different gmres tolerances may be needed in the first step than in the rest
   if (algorithm_type .ne. 2) then
      call initial_projection(mla,umac,rho_old,rhotot_old,gradp_baro, &
-                             Epot_mass_fluxdiv,diff_mass_fluxdiv, &
+                             diff_mass_fluxdiv, &
                              stoch_mass_fluxdiv,stoch_mass_flux,chem_rate, &
                              Temp,eta,eta_ed,dt,dx,the_bc_tower, &
                              charge_old,grad_Epot_old,Epot,permittivity)
@@ -703,7 +696,7 @@ subroutine main_driver()
                                          chem_rate, &
                                          dx,dt,time,the_bc_tower,istep)
      else if (algorithm_type .eq. 3) then
-        ! algorithm_type=3: iterative implicit
+        ! algorithm_type=3: iterative implicit electrodiffusion
         call advance_timestep_iterative(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                         Epot_mass_fluxdiv, &
@@ -713,7 +706,7 @@ subroutine main_driver()
                                         charge_old,charge_new,Epot, &
                                         permittivity,gradPhiApprox)
      else if (algorithm_type .eq. 4) then
-        ! algorithm_type=4: implicit boussinesq
+        ! algorithm_type=4: boussinesq implicit electrodiffusion
         call advance_timestep_imp_bousq(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                         Epot_mass_fluxdiv, &
@@ -736,8 +729,7 @@ subroutine main_driver()
         ! algorithm_type=6: boussinesq
         call advance_timestep_bousq(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                     gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                    Epot_mass_fluxdiv, &
-                                    diff_mass_fluxdiv,stoch_mass_fluxdiv, stoch_mass_flux, &
+                                    diff_mass_fluxdiv,stoch_mass_fluxdiv,stoch_mass_flux, &
                                     chem_rate, &
                                     dx,dt,time,the_bc_tower,istep, &
                                     grad_Epot_old,grad_Epot_new, &
@@ -858,12 +850,6 @@ subroutine main_driver()
      end do
   end do
 
-  if (use_charged_fluid) then
-     do n=1,nlevs
-        call multifab_destroy(Epot_mass_fluxdiv(n))
-     end do
-  end if
-
   do n=1,nlevs
      call multifab_destroy(rho_new(n))
      call multifab_destroy(rhotot_new(n))
@@ -897,6 +883,7 @@ subroutine main_driver()
         call multifab_destroy(charge_new(n))
         call multifab_destroy(permittivity(n))
         call multifab_destroy(Epot(n))
+        call multifab_destroy(Epot_mass_fluxdiv(n))
         do i=1,dm
            call multifab_destroy(grad_Epot_old(n,i))
            call multifab_destroy(grad_Epot_new(n,i))
