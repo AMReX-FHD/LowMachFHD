@@ -475,8 +475,8 @@ subroutine main_driver()
   call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_old,rhotot_old,Temp,dx, &
                          the_bc_tower%bc_tower_array)
 
-  ! now that we have eta, we can initialize the inhomogeneous velocity bcs
-  ! set inhomogeneous bc conditions
+  ! now that we have eta, we can initialize the inhomogeneous velocity bc's
+  ! set inhomogeneous velocity bc's to values supplied in inhomogeneous_bc_val
   call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time, &
                                  the_bc_tower%bc_tower_array)
 

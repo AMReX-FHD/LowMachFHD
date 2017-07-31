@@ -298,7 +298,7 @@ subroutine main_driver()
   call stag_mg_layout_build(mla)
   call mgt_macproj_precon_build(mla,dx,the_bc_tower)
 
-  ! set inhomogeneous bc condition
+  ! set inhomogeneous velocity bc's to values supplied in inhomogeneous_bc_val
   call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,beta_ed,dx,0.d0,the_bc_tower%bc_tower_array)
 
   ! provide an initial value (or guess) for umac and pres 

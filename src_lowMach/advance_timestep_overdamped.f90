@@ -237,7 +237,7 @@ contains
        call mk_grav_force(mla,gmres_rhs_v,.true.,rhotot_fc,rhotot_fc,the_bc_tower)
     end if
 
-    ! reset inhomogeneous bc condition to deal with reservoirs
+    ! set inhomogeneous velocity bc's to values supplied in inhomogeneous_bc_val
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time, &
                                    the_bc_tower%bc_tower_array)
 
@@ -489,7 +489,7 @@ contains
        call mk_grav_force(mla,gmres_rhs_v,.true.,rhotot_fc,rhotot_fc,the_bc_tower)
     end if
 
-    ! reset inhomogeneous bc condition to deal with reservoirs
+    ! set inhomogeneous velocity bc's to values supplied in inhomogeneous_bc_val
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time+0.5d0*dt, &
                                    the_bc_tower%bc_tower_array)
 

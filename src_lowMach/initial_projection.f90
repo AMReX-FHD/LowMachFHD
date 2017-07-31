@@ -137,7 +137,7 @@ contains
        end do
     end if
 
-    ! reset inhomogeneous bc condition to deal with reservoirs
+    ! set inhomogeneous velocity bc's to values supplied in inhomogeneous_bc_val
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,0.d0, &
                                    the_bc_tower%bc_tower_array)
 
