@@ -273,6 +273,10 @@ contains
        call mk_grav_force_bousq(mla,gmres_rhs_v,.true.,rho_fc,the_bc_tower)
     end if
 
+    if (variance_coef_mass .ne. 0.d0) then
+       call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+    end if
+
     ! compute diffusive, stochastic, potential mass fluxes
     ! with barodiffusion and thermodiffusion
     ! this computes "-F = rho W chi [Gamma grad x... ]"
@@ -308,7 +312,7 @@ contains
        end do
     end do
 
-   ! we don't support true "reservoirs" yet but this handles moving walls
+    ! set inhomogeneous velocity bc's to values supplied in inhomogeneous_bc_val
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time+dt, &
                                    the_bc_tower%bc_tower_array)
 
