@@ -639,7 +639,7 @@ contains
                    c_loc = c_init(2,n) + (c_init(1,n)-c_init(2,n))*coeff
                    c(i,j,n) = c_loc
                    if((prob_type==-15).and.(n==nspecies-1)) then ! Add chlorine if adding potassium
-                      c(i,j,2) = c(i,j,2) + c_loc
+                      c(i,j,2) = c(i,j,2) + c_init(1,2)/c_init(1,n)*c_loc
                    end if
                 end do
              end do
