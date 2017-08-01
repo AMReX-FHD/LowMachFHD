@@ -615,10 +615,13 @@ contains
 
     ! Step 6: solve for v^{n+1} and pi^{n+1/2} using GMRES
 
-    ! set gmres_rhs_v = (rho*v)^n / dt
+    ! compute mtemp = (rho*v)^n
+    call convert_m_to_umac(mla,rhotot_fc_old,mtemp,umac_old,.false.)
+
+    ! set gmres_rhs_v = mtemp / dt
     do n=1,nlevs
        do i=1,dm
-          call convert_m_to_umac(mla,rhotot_fc_old,gmres_rhs_v,umac_old,.false.)
+          call multifab_copy_c(gmres_rhs_v(n,i),1,mtemp(n,i),1,1,0)
           call multifab_mult_mult_s_c(gmres_rhs_v(n,i),1,1.d0/dt,1,0)
        end do
     end do
