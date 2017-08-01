@@ -374,6 +374,7 @@ contains
        call multifab_setval(dpi(n),0.d0,all=.true.)
     end do
 
+    ! zero gmres_rhs_v on physical boundaries
     do n=1,nlevs
        call zero_edgeval_physical(gmres_rhs_v(n,:),1,1,the_bc_tower%bc_tower_array(n))
     end do
@@ -382,7 +383,7 @@ contains
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc_old, &
                eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
        
-    ! compute v^{n+1} = v^n + dumac
+    ! compute v^{n+1,*} = vbar^n + dumac
     ! no need to update pi yet
     do n=1,nlevs
        do i=1,dm
@@ -416,11 +417,10 @@ contains
 
     ! Step 2: compute mass fluxes and reactions at t^n
 
-    ! compute adv_mass_fluxdiv = -rho_i^n * v^n
-    call mk_advective_s_fluxdiv(mla,umac_old,rho_fc,adv_mass_fluxdiv,.false.,dx,1,nspecies)
-
+    ! compute adv_mass_fluxdiv = -rho_i^n * v^n and then
     ! increment adv_mass_fluxdiv by -rho_i^n * v^{n+1,*}
-    call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv,.true.,dx,1,nspecies)
+    call mk_advective_s_fluxdiv(mla,umac_old,rho_fc,adv_mass_fluxdiv,.false.,dx,1,nspecies)
+    call mk_advective_s_fluxdiv(mla,umac    ,rho_fc,adv_mass_fluxdiv,.true. ,dx,1,nspecies)
 
     ! compute chemical rates m_i*R^n_i
     if (nreactions > 0) then
@@ -483,11 +483,10 @@ contains
 
     ! Step 4: compute mass fluxes and reactions at t^{n+1/2}
 
-    ! compute adv_mass_fluxdiv = -rho_i^{n+1/2} * v^n
-    call mk_advective_s_fluxdiv(mla,umac_old,rho_fc,adv_mass_fluxdiv,.false.,dx,1,nspecies)
-
+    ! compute adv_mass_fluxdiv = -rho_i^{n+1/2} * v^n and
     ! increment adv_mass_fluxdiv by -rho_i^{n+1/2} * v^{n+1,*}
-    call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv,.true.,dx,1,nspecies)
+    call mk_advective_s_fluxdiv(mla,umac_old,rho_fc,adv_mass_fluxdiv,.false.,dx,1,nspecies)
+    call mk_advective_s_fluxdiv(mla,umac    ,rho_fc,adv_mass_fluxdiv,.true. ,dx,1,nspecies)
 
     ! compute mass fluxes and reactions at t^{n+1/2}
     if (midpoint_stoch_mass_flux_type .eq. 1) then
@@ -624,14 +623,14 @@ contains
        end do
     end do
 
-    ! compute mtemp = rho^{n+1}*v^{n+1,*}
+    ! compute mtemp = rho^{n+1}*v^{n+1,*} for adv_mom_fluxdiv computation
     call convert_m_to_umac(mla,rhotot_fc_new,mtemp,umac,.false.)
 
-    ! compute adv_mom_fluxdiv_new = -rho*v^{n+1,*}*v^{n+1,*}
+    ! compute adv_mom_fluxdiv_new = -rho^{n+1}*v^{n+1,*}*v^{n+1,*}
     call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv_new,.false., &
                                 dx,the_bc_tower%bc_tower_array)
 
-    ! add (1/2) (-rho*v^n*v^n -rho*v^{n+1,*}*v^{n+1,*}) to gmres_rhs_v
+    ! add (1/2) (-rho^n*v^n*v^n -rho^{n+1}*v^{n+1,*}*v^{n+1,*}) to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
           call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,adv_mom_fluxdiv_old(n,i),1,1)
@@ -653,6 +652,8 @@ contains
                                  eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
 
        ! add stochastic momentum fluxes to gmres_rhs_v
+       ! note the factor of (1/2) since stoch_mom_fluxdiv contains
+       ! div (sqrt(eta^{n+1}...) Wbar^n) + div (sqrt(eta^n...) Wbar^n)
        do n=1,nlevs
           do i=1,dm
              call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,stoch_mom_fluxdiv(n,i),1,1)
@@ -751,6 +752,7 @@ contains
        call multifab_setval(dpi(n),0.d0,all=.true.)
     end do
 
+    ! zero gmres_rhs_v on physical boundaries
     do n=1,nlevs
        call zero_edgeval_physical(gmres_rhs_v(n,:),1,1,the_bc_tower%bc_tower_array(n))
     end do
