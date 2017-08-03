@@ -631,16 +631,26 @@ contains
              do i=lo(1),hi(1)
                 x = prob_lo(1) + (dble(i)+0.5d0)*dx(1) - x1
                 do n=1,nspecies
+
+                   ! tanh smoothing in y
                    coeff=0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)*0.5d0*(tanh((-y+y2-y1)/(smoothing_width*dx(2)))+1.d0)
-                   if((prob_type==-15).and.(n==nspecies-1)) then ! Donev: Add a special case for doing ternary diffusion NaCl + KCl
-                      ! Here the last two species have a tanh profile in both x and y (species are Na+,Cl-,K+,water)
+
+                   ! Donev: prob_type = -15: a special case for doing ternary diffusion NaCl + KCl
+                   ! Here the last two species have a tanh profile in both x and y (species are Na+,Cl-,K+,water)
+                   ! Aadd a tanh smoothing for central 50% of domain in x for second-to-last species
+                   if((prob_type==-15).and.(n==nspecies-1)) then 
                       coeff=0.5d0*(tanh(x/(smoothing_width*dx(1)))+1.d0)*0.5d0*(tanh((-x+x2-x1)/(smoothing_width*dx(1)))+1.d0)*coeff
-                   end if   
+                   end if  
+ 
+                   ! smooth between c_init(1,:) and c_init(2,:)
                    c_loc = c_init(2,n) + (c_init(1,n)-c_init(2,n))*coeff
                    c(i,j,n) = c_loc
-                   if((prob_type==-15).and.(n==nspecies-1)) then ! Add chlorine if adding potassium
+
+                   ! for 4-species test, need to add chlorine to central square 
+                   if((prob_type==-15).and.(n==nspecies-1) .and. nspecies .eq. 4) then
                       c(i,j,2) = c(i,j,2) + c_init(1,2)/c_init(1,n)*c_loc
                    end if
+
                 end do
              end do
           end do
