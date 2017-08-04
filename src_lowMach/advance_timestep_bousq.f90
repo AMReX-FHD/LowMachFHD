@@ -30,6 +30,7 @@ module advance_timestep_bousq_module
   use probin_common_module, only: advection_type, grav, variance_coef_mass, &
                                   variance_coef_mom, barodiffusion_type, project_eos_int, &
                                   molmass, use_bl_rng, nspecies
+  use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: midpoint_stoch_mass_flux_type, is_ideal_mixture
   use probin_charged_module, only: use_charged_fluid
   use probin_chemistry_module, only: nreactions, use_Poisson_rng, include_discrete_LMA_correction, &
@@ -115,7 +116,7 @@ contains
 
     integer :: i,dm,n,nlevs
 
-    real(kind=dp_t) :: theta_alpha, norm_pre_rhs
+    real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
     real(kind=dp_t) :: weights(2)
 
     real(kind=dp_t), parameter :: mattingly_lin_comb_coef(1:2) = (/-1.d0, 2.d0/)
@@ -379,9 +380,19 @@ contains
        call zero_edgeval_physical(gmres_rhs_v(n,:),1,1,the_bc_tower%bc_tower_array(n))
     end do
 
+    gmres_abs_tol_in = gmres_abs_tol ! Save this 
+
+    ! This relies entirely on relative tolerance and can fail if the rhs is roundoff error only:
+    ! gmres_abs_tol = 0.d0 ! It is better to set gmres_abs_tol in namelist to a sensible value
+
     ! call gmres to compute delta v and delta pi
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc_old, &
                eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
+
+    ! for the corrector gmres solve we want the stopping criteria based on the
+    ! norm of the preconditioned rhs from the predictor gmres solve.  otherwise
+    ! for cases where du in the corrector should be small the gmres stalls
+    gmres_abs_tol = max(gmres_abs_tol_in, norm_pre_rhs*gmres_rel_tol)
        
     ! compute v^{n+1,*} = vbar^n + dumac
     ! no need to update pi yet
@@ -763,6 +774,8 @@ contains
     ! call gmres to compute delta v and delta pi
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc_new, &
                eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
+                              
+    gmres_abs_tol = gmres_abs_tol_in ! Restore the desired tolerance   
        
     ! compute v^{n+1} = vbar^n + dumac
     ! compute pi^{n+1/2}= pi^{n-1/2} + dpi
