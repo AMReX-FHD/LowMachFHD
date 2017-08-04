@@ -23,11 +23,11 @@
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 1020000                    ! maximum number of time steps
+  max_step = 12000                      ! maximum number of time steps
   plot_int = 0                          ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = -1                          ! Interval for writing a checkpoint
   restart = -1                          ! checkpoint restart number
-  print_int = 1000                      ! how often to output EOS drift and sum of conserved quantities
+  print_int = 100                       ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 10                  ! how often to call project_onto_eos
 
   ! Physical parameters
@@ -35,7 +35,9 @@
   grav(1:2) = 0. 0.                     ! gravity vector (negative is downwards)
   nspecies = 3
   molmass(1:3) = 1. 2. 3.               ! molecular masses for nspecies (mass per molecule, *not* molar mass)
-  rhobar(1:3) = 2. 3. 3.85714           ! pure component densities for all species (chosen from EOS)
+  !rhobar(1:3) = 2. 3. 3.85714          ! pure component densities for all species (chosen from EOS)
+  rhobar(1:3) = 3. 3. 3.                ! pure component densities for all species (chosen from EOS)
+  rho0 = 3.
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
   variance_coef_mom = 1.                ! global scaling epsilon for stochastic momentum forcing
@@ -49,6 +51,7 @@
                                         ! 3 = iterative
                                         ! 4 = imp_bousq
                                         ! 5 = Inertial algorithm (midpoint)
+                                        ! 6 = Boussinesq
 
   ! Random number generator
   !----------------------
@@ -142,7 +145,7 @@
                                         ! If positive, how often to compute mean and 
                                         ! standard deviation over reduced dimensions
   n_steps_save_stats = -1               ! How often to dump HydroGrid output files
-  n_steps_skip = 20000                  ! How many steps to skip > L^2/(chi*dt)
+  n_steps_skip = 2000                   ! How many steps to skip > L^2/(chi*dt)
   analyze_conserved = F                 ! Should we use conserved variables for the analysis
                                         ! (does not work well)
   center_snapshots = F                  ! Should we use cell-centered momenta for the analysis
