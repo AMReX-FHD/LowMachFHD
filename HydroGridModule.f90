@@ -166,8 +166,10 @@ module HydroGridModule
 
       ! Cross-correlations between structure factors for different variables: 
       logical :: writeSpectrumVTK=.false. ! Write to VTK
+      logical :: writeAbsValue=.true. ! Only write absolute value of static structure factors to VTK files
       logical :: estimateCovariances=.false. ! Estimate the covariance of all pairs of spectra
       logical :: subtractMeanFT=.false. ! Subtract the mean of the structure factors (for non-uniform systems)
+      integer :: writeTheory=-1 ! Write the theoretical prediction for incompressible hydro (-2=for MD analysis, -1=none, 0=continuum, 1=MAC)
       real (wp) :: structFactMultiplier = 1.0_wp ! Normalization for structure factors
       integer :: nStructureFactors = 0 ! How many pairs of variables to calculate Fourier-space cross-correlations for
       integer, allocatable :: vectorFactors(:) ! Dimension (nStructureFactors), 1=diagonal, -1=off-diagonal
@@ -227,9 +229,9 @@ module HydroGridModule
 
    end type HydroGrid
    
-   logical, public, save :: writeAbsValue=.true. ! Only write absolute value of static structure factors to VTK files
+   ! These should not actually be global variables since one may want to do different things for different namelists
+   ! But this is mostly used for experimental tests so I did not bother to make them members of type(HydroGrid)
    logical, public, save :: writeSpectrumHistory=.false. ! Write out a history of the structure factors
-   integer, public, save :: writeTheory=-1 ! Write the theoretical prediction for incompressible hydro (-2=for MD analysis, -1=none, 0=continuum, 1=MAC)
    integer, public, save :: useRelativeVelocity=-1 ! Calculate v12 to test two-fluid models
    integer, public, save :: paddDynamicFFT=0 ! -1=no padding, 0=padd with zeros (recommended), 1=padd with mirror image
    
@@ -271,7 +273,8 @@ subroutine createHydroAnalysis (grid, nCells, nSpecies, nVelocityDimensions, isS
    logical :: periodic
 
    logical :: writeSpectrumVTK, writeVariancesVTK, writeMeansVTK, writeSnapshotVTK, &
-      estimateCovariances, subtractMeanFT
+      estimateCovariances, subtractMeanFT, writeAbsValue
+   integer :: writeTheory   
 
    integer :: iDimension, iWavenumber
    
@@ -315,6 +318,8 @@ subroutine createHydroAnalysis (grid, nCells, nSpecies, nVelocityDimensions, isS
    
    grid%estimateCovariances = estimateCovariances
    grid%subtractMeanFT = subtractMeanFT
+   grid%writeTheory = writeTheory
+   grid%writeAbsValue = writeAbsValue
 
    ! BCs
    grid%periodic = periodic
@@ -464,6 +469,8 @@ contains
       staggeredVelocities=grid%staggeredVelocities
       topConcentration=0.5_wp
       bottomConcentration=0.5_wp
+      writeTheory=-1
+      writeAbsValue=.false.
 
       ! Now read the user inputs:   
       read (nameListFile, nml = hydroAnalysisOptions)
@@ -2028,7 +2035,7 @@ subroutine writeStructureFactors(grid,filenameBase)
       open (file = trim(filename), unit=structureFactorFile(3), status = "unknown", action = "write")
       write(structureFactorFile(3), "(A)") "# Columns are: mean, std, minval, maxval"
 
-      if(writeAbsValue) then ! Only write the absolute value of the static factors  
+      if(grid%writeAbsValue) then ! Only write the absolute value of the static factors  
          n_S_k_vars=1 ! For abs value
          varnames(1)="S_k" // C_NULL_CHAR         
       else
@@ -2039,7 +2046,7 @@ subroutine writeStructureFactors(grid,filenameBase)
 
       nTemps=n_S_k_vars ! Number of temporary arrays needed
       
-      if(writeTheory>=0) then ! Calculate the discrete structure factor theory
+      if(grid%writeTheory>=0) then ! Calculate the discrete structure factor theory
          ! Write the actual correct values
          n_S_k_vars = n_S_k_vars + 1
          varnames(n_S_k_vars)="Theory" // C_NULL_CHAR
@@ -2081,7 +2088,7 @@ subroutine writeStructureFactors(grid,filenameBase)
             
             kdrh = ijk * pi / grid%nCells ! This is k*dx/2
             k_discrete = ijk * 2*pi / grid%systemLength ! Wavenumber
-            if(abs(writeTheory)==1) then ! Account for discretization artifacts
+            if(abs(grid%writeTheory)==1) then ! Account for discretization artifacts
                where(ijk==0)
                   k_discrete = 0
                else where
@@ -2105,20 +2112,20 @@ subroutine writeStructureFactors(grid,filenameBase)
                modes(3,:) = (/ -k_discrete(3)*k_discrete(1), -k_discrete(3)*k_discrete(2), k2_proj /) / sqrt(k2_discrete*k2_proj)
             end if
                
-            if(writeAbsValue) then
+            if(grid%writeAbsValue) then
                S_k_array(i,j,k,1)=abs(grid%structureFactors(iCell, jCell, kCell, iStructureFactor))
             else
                S_k_array(i,j,k,1)=real(grid%structureFactors(iCell, jCell, kCell, iStructureFactor))
                S_k_array(i,j,k,2)=aimag(grid%structureFactors(iCell, jCell, kCell, iStructureFactor))
             end if   
             
-            if(writeTheory==0) then ! Write the continuum theoretical prediction for incompressible hydro
+            if(grid%writeTheory==0) then ! Write the continuum theoretical prediction for incompressible hydro
                if(grid%vectorFactors(iStructureFactor)>0) then ! <v_x, v_x> = P_xx
                   S_k_array(i,j,k,n_S_k_vars) = 1.0_wp-kdrh(iStructureFactor)**2/max(sum(kdrh**2), epsilon(1.0_wp))
                else if(grid%vectorFactors(iStructureFactor)<0) then ! <v_x, v_y> = P_xy
                   S_k_array(i,j,k,n_S_k_vars) = -kdrh(1)*kdrh(2)/max(sum(kdrh**2), epsilon(1.0_wp))
                end if   
-            else if(writeTheory>0) then ! Write the discrete theoretical prediction (MAC projection)
+            else if(grid%writeTheory>0) then ! Write the discrete theoretical prediction (MAC projection)
                if(grid%vectorFactors(iStructureFactor)>0) then ! <v_x, v_x> = P_xx
                   if((i==0).and.(j==0).and.(k==0)) then
                      S_k_array(i,j,k,n_S_k_vars) = 1.0_wp
@@ -2363,7 +2370,7 @@ if(grid%writeDynamicFiles>0) then ! Write S(k,w) to files
          
          kdrh = ijk * pi / grid%nCells ! This is k*dx/2
          k_discrete = ijk * 2*pi / grid%systemLength ! Wavenumber
-         if(abs(writeTheory)==1) then ! Account for discretization artifacts
+         if(abs(grid%writeTheory)==1) then ! Account for discretization artifacts
             where(ijk==0)
                k_discrete = 0
             else where
