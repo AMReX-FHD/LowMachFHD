@@ -282,7 +282,7 @@ contains
     call compute_mass_fluxdiv(mla,rho_old,rhotot_old,gradp_baro,Temp, &
                               diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                               diff_mass_flux,stoch_mass_flux, &
-                              dt,time,dx,weights,the_bc_tower, &
+                              0.5d0*dt,time,dx,weights,the_bc_tower, &
                               charge_old,grad_Epot_old,Epot, &
                               permittivity)
 
