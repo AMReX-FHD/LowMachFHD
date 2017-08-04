@@ -112,9 +112,9 @@ In a nonlinear Langevin FHD formalism for multispecies reactive mixtures
 \cite{MultispeciesChemistry,GENERIC_Chemical}, the additional contribution
 to the mass density equation from this reaction can be written in
 the form (in the kinetic or Klimontovich interpretation \cite{KineticStochasticIntegral_Ottinger})
-{[}\textbf{Donev: In }\cite{MultispeciesChemistry}\textbf{ we used
-a reaction time and some other prefactors instead of a rate, but it
-is all just irrelevant constants for our purpose.}{]}
+{[}Donev: In \textbf{\cite{MultispeciesChemistry}} we used a reaction
+time and some other prefactors instead of a rate, but it is all just
+irrelevant constants for our purpose.{]}
 \begin{align}
 \left(\partial_{t}\V{\rho}\right)_{\text{react}} & =\left(\V{\nu}\odot\V m\right)\left[-r\tilde{\mathcal{A}}+\left(2r\frac{\tilde{\mathcal{A}}}{\mathcal{A}}\right)^{\frac{1}{2}}\diamond\check{\mathcal{W}}\right],\label{eq:GENERIC}
 \end{align}
@@ -168,11 +168,11 @@ i.e., close to equilibrium $\tilde{\mathcal{A}}\approx\Upsilon\mathcal{A}$
 where $\Upsilon$ is a constant, i.e., the nonlinear and linear affinities
 are equivalent up to a constant. Therefore, if we redefine the chemical
 rate as $\kappa=\nu_{1}^{2}m_{1}^{2}\left(k_{B}T\right)^{-1}r\Upsilon$,
-near equilibrium we have that \textcolor{red}{
+near equilibrium we have that 
 \begin{align}
 \left(\partial_{t}\rho_{1}\right)_{\text{react}}^{\text{eq}} & \approx\nu_{1}m_{1}\left[-r\Upsilon\mathcal{A}+\left(2r\Upsilon\right)^{\frac{1}{2}}\check{\mathcal{W}}\right]=-\kappa\mu+\left(2\kappa k_{B}T\right)^{\frac{1}{2}}\check{\mathcal{W}}.\label{eq:LinearizedChemistry}
 \end{align}
-}This matches the expressions derived by Grossman from equilibrium
+This matches the expressions derived by Grossman from equilibrium
 fluctuation-dissipation balance \cite{FluctChemistry_Grossmann},
 and will be useful for the linearized analysis performed later.
 
@@ -325,8 +325,7 @@ our assumption $\beta=0$, giving
 \begin{eqnarray*}
 n_{0} & = & n_{1}+2n_{2}=\text{const.}
 \end{eqnarray*}
-For an ideal mixture (not necessarily an ideal gas {[}\textbf{Donev:
-Worth checking this claim explicitly}{]}), we have
+For an ideal mixture (not necessarily an ideal gas, we have
 \[
 \mu_{c}=\frac{k_{B}T}{c\left(1-c\right)\left[cm_{2}+\left(1-c\right)m_{1}\right]}=\frac{k_{B}T}{mc\left(1-c^{2}\right)}.
 \]
@@ -535,19 +534,19 @@ on $\mu_{c}$.
 
 To go beyond the linearized equations and still be consistent with
 a traditional LMA we need to use the full formalism described in \cite{MultispeciesChemistry},
-and use tau-leaping/SSA with forward/backward reaction rate (see (\ref{eq:CLE}))
+and use tau-leaping/SSA with forward/backward reaction rate (see (\ref{eq:CLE}))\textcolor{red}{
 \[
-r^{\pm}=r\prod_{k}e^{\tilde{\mu}_{k}^{\pm}},
+r^{\pm}=r\left(P,T\right)\prod_{k}e^{\tilde{\mu}_{k}^{\pm}},
 \]
-which we can convert this into the more standard LMA form based on
+}which we can convert this into the more standard LMA form based on
 mole fractions (but \emph{not} number densities, as explained above)
 \cite{MultispeciesChemistry}. Specifically, general multispecies
 mixtures, we can express chemical potentials as a sum of ideal and
-excess contributions, 
+excess contributions, \textcolor{red}{
 \[
 \mu_{k}\left(\V x,T,P\right)=\left(\mu_{k}^{0}\left(T,P\right)+\frac{k_{B}T}{m_{k}}\ln\left(x_{k}\right)\right)+\frac{k_{B}T}{m_{k}}\ln\left(\gamma_{k}\right),
 \]
-where $\mu_{k}^{0}\left(T,P\right)$ is a reference chemical potential
+}where $\mu_{k}^{0}\left(T,P\right)$ is a reference chemical potential
 (e.g., pure liquid state at standard conditions), and $\gamma_{k}\left(\V x,T,P\right)$
 is the activity coefficient of species $k$; for an ideal mixture
 $\gamma_{k}=1$. In the low Mach number setting we consider here,
@@ -567,10 +566,11 @@ is the activity (i.e., effective concentration). This gives
 \exp\left(\tilde{\mu}_{s}^{\pm}\right)=\exp\left(\nu_{k}^{\pm}\hat{\mu}_{s}^{o}\right)\left(x_{s}\gamma_{s}\right)^{\nu_{s}^{\pm}}\;\;,
 \]
 which leads to a generalized law-of-mass action (LMA) of the form
+\textcolor{red}{
 \begin{eqnarray}
 \left(\partial_{t}\rho_{s}\right)_{\text{react}} & = & \nu_{s}m_{s}\left(\kappa_{r}^{+}\prod_{s^{\prime}}\left(x_{s^{\prime}}\gamma_{s^{\prime}}\right)^{\nu_{{s^{\prime}}}^{+}}-\kappa_{r}^{-}\prod_{s^{\prime}}\left(x_{s^{\prime}}\gamma_{s^{\prime}}\right)^{\nu_{{s^{\prime}}}^{-}}\right),\label{eq:LMA_generalized}
 \end{eqnarray}
-where $\kappa_{r}^{\pm}(T,p,\V X)$ are the more familiar forward/reverse
+}where $\kappa_{r}^{\pm}(T,p,\V X)$ are the more familiar forward/reverse
 reaction rates (per unit time and per unit volume). Since there is
 only one independent timescale parameter $r$, the forward and reverse
 rates are not independent and the LMA gives the ratio to be the equilibrium
@@ -585,16 +585,15 @@ that can be calculated from pure component data~\cite{zemansky1981heat,NonEqTher
 
 \subsection{Equilibrium Free Energy beyond Gaussian Approximation}
 
-If everything is done right, for an ideal mixture with $\beta=0$
-{[}\textbf{Donev: Handling beta nonzero requires a lot more thought}{]},
-the thermodynamic equilibrium state should be consistent with the
-Einstein distribution with an ideal entropy of mixing {[}\textbf{Donev:
-I think this is right because the exponential has the form} $(N_{k}m_{k}\mu_{k})/k_{B}T$\textbf{
-which seems right}{]} at constant mass, i.e., constant density,
+If everything is done right, for an ideal mixture with $\beta=0$,
+sometimes called a \emph{perfect solution}, the thermodynamic equilibrium
+state should be consistent with the Einstein distribution with an
+ideal entropy of mixing (since here we have constant mass, i.e., constant
+density, the only contribution is the entropy of mixing),\textcolor{red}{
 \begin{equation}
-P\left(\V n\right)\sim\exp\left[-\left(n\D V\right)\sum_{k}x_{k}\,\left(\ln\left(x_{k}/x_{k}^{\text{eq}}\right)-1\right)\right]=\exp\left[-\D V\sum_{k}n_{k}\,\left(\ln\left(x_{k}/x_{k}^{\text{eq}}\right)-1\right)\right],\label{eq:eq_distro_LM}
+P\left(\V n\right)\sim\exp\left[-\left(n\D V\right)\sum_{k}x_{k}\,\left(\ln\left(x_{k}/x_{k}^{\text{eq}}\right)-1\right)\right]=\exp\left[-\D V\sum_{k}n_{k}\,\ln\left(x_{k}/x_{k}^{\text{eq}}\right)\right],\label{eq:eq_distro_LM}
 \end{equation}
-including going beyond the Gaussian approximation. Here $x_{k}^{\text{eq}}$
+}including going beyond the Gaussian approximation. Here $x_{k}^{\text{eq}}$
 is the equilibrium mole fraction, which is determined by the equilibrium
 constant. For the dimerization reaction in a single cell with $c_{\text{eq}}=1/2$,
 we have the mass conservation $n_{1}+2n_{2}=n_{0}$ relating $n_{1}$
@@ -604,7 +603,12 @@ The distribution (\ref{eq:eq_distro_LM}) should be the equilibrium
 density for the mole fraction in each cell (and different cells should
 be independent). It is related to but different from the Poisson distribution
 for the number of molecules of each species which applies in the ideal
-gas case.
+gas case. We have confirmed that (\ref{eq:eq_distro_LM}) is indeed
+the equilibrium distribution of the LME with LMA based on mole fractions,
+and also that for sufficiently large $N_{0}=n_{0}\D V$ it is the
+equilibrium distribution for mole-fraction-based CME (SSA/tau-leaping)
+{[}Donev: This test was done numerically and not analytically but
+I am pretty sure it is right.{]}.
 
 Note that for an ideal gas mixture, as we considered in \cite{MultispeciesChemistry},
 we used the ideal-gas entropy, which would give 
@@ -618,23 +622,10 @@ using the known entropy of a mixture. But the important thing is that
 (\ref{eq:eq_distro_gas}) is \emph{different} from (\ref{eq:eq_distro_LM})
 because $x_{k}=n_{k}/n$ and $n_{k}$ are different because $n$ varies.
 For an ideal gas constant pressure means constant $n$ so the two
-are then the same.
-
-In the previous \cite{MultispeciesChemistry} we showed that (\ref{eq:eq_distro_gas})
-is the steady-state solution of the Fokker-Planck equation for the
-LME equation when the LMA is expressed in terms of number densities.
-\textcolor{red}{So I think that we can convince ourselves that (\ref{eq:eq_distro_LM})
-is the right answer in the Boussinesq case $\beta=0$ if Changho can
-confirm that (\ref{eq:eq_distro_LM}) is the steady-state solution
+are then the same. In the previous \cite{MultispeciesChemistry} we
+showed that (\ref{eq:eq_distro_gas}) is the steady-state solution
 of the Fokker-Planck equation for the LME equation when the LMA is
-expressed in terms of }\textcolor{red}{\emph{mole}}\textcolor{red}{{}
-fractions. If one does not want to use the LMA one can start from
-the CME itself (with rates based on mole fractions!) and then use
-Stirling's approximation in the solution; this is a bit more work
-though and I am pretty sure it will give the same answer as the CME
-to leading order. But, solving the CME is easy and we can regard that
-answer as the ``truth'' to compare to since that does not even use
-Stirling's approximation.}
+expressed in terms of number densities.
 
 \bibliographystyle{unsrt}
 \bibliography{References,GarciaGeneralBibFile,MScaleProp}
