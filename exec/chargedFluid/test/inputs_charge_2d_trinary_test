@@ -1,6 +1,10 @@
 ! WARNING: gfortran has shown some issues reading matrices of rank higher than 2 from namelists
 ! be careful and check values are read correctly (e.g., c_bc)
 
+! Debye length 26.5nm (2.65d-6 cm)
+! dt_electro is ~ 3.5d-7
+! for finest simulation, dt_diff limit is ~ 3.13d-7
+
 ! Options for low Mach equations
 &probin_common
  
