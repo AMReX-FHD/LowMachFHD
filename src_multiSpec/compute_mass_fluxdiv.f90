@@ -33,8 +33,8 @@ contains
     ! Donev: Add a logical flag for whether to do electroneutral or not
        
     type(ml_layout), intent(in   )   :: mla
-    type(multifab) , intent(inout)   :: rho(:)
-    type(multifab) , intent(inout)   :: rhotot(:)
+    type(multifab) , intent(in   )   :: rho(:)
+    type(multifab) , intent(in   )   :: rhotot(:)
     type(multifab) , intent(in   )   :: gradp_baro(:,:)
     type(multifab) , intent(in   )   :: Temp(:)
     type(multifab) , intent(inout)   :: diff_mass_fluxdiv(:)
@@ -85,8 +85,6 @@ contains
           call multifab_build_edge(sqrtLonsager_fc(n,i), mla%la(n), nspecies**2, 0, i)
        end do
     end do
- 
-    call compute_rhotot(mla,rho,rhotot,ghost_cells_in=.true.)
  
     ! compute molmtot, molarconc (primitive variables) for 
     ! each-cell from rho(conserved) 
