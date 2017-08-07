@@ -4,7 +4,7 @@ module inhomogeneous_bc_val_module
   use bc_module
   use bl_error_module
   use bl_constants_module
-  use probin_multispecies_module, only: c_bc
+  use probin_multispecies_module, only: c_bc, rho_bc
   use probin_common_module, only: prob_lo, prob_hi, wallspeed_lo, wallspeed_hi, prob_type, &
                                   nspecies, algorithm_type, rho0
   use probin_charged_module, only: Epot_wall, Epot_wall_bc_type
@@ -153,7 +153,20 @@ contains
 
        ! full density (only for boussinesq algorithm)
        if (algorithm_type .eq. 6) then
-          val = 0.d0 ! homogeneous Neumann walls
+
+          ! full rho boundary condition
+          if (x .eq. prob_lo(1)) then
+             val = rho_bc(1,1)
+          else if (x .eq. prob_hi(1)) then
+             val = rho_bc(1,2)
+          else if (y .eq. prob_lo(2)) then
+             val = rho_bc(2,1)
+          else if (y .eq. prob_hi(2)) then
+             val = rho_bc(2,2)
+          else
+             val = 0.d0
+          end if
+
        else
           call bl_error("calling inhomogeneous_bc_val_2d with scal_bc_comp (full rho")
        end if
