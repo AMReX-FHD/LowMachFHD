@@ -29,7 +29,7 @@ module advance_timestep_bousq_module
   use mk_grav_force_module
   use probin_common_module, only: advection_type, grav, variance_coef_mass, &
                                   variance_coef_mom, barodiffusion_type, project_eos_int, &
-                                  molmass, use_bl_rng, nspecies
+                                  molmass, use_bl_rng, nspecies, plot_int, max_step
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: midpoint_stoch_mass_flux_type, is_ideal_mixture
   use probin_charged_module, only: use_charged_fluid
@@ -813,6 +813,24 @@ contains
           call multifab_mult_mult_s_c(eta_ed(n,i),1,2.d0,1,eta_ed(n,i)%ng)
        end do
     end do
+
+    ! if writing a plotfile, compute Epot using new densities
+    ! use existing machinery to compute all mass fluxes - yes this is overkill
+    ! but better than writing a separate routine for now
+    ! diff/stoch_mass_flux and fluxdiv are not persistent so changing values doesn't
+    ! matter.  grad_Epot is persistent so we overwrite the old values,
+    ! which are thrown away
+    if (plot_int.gt.0 .and. ( (mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) ) then
+       ! compute the new charge and store it in charge_old (it could get modified to
+       ! subtract off the average in compute_mass_fluxdiv)
+       call dot_with_z(mla,rho_new,charge_old)
+       call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro,Temp, &
+                                 diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                 diff_mass_flux,stoch_mass_flux, &
+                                 dt,time,dx,weights,the_bc_tower, &
+                                 charge_old,grad_Epot_old,Epot, &
+                                 permittivity)
+    end if
 
     do n=1,nlevs
        call multifab_destroy(adv_mass_fluxdiv(n))
