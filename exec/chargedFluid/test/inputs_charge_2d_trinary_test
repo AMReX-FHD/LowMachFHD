@@ -8,30 +8,37 @@
   !----------------------
   dim_in = 2                       ! 2D or 3D  
   prob_lo(1:3) = 0.d0 0.d0 0.d0        ! physical lo coordinate
-  prob_hi(1:3) = 5.12e-4 5.12e-4       ! physical hi coordinate
+  prob_hi(1:3) = 1.28d-3 1.28d-3       ! physical hi coordinate
 
   nspecies = 4
 
-  n_cells(1:2) = 512 512               ! number of cells in domain
-  max_grid_size(1:2) = 256 256     ! max number of cells in a box
-  max_step = 100                ! maximum number of time steps
-  plot_int = 100                 ! Interval for writing a plotfile (for visit/amrvis)
-  smoothing_width = 8.d0
-  fixed_dt = 1.d-8                  ! time step (if positive, fixed)
-
   n_cells(1:2) = 256 256               ! number of cells in domain
   max_grid_size(1:2) = 128 128     ! max number of cells in a box
-  max_step = 50                 ! maximum number of time steps
-  plot_int = 50                  ! Interval for writing a plotfile (for visit/amrvis)
-  smoothing_width = 4.d0
-  fixed_dt = 2.d-8                  ! time step (if positive, fixed)
+  max_step = 80                 ! maximum number of time steps
+  plot_int = 80                  ! Interval for writing a plotfile (for visit/amrvis)
+  smoothing_width = 8.d0
+  fixed_dt = 2.5d-7                  ! time step (if positive, fixed)
 
-  n_cells(1:2) = 128 128               ! number of cells in domain
-  max_grid_size(1:2) = 64 64       ! max number of cells in a box
-  max_step = 25                 ! maximum number of time steps
-  plot_int = 25                  ! Interval for writing a plotfile (for visit/amrvis)
-  smoothing_width = 2.d0
-  fixed_dt = 4.d-8                  ! time step (if positive, fixed)
+!  n_cells(1:2) = 128 128               ! number of cells in domain
+!  max_grid_size(1:2) = 64 64       ! max number of cells in a box
+!  max_step = 40                 ! maximum number of time steps
+!  plot_int = 40                  ! Interval for writing a plotfile (for visit/amrvis)
+!  smoothing_width = 4.d0
+!  fixed_dt = 5.d-7                 ! time step (if positive, fixed)
+
+!  n_cells(1:2) = 64 64               ! number of cells in domain
+!  max_grid_size(1:2) = 32 32       ! max number of cells in a box
+!  max_step = 20                 ! maximum number of time steps
+!  plot_int = 20                  ! Interval for writing a plotfile (for visit/amrvis)
+!  smoothing_width = 2.d0
+!  fixed_dt = 1.d-6                 ! time step (if positive, fixed)
+
+!  n_cells(1:2) = 32 32               ! number of cells in domain
+!  max_grid_size(1:2) = 16 16       ! max number of cells in a box
+!  max_step = 10               ! maximum number of time steps
+!  plot_int = 10                ! Interval for writing a plotfile (for visit/amrvis)
+!  smoothing_width = 1.d0
+!  fixed_dt = 2.d-6                 ! time step (if positive, fixed)
 
   ! Time-step control
   !----------------------
@@ -49,7 +56,7 @@
   !--------------------
   grav(1:2) = 0.d0 0.d0               ! gravity vector (negative is downwards)
   molmass(1:4) =  3.82d-23 5.89d-23 3.35d-23 3.0d-23 ! sodium: 3.82e-23 g, Cl: 5.89e-23 g
-  rhobar(1:4) =   1.d0 1.d0 1.d0 1.d0 !3.17d0 3.17d0 1.d0
+  rhobar(1:4) =   1.d0 1.d0 1.d0 1.d0
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
   variance_coef_mom =  0.d0 !.25d5 ! 1.d5
@@ -202,13 +209,10 @@
 /
 
 &probin_charged
-  electroneutral = T
+  electroneutral = F
   use_charged_fluid = T
   dielectric_const = 2.5d-19
   charge_per_mass(1:4) = 4.2d3 -2.72d3 4.776d3 0.d0
-  Epot_wall(2,2) = 0.d0
-  ! theta_pot = 1
-  ! num_pot_iters = 2
 /
 
 ! Stokes solver for velocity
