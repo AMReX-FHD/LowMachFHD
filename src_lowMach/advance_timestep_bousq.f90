@@ -121,9 +121,6 @@ contains
 
     real(kind=dp_t), parameter :: mattingly_lin_comb_coef(1:2) = (/-1.d0, 2.d0/)
 
-    weights(1) = 1.d0
-    weights(2) = 0.d0
-
     if (barodiffusion_type .ne. 0) then
        call bl_error("advance_timestep_bousq: barodiffusion not supported yet")
     end if
@@ -255,6 +252,7 @@ contains
 
        ! compute stoch_mom_fluxdiv = div (sqrt(eta^n...) Wbar^n)
        ! save this for use in the corrector GMRES solve
+       weights(1) = 1.d0
        call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv,.false., &
                                  eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
 
@@ -279,6 +277,8 @@ contains
     ! compute diffusive, stochastic, potential mass fluxes
     ! with barodiffusion and thermodiffusion
     ! this computes "-F = rho W chi [Gamma grad x... ]"
+    weights(1) = 1.d0
+    weights(2) = 0.d0
     call compute_mass_fluxdiv(mla,rho_old,rhotot_old,gradp_baro,Temp, &
                               diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                               diff_mass_flux,stoch_mass_flux, &
@@ -662,7 +662,8 @@ contains
     if (variance_coef_mom .ne. 0.d0) then
 
        ! increment stoch_mom_fluxdiv by = div (sqrt(eta^{n+1}...) Wbar^n)
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv,.false., &
+       weights(1) = 1.d0
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv,.true., &
                                  eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
 
        ! add stochastic momentum fluxes to gmres_rhs_v
