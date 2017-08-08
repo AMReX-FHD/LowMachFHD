@@ -4,8 +4,9 @@ module define_bc_module
   use ml_layout_module
   use bc_module
   use inhomogeneous_bc_val_module
-  use probin_common_module, only : bc_lo, bc_hi, nspecies
+  use probin_common_module, only : bc_lo, bc_hi, nspecies, algorithm_type, rho0
   use probin_charged_module, only: Epot_wall_bc_type
+  use probin_multispecies_module, only: rhotot_bc
 
   implicit none
 
@@ -270,6 +271,19 @@ contains
     end do
     end do
     end do
+
+    ! for Boussinesq algorithm, we define rhotot bc's to be either homogeneous Neumann or dirichlet
+    if (algorithm_type .eq. 6) then
+       do d = 1, dm
+       do lohi = 1, 2
+          if ( (phys_bc_level(0,d,lohi) == NO_SLIP_WALL) .or. (phys_bc_level(0,d,lohi) == SLIP_WALL) ) then
+             rhotot_bc(d,lohi) = 0.d0
+          else if ( (phys_bc_level(0,d,lohi) == NO_SLIP_RESERVOIR) .or. (phys_bc_level(0,d,lohi) == SLIP_RESERVOIR) ) then
+             rhotot_bc(d,lohi) = rho0
+          end if
+       end do
+       end do
+    end if
 
   end subroutine adv_bc_level_build
 
