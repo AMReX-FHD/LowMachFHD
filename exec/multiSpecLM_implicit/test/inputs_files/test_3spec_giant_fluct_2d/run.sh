@@ -1,15 +1,16 @@
 #!/bin/bash
 
 EXEC=../../main.Linux.gfortran.mpi.exe
-INPUTS=../inputs_paper_3spec_giant_fluct_2d
-RUNNAME=nu1_alg0_64x32_short
+INPUTS=inputs_3spec_giant_fluct_2d
+RUNNAME=nu1e3_alg6_64x32_short
 NPROC=4
 
 # visc_coef
-OPT1="--visc_coef 1."
+OPT1="--visc_coef 1.e3"
 
 # algorithm type
-OPT2="--algorithm_type 0"               # inertial trapezoidal
+OPT2="--algorithm_type 6"               # Boussinesq 
+#OPT2="--algorithm_type 0"              # inertial trapezoidal
 #OPT2="--algorithm_type 2"              # overdamped
 #OPT2="--algorithm_type 5"              # inertial midpoint
 

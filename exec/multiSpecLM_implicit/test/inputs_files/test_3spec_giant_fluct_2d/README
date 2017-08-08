@@ -1,13 +1,7 @@
-This directory contains scripts for generating
- - Figure 3 (Section III.C.2)
-in Paper by Donev et al.
- "Low Mach number fluctuating hydrodynamics of multispecies liquid mixtures"
- Phys. Fluids 27, 037103 (2015)
-
-Scripts are based on inputs file ../inputs_paper_3spec_giant_fluct_2d 
+Note that ./inputs_3spec_giant_fluct_2d is slightly different from ../inputs_paper_3spec_giant_fluct_2d
+We want to check algorithm = 6 (Boussinesq).
 
 ** Execution
 - edit run.sh and run it
 - move to $RUNNAME directory and "gnuplot ../Sk.plt"
   (make sure the right values of nu, c11, c12, c22 are chosen)
-  (values of c11, c12, c22 are for smaller system 64x32)
