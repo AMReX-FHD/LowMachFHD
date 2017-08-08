@@ -821,6 +821,7 @@ contains
     ! diff/stoch_mass_flux and fluxdiv are not persistent so changing values doesn't
     ! matter.  grad_Epot is persistent so we overwrite the old values,
     ! which are thrown away
+    if (use_charged_fluid) then
     if (plot_int.gt.0 .and. ( (mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) ) then
        ! compute the new charge and store it in charge_old (it could get modified to
        ! subtract off the average in compute_mass_fluxdiv)
@@ -831,6 +832,7 @@ contains
                                  dt,time,dx,weights,the_bc_tower, &
                                  charge_old,grad_Epot_old,Epot, &
                                  permittivity)
+    end if
     end if
 
     do n=1,nlevs
