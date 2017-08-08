@@ -19,7 +19,7 @@ module probin_multispecies_module
   logical            :: is_nonisothermal,is_ideal_mixture,use_lapack
   real(kind=dp_t)    :: c_init(2,MAX_SPECIES)
   real(kind=dp_t)    ::   c_bc(3,2,MAX_SPECIES)
-  real(kind=dp_t)    :: rho_bc(3,2)                 ! used for boussinesq algorithm
+  real(kind=dp_t)    :: rhotot_bc(3,2)              ! used for boussinesq algorithm
   real(kind=dp_t)    :: alpha1,beta,delta,sigma     ! manufactured solution parameters populated in init
   integer            :: midpoint_stoch_mass_flux_type
   integer            :: avg_type
@@ -43,7 +43,7 @@ module probin_multispecies_module
   namelist /probin_multispecies/ temp_type  ! for initializing temperature
   namelist /probin_multispecies/ c_init     ! initial values for c
   namelist /probin_multispecies/ c_bc       ! c_i boundary conditions (dir,lohi,species)
-  namelist /probin_multispecies/ rho_bc     ! rho boundary condition for boussinesq (dir,lohi)
+  namelist /probin_multispecies/ rhotot_bc  ! rho boundary condition for boussinesq (dir,lohi)
   
   ! Thermodynamic and transport properties:
   !----------------------
@@ -106,7 +106,7 @@ contains
     temp_type          = 0
     c_init             = 1.0d0
     c_bc               = 0.d0
-    rho_bc             = 0.d0
+    rhotot_bc          = 0.d0
     Dbar               = 1.0d0
     Dtherm             = 0.0d0
     H_offdiag          = 0.0d0
