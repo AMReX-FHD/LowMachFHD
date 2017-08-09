@@ -32,7 +32,7 @@ module advance_timestep_bousq_module
                                   molmass, use_bl_rng, nspecies, plot_int, max_step
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: midpoint_stoch_mass_flux_type, is_ideal_mixture
-  use probin_charged_module, only: use_charged_fluid
+  use probin_charged_module, only: use_charged_fluid, electroneutral
   use probin_chemistry_module, only: nreactions, use_Poisson_rng, include_discrete_LMA_correction, &
                                      exclude_solvent_comput_rates, use_mole_frac_LMA
 
@@ -815,13 +815,13 @@ contains
        end do
     end do
 
-    ! if writing a plotfile, compute Epot using new densities
+    ! if writing a plotfile for electro-explicit option, compute Epot using new densities
     ! use existing machinery to compute all mass fluxes - yes this is overkill
     ! but better than writing a separate routine for now
     ! diff/stoch_mass_flux and fluxdiv are not persistent so changing values doesn't
     ! matter.  grad_Epot is persistent so we overwrite the old values,
     ! which are thrown away
-    if (use_charged_fluid) then
+    if (use_charged_fluid .and. (.not. electroneutral) ) then
     if (plot_int.gt.0 .and. ( (mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) ) then
        ! compute the new charge and store it in charge_old (it could get modified to
        ! subtract off the average in compute_mass_fluxdiv)
