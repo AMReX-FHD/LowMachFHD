@@ -59,9 +59,9 @@
   ! Physical parameters
   !--------------------
   grav(1:2) = 0.d0 0.d0               ! gravity vector (negative is downwards)
-  ! divide molecular weight by avogadro
-  ! 1. Na (22.99) 2. Cl (35.45) 3. K (39.10) 4. H2O (18.019)
-  molmass(1:4) =  3.81d-23 5.88d-23 6.48d-23 2.99d-23
+  ! divide molecular weight by avogadro=6.0221409d23
+  ! 1. Na (22.989769) 2. Cl (35.453) 3. K (39.0983) 4. H2O (18.01528)
+  molmass(1:4) =  3.81754086823176d-23 5.88710901799060d-23 6.49242531007536d-23 2.99150755506235d-23
   rhobar(1:4) =   1.d0 1.d0 1.d0 1.d0
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
@@ -196,10 +196,10 @@
 
   ! initial values for CONCENTRATIONS (for the last species, H2O, code sets it to 1-sum_others)
   ! The horizontal for NaCl uses parameters for inside (c_init(1,1:2)) and outside (c_init(2,1:2))
-  ! The ratio of c_init(:,1) and c_init(:,2) must have zero net charge (e.g., 5.44d-7*4200 = 8.4d-7*2720)
+  ! The ratio of c_init(:,1) and c_init(:,2) must have zero net charge
   ! c_init(1,3) is how much K is in the square, and the code increments c_init(:,2) to maintain neutrality
-  c_init(1,1:3) = 5.44d-7 8.4d-7 9.25020242915d-7
-  c_init(2,1:3) = 2.72d-7 4.2d-7 4.62510121457d-7
+  c_init(1,1:3) = 5.44000000000000E-007 8.38913692434230E-007 9.25171331647569E-007
+  c_init(2,1:3) = 2.72000000000000E-007 4.19456846217115E-007 4.62585665823785E-007
 
   ! Thermodynamic and transport properties:
   !----------------------
@@ -221,8 +221,8 @@
   electroneutral = F
   use_charged_fluid = T
   dielectric_const = 2.5d-19
-  ! take elementary charge (1.60d-19) divided by molecular mass above
-  charge_per_mass(1:4) = 4.200d3 -2.720d3 2.470d3 0.d0
+  ! take elementary charge (1.60217662E-019) divided by molecular mass above
+  charge_per_mass(1:4) = 4.19688138333437d3 -2.72149983141786d3 2.46776288286850d3 0.d0
 /
 
 ! Stokes solver for velocity
