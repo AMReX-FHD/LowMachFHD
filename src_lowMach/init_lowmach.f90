@@ -16,6 +16,7 @@ module init_lowmach_module
                                   use_bl_rng, nspecies, algorithm_type
   use probin_multispecies_module, only: alpha1, beta, delta, sigma, Dbar, Dtherm, &
                                         c_init, T_init, temp_type, sigma
+  use probin_charged_module, only: charge_per_mass
  
   implicit none
 
@@ -638,7 +639,7 @@ contains
                    ! Donev: prob_type = -15: a special case for doing ternary diffusion NaCl + KCl
                    ! Here the last two species have a tanh profile in both x and y (species are Na+,Cl-,K+,water)
                    ! Aadd a tanh smoothing for central 50% of domain in x for second-to-last species
-                   if((prob_type==-15).and.(n==nspecies-1)) then 
+                   if( (prob_type==-15) .and. (n==nspecies-1) ) then 
                       coeff=0.5d0*(tanh(x/(smoothing_width*dx(1)))+1.d0)*0.5d0*(tanh((-x+x2-x1)/(smoothing_width*dx(1)))+1.d0)*coeff
                    end if  
  
@@ -646,9 +647,9 @@ contains
                    c_loc = c_init(2,n) + (c_init(1,n)-c_init(2,n))*coeff
                    c(i,j,n) = c_loc
 
-                   ! for 4-species test, need to add chlorine to central square 
-                   if((prob_type==-15).and.(n==nspecies-1) .and. nspecies .eq. 4) then
-                      c(i,j,2) = c(i,j,2) + c_init(1,2)/c_init(1,n)*c_loc
+                   ! for 4-species test, need to add Cl to central square to balance the K
+                   if ( (prob_type==-15) .and. (nspecies .eq. 4) .and. (n .eq. nspecies-1) ) then
+                      c(i,j,2) = c(i,j,2) - charge_per_mass(3)/charge_per_mass(2)*c_loc
                    end if
 
                 end do
