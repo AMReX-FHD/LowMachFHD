@@ -19,13 +19,13 @@ OPT2="--rate_multiplier 0.1"
 # timestep size
 OPT3="--fixed_dt 1.e-2"
 
-# task (check gmres solver | plot files | structure factor )
+# task (check gmres solver | plot files | hist )
 #OPT4="--max_step 10      --plot int 0   --print_int 10   --hydro_grid_int 0   --gmres_verbose 1"
 #OPT4="--max_step 1000    --plot_int 100 --print_int 10   --hydro_grid_int 0"
 OPT4="--max_step 100000  --plot_int 0   --print_int 1000 --hydro_grid_int 100 --n_steps_skip 20000 --histogram_unit 10"
 
 OPTMISC1="--max_grid_size_x 16 --max_grid_size_y 16"
-OPTMISC2=
+#OPTMISC2="--midpoint_stoch_mass_flux_type 2"
 
 OPTS="$OPT1 $OPT2 $OPT3 $OPT4 $OPTMISC1 $OPTMISC2"
 
