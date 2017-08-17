@@ -2,7 +2,9 @@
 
 RUNNAME=TEST
 NRUN=16
+#PYARGS="../../../../../multiSpecLM_react/test/analysis/hist/hist_N.py 2 0.05 5 0 10 no yes"
 PYARGS="../../../../../multiSpecLM_react/test/analysis/hist/hist_N.py 2 0.025 10 0 20 no yes"
+#PYARGS="../../../../../multiSpecLM_react/test/analysis/hist/hist_N.py 2 1.6666667e-2 15 0 30 no yes"
 
 if [ $NRUN == 1 ]
 then

@@ -2,7 +2,9 @@
 
 RUNNAME=TEST
 NRUN=16
+#PYARGS="../../../analysis/hist/hist_N.py 2 0.1 5 0 10 no yes"
 PYARGS="../../../analysis/hist/hist_N.py 2 0.05 10 0 20 no yes"
+#PYARGS="../../../analysis/hist/hist_N.py 2 3.3333333e-2 15 0 30 no yes"
 
 if [ $NRUN == 1 ]
 then

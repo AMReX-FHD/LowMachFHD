@@ -23,7 +23,7 @@ OPT3="--fixed_dt 1.e-2"
 OPT4="--max_step 100000  --plot_int 0   --print_int 1000 --hydro_grid_int 100 --n_steps_skip 20000 --histogram_unit 10"
 
 #OPTMISC1="--max_grid_size_x 16 --max_grid_size_y 16"
-#OPTMISC2=
+OPTMISC2="--use_Poisson_rng 0"
 
 OPTS="$OPT1 $OPT2 $OPT3 $OPT4 $OPTMISC1 $OPTMISC2"
 
