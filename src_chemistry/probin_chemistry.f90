@@ -93,6 +93,16 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) nreactions
 
+       case ('--rate_const_1')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) rate_const(1)
+
+       case ('--rate_const_2')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) rate_const(2)
+
        case ('--rate_multiplier')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
