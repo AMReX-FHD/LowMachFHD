@@ -10,22 +10,28 @@ NPROC=1
 # OPTIONS #
 ###########
 
-# cross section
-OPT1="--prob_hi_z 40."
+# number of atoms per cell
+#OPT1="--prob_hi_z 20. --rate_const_1 1. --rate_const_2 1.290564"       # N0=20
+OPT1="--prob_hi_z 40. --rate_const_1 1. --rate_const_2 1.311528"        # N0=40
+#OPT1="--prob_hi_z 60. --rate_const_1 1. --rate_const_2 1.318704"       # N0=60
 
-# reaction
-#OPT2="--rate_multiplier 0."
-OPT2="--rate_multiplier 0.1"
+# tau leaping or CLE
+OPT2="--use_Poisson_rng 1"
+#OPT2="--use_Poisson_rng 0"
 
-# timestep size
-OPT3="--fixed_dt 1.e-2"
+# rate multiplier
+OPT3="--rate_multiplier 0.021"
 
-OPT4="--max_step 100000  --plot_int 0   --print_int 1000 --hydro_grid_int 100 --n_steps_skip 20000 --histogram_unit 10"
+# time step size
+OPT4="--fixed_dt 1.e-2"
+
+# task (histogram)
+OPT5="--max_step 100000  --plot_int 0   --print_int 1000 --hydro_grid_int 100 --n_steps_skip 20000 --histogram_unit 10"
 
 #OPTMISC1="--max_grid_size_x 16 --max_grid_size_y 16"
-OPTMISC2="--use_Poisson_rng 0"
+#OPTMISC2=
 
-OPTS="$OPT1 $OPT2 $OPT3 $OPT4 $OPTMISC1 $OPTMISC2"
+OPTS="$OPT1 $OPT2 $OPT3 $OPT4 $OPT5 $OPTMISC1 $OPTMISC2"
 
 #######
 # RUN #
