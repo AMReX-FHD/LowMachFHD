@@ -242,10 +242,14 @@
 
   ! for mole fraction based LMA
   use_mole_frac_LMA = T
-  rate_const(1:2) = 1. 1.311528 
+
+  !rate_const(1:2) = 1. 1.290564        ! N0=20
+  rate_const(1:2) = 1. 1.311528         ! N0=40
+  !rate_const(1:2) = 1. 1.318704        ! N0=60
+
   include_discrete_LMA_correction = F
 
-  rate_multiplier = 0.1 
+  rate_multiplier = 0.021
 
   ! if positive n, exclude species n (=solvent) when computing reaction rates
   ! in this case, the concentration of the solvent is assumed to be constant,
