@@ -513,8 +513,6 @@ contains
     integer         :: nspecies_sub     ! dim of subsystem = nspecies-ntrace
     real(kind=dp_t) :: molmtot_sub
     real(kind=dp_t) :: rhotot_sub
-    real(kind=dp_t), allocatable :: molmass_sub(:), rho_sub(:), W_sub(:), molarconc_sub(:)
-    real(kind=dp_t), allocatable :: D_bar_sub(:,:), chi_sub(:,:)
 
     ! this is a mapping used to eliminate elements in D_bar we don't need (for D_bar_sub)
     ! and for expanding sqrtLonsager_sub into sqrtLonsager
@@ -1258,7 +1256,7 @@ contains
     real(kind=dp_t), intent(out)  :: sqrtLonsager(nspecies,nspecies) 
 
     ! local variables
-    integer         :: row,column,info,i,j
+    integer         :: row,column,info
     real(kind=dp_t) :: W(nspecies)
     real(kind=dp_t) :: rcond
 
@@ -1271,8 +1269,6 @@ contains
     integer :: nspecies_sub             ! dim of subsystem = nspecies-ntrace 
     real(kind=dp_t) :: molmtot_sub
     real(kind=dp_t) :: rhotot_sub
-    real(kind=dp_t), allocatable :: molmass_sub(:), rho_sub(:), W_sub(:), molarconc_sub(:)
-    real(kind=dp_t), allocatable :: D_bar_sub(:,:), chi_sub(:,:), sqrtLonsager_sub(:,:)
 
     ! this is a mapping used to eliminate elements in D_bar we don't need (for D_bar_sub)
     ! and for expanding sqrtLonsager_sub into sqrtLonsager
