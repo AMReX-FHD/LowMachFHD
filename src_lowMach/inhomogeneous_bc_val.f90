@@ -332,7 +332,23 @@ contains
 
        ! full density (only for boussinesq algorithm)
        if (algorithm_type .eq. 6) then
-          val = 0.d0 ! homogeneous Neumann walls
+
+          ! full rho boundary condition
+          if (x .eq. prob_lo(1)) then
+             val = rhotot_bc(1,1)
+          else if (x .eq. prob_hi(1)) then
+             val = rhotot_bc(1,2)
+          else if (y .eq. prob_lo(2)) then
+             val = rhotot_bc(2,1)
+          else if (y .eq. prob_hi(2)) then
+             val = rhotot_bc(2,2)
+          else if (z .eq. prob_lo(3)) then
+             val = rhotot_bc(3,1)
+          else if (z .eq. prob_hi(3)) then
+             val = rhotot_bc(3,2)
+          else
+             val = 0.d0
+          end if
        else
           call bl_error("calling inhomogeneous_bc_val_3d with scal_bc_comp (full rho")
        end if
