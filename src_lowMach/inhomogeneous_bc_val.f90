@@ -168,7 +168,7 @@ contains
           end if
 
        else
-          call bl_error("calling inhomogeneous_bc_val_2d with scal_bc_comp (full rho")
+          call bl_error("calling inhomogeneous_bc_val_2d with scal_bc_comp (full rho) - only works with algorithm_type=6")
        end if
 
     else if (comp .ge. c_bc_comp .and. comp .le. c_bc_comp+nspecies-1) then
@@ -350,7 +350,7 @@ contains
              val = 0.d0
           end if
        else
-          call bl_error("calling inhomogeneous_bc_val_3d with scal_bc_comp (full rho")
+          call bl_error("calling inhomogeneous_bc_val_3d with scal_bc_comp (full rho) - only works with algorithm_type=6")
        end if
 
     else if (comp .ge. c_bc_comp .and. comp .le. c_bc_comp+nspecies-1) then
