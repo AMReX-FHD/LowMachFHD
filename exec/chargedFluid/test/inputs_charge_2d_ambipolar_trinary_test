@@ -37,8 +37,8 @@
 
 !  n_cells(1:2) = 32 32               ! number of cells in domain
 !  max_grid_size(1:2) = 16 16       ! max number of cells in a box
-!  max_step = 20               ! maximum number of time steps
-!  plot_int = 20                ! Interval for writing a plotfile (for visit/amrvis)
+!  max_step = 10               ! maximum number of time steps
+!  plot_int = 10                ! Interval for writing a plotfile (for visit/amrvis)
 !  smoothing_width = 1.d0
 !  fixed_dt = 6.4d-6                 ! time step (if positive, fixed)
 
