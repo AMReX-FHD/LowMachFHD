@@ -320,6 +320,13 @@ subroutine main_driver()
   ! fill rho and rhotot ghost cells
   call fill_rho_rhotot_ghost(mla,rho_old,rhotot_old,dx,the_bc_tower)
 
+  do n=1,nlevs
+     ! presure ghost cells
+     call multifab_fill_boundary(pi(n))
+     call multifab_physbc(pi(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n), &
+                          dx_in=dx(n,:))
+  end do
+
   !=======================================================
   ! Build multifabs for all the variables
   !=======================================================
