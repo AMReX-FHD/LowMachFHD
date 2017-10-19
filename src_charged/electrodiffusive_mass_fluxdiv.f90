@@ -202,11 +202,6 @@ contains
 
     end do
 
-    ! for inhomogeneous Neumann bc's for electric potential, put in homogeneous form
-    if (Epot_wall_bc_type .eq. 2) then
-       call inhomogeneous_neumann_fix(mla,charge,permittivity,dx,the_bc_tower)
-    end if
-
     if (.not. electroneutral .or. E_ext_type .ne. 0) then
        ! permittivity on faces
        call average_cc_to_face(nlevs,permittivity,permittivity_fc,1,scal_bc_comp,1, &
@@ -245,7 +240,13 @@ contains
           call multifab_copy_c(rhs(n),1,charge(n),1,1,0)
        end do
 
+       ! for inhomogeneous Neumann bc's for electric potential, put in homogeneous form
+       if (Epot_wall_bc_type .eq. 2) then
+          call inhomogeneous_neumann_fix(mla,rhs,permittivity,dx,the_bc_tower)
+       end if
+
     end if
+
 
     if (E_ext_type .ne. 0) then
 
@@ -358,10 +359,10 @@ contains
   !   A_H is the homogeneous operator
   !   x_H is a multifab filled with zeros, but ghost cells filled to respect bc's
   ! We use this for walls with inhomogeneous Neumann conditions on the electric potential
-  subroutine inhomogeneous_neumann_fix(mla,charge,permittivity,dx,the_bc_tower)
+  subroutine inhomogeneous_neumann_fix(mla,rhs,permittivity,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(inout) :: charge(:)
+    type(multifab) , intent(inout) :: rhs(:)
     type(multifab) , intent(in   ) :: permittivity(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
@@ -394,7 +395,7 @@ contains
        call multifab_fill_boundary(zerofab(n))
 
        ! multiply zerofab everywhere (including ghost cells) by the permittivity since
-       ! we are incrementing the RHS (charge) by -A x_H
+       ! we are incrementing the RHS (rhs) by -A x_H
        call multifab_mult_mult_c(zerofab(n),1,permittivity(n),1,1,1)
 
     end do
@@ -402,11 +403,11 @@ contains
     ! compute gradient of zerofab
     call compute_grad(mla,zerofab,gradphi,dx,1,Epot_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
-    ! increment charge with negative divergence
-    call compute_div(mla,gradphi,charge,dx,1,1,1,increment_in=.true.)
+    ! increment rhs with negative divergence
+    call compute_div(mla,gradphi,rhs,dx,1,1,1,increment_in=.true.)
 
     do n=1,nlevs
-       call multifab_fill_boundary(charge(n))
+       call multifab_fill_boundary(rhs(n))
     end do
 
     do n=1,nlevs
