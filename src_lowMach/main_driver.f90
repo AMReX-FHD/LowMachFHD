@@ -441,7 +441,7 @@ subroutine main_driver()
      call dot_with_z(mla,rho_old,charge_old)
      total_charge = multifab_sum_c(charge_old(1),1,1)
      if (parallel_IOProcessor()) then
-        print*,'Total charge',total_charge
+        print*,'Total charge',total_charge*product(dx(1,1:dm))
      end if
 
      ! compute permittivity
