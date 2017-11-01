@@ -1,0 +1,81 @@
+\documentclass[final]{siamltex}
+
+% for red MarginPars
+\usepackage{color}
+
+% for \boldsymbol
+\usepackage{amsmath}
+\usepackage{latexsym}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{hyperref}
+
+% total number of floats allowed on a page
+\setcounter{totalnumber}{100}
+
+% float page fractions
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.9}
+\renewcommand{\textfraction}{0.2}
+
+% MarginPar
+\setlength{\marginparwidth}{0.75in}
+\newcommand{\MarginPar}[1]{\marginpar{\vskip-\baselineskip\raggedright\tiny\sffamily\hrule\smallskip{\color{red}#1}\par\smallskip\hrule}}
+
+% for non-stacked fractions
+\newcommand{\sfrac}[2]{\mathchoice
+  {\kern0em\raise.5ex\hbox{\the\scriptfont0 #1}\kern-.15em/
+   \kern-.15em\lower.25ex\hbox{\the\scriptfont0 #2}}
+  {\kern0em\raise.5ex\hbox{\the\scriptfont0 #1}\kern-.15em/
+   \kern-.15em\lower.25ex\hbox{\the\scriptfont0 #2}}
+  {\kern0em\raise.5ex\hbox{\the\scriptscriptfont0 #1}\kern-.2em/
+   \kern-.15em\lower.25ex\hbox{\the\scriptscriptfont0 #2}}
+  {#1\!/#2}}
+
+\def\1b {{\bf 1}}
+\def\Ab {{\bf A}}
+\def\bb {{\bf b}}
+\def\Eb {{\bf E}}
+\def\fb {{\bf f}}
+\def\Fb {{\bf F}}
+\def\gb {{\bf g}}
+\def\Ib {{\bf I}}
+\def\Lb {{\bf L}}
+\def\mb {{\bf m}}
+\def\vb {{\bf v}}
+\def\wb {{\bf w}}
+\def\Wb {{\bf W}}
+\def\xb {{\bf x}}
+\def\zb {{\bf z}}
+
+\def\chib   {\boldsymbol{\chi}}
+\def\deltab {\boldsymbol{\delta}}
+\def\Gammab {\boldsymbol{\Gamma}}
+\def\phib   {\boldsymbol{\phi}}
+\def\Phib   {\boldsymbol{\Phi}}
+\def\Psib   {\boldsymbol{\Psi}}
+\def\rhob   {\boldsymbol{\rho}}
+\def\sigmab {\boldsymbol{\sigma}}
+\def\Sigmab {\boldsymbol{\Sigma}}
+\def\taub   {\boldsymbol{\tau}}
+\def\zetab  {\boldsymbol{\zeta}}
+
+\def\half   {\frac{1}{2}}
+\def\myhalf {\sfrac{1}{2}}
+
+\begin{document}
+
+%==========================================================================
+% Title
+%==========================================================================
+\title{Electroosmosis Notes}
+
+\maketitle
+
+\cite{LowMachElectro} The problem setup is as follows.
+
+
+\bibliographystyle{plain}
+\bibliography{Electroosmosis}
+
+\end{document}
