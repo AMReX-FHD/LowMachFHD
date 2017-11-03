@@ -195,11 +195,16 @@
   dielectric_const = 1.d0
   charge_per_mass(1:2) = 0.d0 0.d0
 
-  Epot_wall_bc_type  = 1 ! 1 = Dirichlet (fixed potential)
-                         ! 2 = Neumann (fixed charge density)
-
-  Epot_wall(1,1:2) = 0.d0 0.d0 ! Dirichlet or Neumann condition
-  Epot_wall(2,1:2) = 0.d0 0.d0 ! Dirichlet or Neumann condition
+  ! 1 = Dirichlet (fixed potential)
+  ! 2 = Neumann (fixed charge density)
+  Epot_wall_bc_type(1,1) = 1
+  Epot_wall_bc_type(2,1) = 1
+  Epot_wall_bc_type(1,2) = 1
+  Epot_wall_bc_type(2,2) = 1
+  Epot_wall(1,1) = 0.d0
+  Epot_wall(2,1) = 0.d0
+  Epot_wall(1,2) = 0.d0
+  Epot_wall(2,2) = 0.d0
 
   theta_pot = 1.d0              ! for implicit algorithm_type=3, controls
                                 ! temporal discretization for potential term

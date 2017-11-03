@@ -36,7 +36,7 @@ module advance_timestep_iterative_module
                                   use_bl_rng, nspecies
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol, mg_verbose
   use probin_charged_module, only: use_charged_fluid, theta_pot, &
-                                   num_pot_iters, dpdt_factor, Epot_wall_bc_type
+                                   num_pot_iters, dpdt_factor, Epot_wall_bc_type, Epot_wall
   use probin_chemistry_module, only: nreactions
 
   implicit none
@@ -139,6 +139,8 @@ contains
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
 
     real(kind=dp_t) :: weights(1), sum
+
+    real(kind=dp_t) :: Epot_wall_save(2,mla%dim)
 
     if (nreactions .gt. 0) then
        call bl_error("advance_timestep_iterative does not support reactions yet")
@@ -392,8 +394,26 @@ contains
           end do
 
           ! for inhomogeneous Neumann bc's for electric potential, put in homogeneous form
-          if (Epot_wall_bc_type .eq. 2) then
+          if (any(Epot_wall_bc_type(1:2,1:dm).eq. 2)) then
+
+             ! save the numerical values for the Dirichlet and Neumann conditions
+             Epot_wall_save(1:2,1:dm) = Epot_wall(1:2,1:dm)
+
+             ! for Dirichlet conditions, temporarily set the numerical values to zero
+             ! so we can put the Neumann boundaries into homogeneous form
+             do comp=1,dm
+                do i=1,dm
+                   if (Epot_wall_bc_type(comp,1) .eq. 1) then
+                      Epot_wall(comp,1) = 0.d0
+                   end if
+                end do
+             end do
+
              call inhomogeneous_neumann_fix(mla,solver_rhs,permittivity,dx,the_bc_tower)
+
+             ! restore the numerical values for the Dirichlet and Neumann conditions
+             Epot_wall(1:2,1:dm) = Epot_wall_save(1:2,1:dm)
+             
           end if
 
           ! solve -div (epsilon + dt theta z^T A_Phi^{n+1,l}) grad Phi^{n+1,l+1} = z^T RHS

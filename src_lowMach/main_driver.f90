@@ -275,7 +275,7 @@ subroutine main_driver()
   ! dm+1 = pressure
   !
   ! next, for scalars, scal_bc_comp=dm+2
-  ! there are 2*nspecies+2 "scalars"
+  ! there are 2*nspecies+3 "scalars"
   ! scal_bc_comp = rhotot
   ! scal_bc_comp+1 = c_i
   ! scal_bc_comp+nspecies+1 = molfrac or massfrac (dimensionless fractions)

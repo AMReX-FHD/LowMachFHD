@@ -14,7 +14,7 @@ module electrodiffusive_mass_fluxdiv_module
   use matvec_mul_module
   use probin_common_module, only: nspecies, variance_coef_mass
   use probin_gmres_module, only: mg_verbose
-  use probin_charged_module, only: Epot_wall_bc_type, E_ext_type, electroneutral
+  use probin_charged_module, only: Epot_wall_bc_type, Epot_wall, E_ext_type, electroneutral
   
   use fabio_module
 
@@ -124,7 +124,7 @@ contains
     real(kind=dp_t), intent(in   ) :: dt
 
     ! local variables
-    integer :: n,i,s,dm,nlevs
+    integer :: n,i,comp,dm,nlevs
  
     ! local face-centered multifabs 
     type(multifab)  :: rhoWchi_face(mla%nlevel,mla%dim)
@@ -143,6 +143,8 @@ contains
     type(bndry_reg) :: fine_flx(mla%nlevel)
   
     real(kind=dp_t) :: sum
+
+    real(kind=dp_t) :: Epot_wall_save(2,mla%dim)
 
     type(bl_prof_timer), save :: bpt
     
@@ -235,14 +237,35 @@ contains
           end do
        end do
 
+       ! set beta to set to zero on certain boundary faces
+!       call neumann_beta(mla,beta)
+
        ! set rhs equal to charge
        do n=1,nlevs
           call multifab_copy_c(rhs(n),1,charge(n),1,1,0)
        end do
 
        ! for inhomogeneous Neumann bc's for electric potential, put in homogeneous form
-       if (Epot_wall_bc_type .eq. 2) then
+       if (any(Epot_wall_bc_type(1:2,1:dm).eq. 2)) then
+
+          ! save the numerical values for the Dirichlet and Neumann conditions
+          Epot_wall_save(1:2,1:dm) = Epot_wall(1:2,1:dm)
+
+          ! for Dirichlet conditions, temporarily set the numerical values to zero
+          ! so we can put the Neumann boundaries into homogeneous form
+          do comp=1,dm
+             do i=1,dm
+                if (Epot_wall_bc_type(comp,1) .eq. 1) then
+                   Epot_wall(comp,1) = 0.d0
+                end if
+             end do
+          end do
+
           call inhomogeneous_neumann_fix(mla,rhs,permittivity,dx,the_bc_tower)
+
+          ! restore the numerical values for the Dirichlet and Neumann conditions
+          Epot_wall(1:2,1:dm) = Epot_wall_save(1:2,1:dm)
+
        end if
 
     end if
@@ -309,8 +332,8 @@ contains
     ! multiply flux coefficient by gradient of electric potential
     do n=1,nlevs
        do i=1,dm
-          do s=1,nspecies
-             call multifab_mult_mult_c(electro_mass_flux(n,i), s, grad_Epot(n,i), 1, 1)
+          do comp=1,nspecies
+             call multifab_mult_mult_c(electro_mass_flux(n,i), comp, grad_Epot(n,i), 1, 1)
           end do
        end do
     end do
@@ -418,5 +441,63 @@ contains
     end do
 
   end subroutine inhomogeneous_neumann_fix
+
+  subroutine neumann_beta(mla,beta)
+
+    type(ml_layout), intent(in   )  :: mla
+    type(multifab) , intent(in   )  :: beta(:,:)
+
+    integer :: i,dm,nlevs,n,ng_b
+    integer :: lo(mla%dim),hi(mla%dim)
+
+    real(kind=dp_t), pointer :: bp(:,:,:,:)
+
+    nlevs = mla%nlevel
+    dm = mla%dim
+
+    ng_b = beta(1,1)%ng
+
+    do n=1,nlevs
+       do i=1,nfabs(beta(n,1))
+          lo = lwb(get_box(beta(n,1),i))
+          hi = upb(get_box(beta(n,1),i))
+          bp => dataptr(beta(n,dm),i)  ! for the dm component
+          select case (dm)
+          case (2)
+
+             call neumann_beta_2d(bp(:,:,1,1),ng_b,lo,hi)
+          case (3)
+
+          end select
+       end do
+    end do
+
+  end subroutine neumann_beta
+
+  subroutine neumann_beta_2d(betay,ng_b,lo,hi)
+      
+    integer         :: lo(:),hi(:),ng_b
+    real(kind=dp_t) :: betay(lo(1)-ng_b:,lo(2)-ng_b:)
+
+    integer :: i,j
+
+    do i=lo(1),hi(1)
+    do j=lo(2),hi(2)+1
+
+       if (j .eq. 0 .or. j .eq. 128) then
+
+          if (i .le. 31 .or. i .ge. 99 .or. j .eq. 128) then
+             betay(i,j) = 0.d0
+          end if
+
+          
+
+       end if
+
+
+    end do
+    end do
+
+  end subroutine neumann_beta_2d
 
 end module electrodiffusive_mass_fluxdiv_module

@@ -1,6 +1,7 @@
 module probin_charged_module
 
   use bl_types
+  use bl_space
   use probin_common_module, only: MAX_SPECIES
  
   implicit none
@@ -9,8 +10,8 @@ module probin_charged_module
   real(kind=dp_t)    :: dielectric_const
   integer            :: dielectric_type
   real(kind=dp_t)    :: charge_per_mass(MAX_SPECIES)
-  real(kind=dp_t)    :: Epot_wall_bc_type
-  real(kind=dp_t)    :: Epot_wall(1:2,1:3)
+  real(kind=dp_t)    :: Epot_wall_bc_type(1:2,MAX_SPACEDIM)
+  real(kind=dp_t)    :: Epot_wall(1:2,MAX_SPACEDIM)
   real(kind=dp_t)    :: theta_pot
   integer            :: num_pot_iters
   real(kind=dp_t)    :: dpdt_factor
@@ -60,14 +61,14 @@ contains
     dielectric_type    = 0      ! 0 = assumes constant epsilon
                                 ! 1 = (1+c1)*dielectric_const
                                 ! see fluid_charge.f90:compute_permittivity()
-    charge_per_mass(:) = 0.d0
-    Epot_wall_bc_type  = 1
-    Epot_wall(:,:)     = 0.d0
-    theta_pot          = 0.5d0
-    num_pot_iters      = 2
-    dpdt_factor        = 0.d0
-    E_ext_type         = 0
-    E_ext_value(:)     = 0.d0
+    charge_per_mass(:)     = 0.d0
+    Epot_wall_bc_type(:,:) = 1
+    Epot_wall(:,:)         = 0.d0
+    theta_pot              = 0.5d0
+    num_pot_iters          = 2
+    dpdt_factor            = 0.d0
+    E_ext_type             = 0
+    E_ext_value(:)         = 0.d0
 
     electroneutral = .false.
  
@@ -106,11 +107,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) dielectric_type
-
-       case ('--Epot_wall_bc_type')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) Epot_wall_bc_type
 
        case ('--theta_pot')
           farg = farg + 1

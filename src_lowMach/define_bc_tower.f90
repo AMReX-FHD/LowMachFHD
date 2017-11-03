@@ -130,6 +130,7 @@ contains
     !                  num_scal_bc components for scalars
     !                  num_tran_bc components for transport coefficients
     allocate(bct%bc_tower_array(n)%adv_bc_level_array(0:ngrids,dm,2,1:tran_bc_comp+num_tran_bc-1))
+
     default_value = INTERIOR
     call adv_bc_level_build(bct%bc_tower_array(n)%adv_bc_level_array, &
                             bct%bc_tower_array(n)%phys_bc_level_array,default_value)
@@ -228,6 +229,11 @@ contains
           ! for pressure we use extrapolation
           adv_bc_level(igrid,d,lohi,1:dm)         = DIR_VEL  ! normal and transverse velocity
           adv_bc_level(igrid,d,lohi,pres_bc_comp) = FOEXTRAP ! pressure
+          if (Epot_wall_bc_type(lohi,d) .eq. 1) then         ! electric potential
+             adv_bc_level(igrid,d,lohi,Epot_bc_comp) = EXT_DIR
+          else
+             adv_bc_level(igrid,d,lohi,Epot_bc_comp) = FOEXTRAP
+          end if
 
        else if ( (phys_bc_level(igrid,d,lohi) >= SLIP_START) .and.  (phys_bc_level(igrid,d,lohi) <= SLIP_END) ) then
 
@@ -237,6 +243,11 @@ contains
           adv_bc_level(igrid,d,lohi,vel_bc_comp:vel_bc_comp+dm-1) = DIR_TRACT ! transverse velocity
           adv_bc_level(igrid,d,lohi,vel_bc_comp+d-1)              = DIR_VEL   ! normal velocity
           adv_bc_level(igrid,d,lohi,pres_bc_comp)                 = FOEXTRAP  ! pressure
+          if (Epot_wall_bc_type(lohi,d) .eq. 1) then         ! electric potential
+             adv_bc_level(igrid,d,lohi,Epot_bc_comp) = EXT_DIR
+          else
+             adv_bc_level(igrid,d,lohi,Epot_bc_comp) = FOEXTRAP
+          end if
 
        else
 
@@ -324,9 +335,9 @@ contains
           ell_bc_level(igrid,d,lohi,pres_bc_comp) = BC_NEU
 
           ! electric potential
-          if (Epot_wall_bc_type .eq. 1) then
+          if (Epot_wall_bc_type(lohi,d) .eq. 1) then
              ell_bc_level(igrid,d,lohi,Epot_bc_comp) = BC_DIR
-          else if (Epot_wall_bc_type .eq. 2) then
+          else if (Epot_wall_bc_type(lohi,d) .eq. 2) then
              ell_bc_level(igrid,d,lohi,Epot_bc_comp) = BC_NEU
           end if
 

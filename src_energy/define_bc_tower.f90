@@ -312,9 +312,9 @@ contains
           ell_bc_level(igrid,d,lohi,pres_bc_comp:temp_bc_comp) = BC_NEU
 
           ! electric potential
-          if (Epot_wall_bc_type .eq. 1) then
+          if (Epot_wall_bc_type(lohi,d) .eq. 1) then
              ell_bc_level(igrid,d,lohi,Epot_bc_comp) = BC_DIR
-          else if (Epot_wall_bc_type .eq. 2) then
+          else if (Epot_wall_bc_type(lohi,d) .eq. 2) then
              ell_bc_level(igrid,d,lohi,Epot_bc_comp) = BC_NEU
           end if
 
