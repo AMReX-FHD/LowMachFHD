@@ -302,7 +302,16 @@ contains
                                dx_in=dx(n,:))
           call multifab_fill_boundary(Epot(n))
        end do
+    else
+       ! we need to fill the ghost cells so the inhomogeneous Neumann phi case
+       ! has properly filled ghost cells (since the solver assumed homogeneous BC's)
+       do n=1,nlevs
+          call multifab_physbc(Epot(n),1,Epot_bc_comp,1,the_bc_tower%bc_tower_array(n), &
+                               dx_in=dx(n,:))
+          call multifab_fill_boundary(Epot(n))
+       end do
     end if
+
 
     ! compute the gradient of the electric potential
     call compute_grad(mla,Epot,grad_Epot,dx,1,Epot_bc_comp,1,1,the_bc_tower%bc_tower_array)
