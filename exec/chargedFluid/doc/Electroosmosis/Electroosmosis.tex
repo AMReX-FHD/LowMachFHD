@@ -72,7 +72,8 @@
 
 \maketitle
 
-\cite{LowMachElectro} The problem setup is as follows.
+\section{Problem Setup}
+Using the code from \cite{LowMachElectro}, the problem setup is as follows.
 
 The computational domain is square with $L=1.28\times 10^{-4}$~cm.
 These tests were performed in two-dimensions.  We typically use
@@ -83,7 +84,6 @@ The viscosity is $1.05\times 10^{-2}$~g/cm$^2$.
 
 The applied electric field in the flow direction is $10^{11}$~V/cm.
 
-
 Boundary conditions are inhomogeneous Neumann, with a surface charge
 density set to exactly balance the lack of charge neutrality on the interior.
 In fact, if the Neumann condition is not specified correctly to a large number
@@ -93,20 +93,38 @@ We have a temporary fix in the code to handle the Lorentz force using the
 discretization $qE$.  For the original formulation work we somehow need to
 subtract off the charge at the boundary.
 
-
-Test 1: Debye length much smaller than the channel width.
+\subsection{Test 1: Debye length much smaller than the channel width}
 We initialize $w_{\rm Na} = 2.088\times 10^{-6}$ and
 $w_{\rm Cl} = 1.68\times 10^{-6}$ so the Debye length of the initial
-configuration is $3.66\times 10^{-6}$~cm.  As the simulation reaches
-steady-state, there are two other Debye lengths to consider.  The first is
-found by taking the state against the wall, whereas the other is the
-centerline.
+configuration is $3.66\times 10^{-6}$~cm.  The total charge in the interior
+of the domain is $6.8812977493198297\times 10^{-11}$~C.  The surface charge density
+is $\sigma = q_{\rm tot} / (2L\cdot (1~{\rm cm})) = 2.68800693333\times 10^{-7}$~g/cm$^2$
+(this is 2D but we say the thickness is 1~cm so the units work out)
 
-Theory says the steady velocity profile should be
-plug-flow like with maximum velocity $XXX$, with
-a velocity of $XXX (1-1/e)$ one Debye length from the wall
+As the simulation reaches
+steady-state, there are four Debye lengths to consider.
+\begin{itemize}
+\item The initial state ($3.66\times 10^{-6}$~cm).
+\item The state against the wall ($1.21\times 10^{-6}$~cm).
+\item The state 1 Debye length from the wall ($2.95\times 10^{-6}$~cm).
+\item The state at the centerline ($4.16\times 10^{-6}$~cm).
+\end{itemize}
+The peak velocity (at the centerline) is given by
+\begin{equation}
+v_0 = \frac{\lambda\sigma E_0}{\mu} ~ {\rm cm/s}.
+\end{equation}
+Plugging in the parameters (using the smalles and largest of the 4 Debye lengths),
+the predicted peak velocity is between 
+3.10~cm/s and 10.65~cm/s.  The computationally measured peak velocity 
+is $v_0 = 6.54$~cm/s
 
-Test 2: Debye length comparable to the channel width.
+The theoretical result for the velocity one Debye length from the wall
+is $v_0 (1-e^{-1}) = (6.54)(0.63) = 4.13$~cm/s.
+The computationally measured velocity one Debye length from the wall is 4.3~cm/s.  
+
+
+
+\subsection{Test 2: Debye length comparable to the channel width}
 We initialize $w_{\rm Na} = 2.088\times 10^{-9}$ and
 $w_{\rm Cl} = 1.68\times 10^{-9}$ so the Debye length is
 $1.16\times 10^{-4}$~cm.
