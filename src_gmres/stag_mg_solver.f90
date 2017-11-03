@@ -463,7 +463,7 @@ contains
           end if
 
           ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
-          call initialize_bc(the_bc_tower_fancy,1,dm,mla_fancy%pmask,2,1)
+          call initialize_bc(the_bc_tower_fancy,1,dm,mla_fancy%pmask,num_scal_bc,num_tran_bc)
 
           ! define level 1 of the_bc_tower
           call bc_tower_level_build(the_bc_tower_fancy,1,mla_fancy%la(1))
