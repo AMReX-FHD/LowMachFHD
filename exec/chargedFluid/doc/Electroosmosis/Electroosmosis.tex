@@ -111,7 +111,7 @@ steady-state, there are four Debye lengths to consider.
 \end{itemize}
 The peak velocity (at the centerline) is given by
 \begin{equation}
-v_0 = \frac{\lambda\sigma E_0}{\mu} ~ {\rm cm/s}.
+v_0 = \frac{\lambda\sigma E_0}{\mu} ~ {\rm cm/s}.\label{eq:v0}
 \end{equation}
 Plugging in the parameters (using the smalles and largest of the 4 Debye lengths),
 the predicted peak velocity is between 
@@ -120,6 +120,11 @@ is $v_0 = 6.54$~cm/s
 
 The theoretical result for the velocity one Debye length from the wall
 is $v_0 (1-e^{-1}) = (6.54)(0.63) = 4.13$~cm/s.
+This comes from the equation valid for $\lambda \ll L$:
+\begin{equation}
+v(y) = -v_0(1-e^{-(|y|-L/2)/\lambda})
+\end{equation}
+
 The computationally measured velocity one Debye length from the wall is 4.3~cm/s.  
 
 
@@ -128,6 +133,21 @@ The computationally measured velocity one Debye length from the wall is 4.3~cm/s
 We initialize $w_{\rm Na} = 2.088\times 10^{-9}$ and
 $w_{\rm Cl} = 1.68\times 10^{-9}$ so the Debye length is
 $1.16\times 10^{-4}$~cm.
+
+The surface charge density
+is $\sigma = q_{\rm tot} / (2L\cdot (1~{\rm cm})) = 2.68800000693\times 10^{-10}$~g/cm$^2$
+
+We have zeta potential $\zeta = \lambda\sigma/\epsilon = 44379$.
+
+The equation for velocity in general 
+\begin{equation}
+v(y) = v_0\left(1 - \frac{\phi_0(y)}{\phi_0(L/2)}\right)\label{eq:vgeneral}
+\end{equation}
+where we believe $\zeta$ is the potential at the wall, i.e., $\zeta=\phi_0(L/2)$.
+Our maximum velocity at the center line in the computation is 0.08~cm/s.
+The potential varies from $\zeta$ at the wall to $\zeta+11953$ at the centerline.
+We compute $v_0=0.30$~cm/s using (\ref{eq:v0}) above, and thus the velocity at the 
+centerline using (\ref{eq:vgeneral}) is $0.08$, matching the computation.
 
 \bibliographystyle{plain}
 \bibliography{Electroosmosis}
