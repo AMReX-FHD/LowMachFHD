@@ -18,6 +18,7 @@ module probin_charged_module
   integer            :: E_ext_type
   real(kind=dp_t)    :: E_ext_value(1:3)
   logical            :: electroneutral
+  integer            :: zero_eps_on_wall_type
 
   ! for charged fluid
   namelist /probin_charged/ use_charged_fluid
@@ -35,6 +36,9 @@ module probin_charged_module
   namelist /probin_charged/ E_ext_value
 
   namelist /probin_charged/ electroneutral     ! use electroneutral diffusion fluxes
+  namelist /probin_charged/ zero_eps_on_wall_type ! set eps=0 on certain Dirichlet walls
+                                                  ! if we want homogeneous Neumann bc's on 
+                                                  ! phi for part of a Dirichlet wall
 
 contains
 
@@ -71,6 +75,7 @@ contains
     E_ext_value(:)         = 0.d0
 
     electroneutral = .false.
+    zero_eps_on_wall_type = 0
  
     ! read from input file 
     need_inputs = .true.
@@ -132,6 +137,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) electroneutral
+
+       case ('--zero_eps_on_wall_type')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) zero_eps_on_wall_type
 
        case ('--')
           farg = farg + 1

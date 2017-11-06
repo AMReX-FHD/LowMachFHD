@@ -12,9 +12,10 @@ module electrodiffusive_mass_fluxdiv_module
   use ml_solve_module
   use multifab_physbc_module
   use matvec_mul_module
-  use probin_common_module, only: nspecies, variance_coef_mass
+  use probin_common_module, only: nspecies, variance_coef_mass, prob_lo, prob_hi
   use probin_gmres_module, only: mg_verbose
-  use probin_charged_module, only: Epot_wall_bc_type, Epot_wall, E_ext_type, electroneutral
+  use probin_charged_module, only: Epot_wall_bc_type, Epot_wall, E_ext_type, electroneutral, &
+                                   zero_eps_on_wall_type
   
   use fabio_module
 
@@ -237,8 +238,10 @@ contains
           end do
        end do
 
-       ! set beta to set to zero on certain boundary faces
-!       call neumann_beta(mla,beta)
+       if (zero_eps_on_wall_type .gt. 0) then
+          ! set beta to set to zero on certain boundary faces
+          call zero_eps_on_wall(mla,beta,dx)
+       end if
 
        ! set rhs equal to charge
        do n=1,nlevs
@@ -451,15 +454,18 @@ contains
 
   end subroutine inhomogeneous_neumann_fix
 
-  subroutine neumann_beta(mla,beta)
+  subroutine zero_eps_on_wall(mla,beta,dx)
 
-    type(ml_layout), intent(in   )  :: mla
-    type(multifab) , intent(in   )  :: beta(:,:)
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(in   ) :: beta(:,:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:)
 
     integer :: i,dm,nlevs,n,ng_b
     integer :: lo(mla%dim),hi(mla%dim)
 
-    real(kind=dp_t), pointer :: bp(:,:,:,:)
+    real(kind=dp_t), pointer :: bpx(:,:,:,:)
+    real(kind=dp_t), pointer :: bpy(:,:,:,:)
+    real(kind=dp_t), pointer :: bpz(:,:,:,:)
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -470,43 +476,47 @@ contains
        do i=1,nfabs(beta(n,1))
           lo = lwb(get_box(beta(n,1),i))
           hi = upb(get_box(beta(n,1),i))
-          bp => dataptr(beta(n,dm),i)  ! for the dm component
+          bpy => dataptr(beta(n,2),i)
           select case (dm)
           case (2)
-
-             call neumann_beta_2d(bp(:,:,1,1),ng_b,lo,hi)
+             call zero_eps_on_wall_2d(bpy(:,:,1,1),ng_b,lo,hi,dx(n,:))
           case (3)
-
+             call bl_error("zero_eps_on_wall_3d not written yet")
           end select
        end do
     end do
 
-  end subroutine neumann_beta
+  end subroutine zero_eps_on_wall
 
-  subroutine neumann_beta_2d(betay,ng_b,lo,hi)
+  subroutine zero_eps_on_wall_2d(betay,ng_b,lo,hi,dx)
       
     integer         :: lo(:),hi(:),ng_b
     real(kind=dp_t) :: betay(lo(1)-ng_b:,lo(2)-ng_b:)
+    real(kind=dp_t) :: dx(:)
 
     integer :: i,j
 
-    do i=lo(1),hi(1)
-    do j=lo(2),hi(2)+1
+    real(kind=dp_t) :: x,y,Lx
 
-       if (j .eq. 0 .or. j .eq. 128) then
+    Lx = prob_hi(1) - prob_lo(1)    
 
-          if (i .le. 31 .or. i .ge. 99 .or. j .eq. 128) then
-             betay(i,j) = 0.d0
-          end if
+    if (zero_eps_on_wall_type .eq. 1) then
 
-          
+       ! y-faces
+       do j=lo(2),hi(2)+1
+          y = prob_lo(2) + dx(2)*j
+          do i=lo(1),hi(1)
+             x = prob_lo(1) + dx(1)*(i+0.5d0)
 
-       end if
+             if (y .eq. 0.d0 .and. (x .le. 0.25d0*Lx .or. x .ge. 0.75d0*Lx) ) then
+                betay(i,j) = 0.d0
+             end if
 
+          end do
+       end do
 
-    end do
-    end do
+    end if
 
-  end subroutine neumann_beta_2d
+  end subroutine zero_eps_on_wall_2d
 
 end module electrodiffusive_mass_fluxdiv_module

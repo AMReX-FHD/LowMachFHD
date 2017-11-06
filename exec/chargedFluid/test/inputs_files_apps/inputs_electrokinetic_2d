@@ -19,8 +19,8 @@
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 10000                  ! maximum number of time steps
-  plot_int = 100                   ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 1000                  ! maximum number of time steps
+  plot_int = 10                   ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   prob_type = 2                    ! sets scalars, m, coefficients (see init.f90)
   restart = -1                     ! checkpoint restart number
@@ -177,14 +177,13 @@
   Epot_wall_bc_type(1,1) = 1
   Epot_wall_bc_type(2,1) = 1
   Epot_wall_bc_type(1,2) = 1
-  Epot_wall_bc_type(2,2) = 1
+  Epot_wall_bc_type(2,2) = 2
   Epot_wall(1,1) = -1.d0
   Epot_wall(2,1) =  1.d0
   Epot_wall(1,2) = 0.d0
   Epot_wall(2,2) = 0.d0
 
-!  E_ext_type = 1
-!  E_ext_value(1:2) = 1.d11 0.d0
+  zero_eps_on_wall_type = 1
 
 /
 
