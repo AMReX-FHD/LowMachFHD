@@ -11,10 +11,10 @@ module fluid_charge_module
   use compute_mixture_properties_module
   use multifab_physbc_module
   use zero_edgeval_module
-  use probin_common_module, only: molmass, k_B, rhobar, nspecies
+  use probin_common_module, only: molmass, k_B, rhobar, nspecies, prob_lo, prob_hi
   use probin_charged_module, only: charge_per_mass, dpdt_factor, &
                                    dielectric_const, dielectric_type, &
-                                   E_ext_type, E_ext_value
+                                   E_ext_type, E_ext_value, zero_eps_on_wall_type
 
   implicit none
 
@@ -22,7 +22,8 @@ module fluid_charge_module
 
   public :: dot_with_z, dot_with_z_face, compute_charge_coef, &
             enforce_charge_neutrality, implicit_potential_coef, modify_S, &
-            compute_permittivity, compute_Lorentz_force, compute_E_ext
+            compute_permittivity, compute_Lorentz_force, compute_E_ext, &
+            zero_eps_on_wall
   
 contains
 
@@ -725,9 +726,29 @@ contains
     real(kind=dp_t), pointer :: dp2y(:,:,:,:)
     real(kind=dp_t), pointer :: dp2z(:,:,:,:)
     real(kind=dp_t), pointer :: dp3(:,:,:,:)
+
+    logical :: use_qE_Lorentz
     
     dm = mla%dim
     nlevs = mla%nlevel
+
+    use_qE_Lorentz = .false.
+
+    if (use_qE_Lorentz) then
+
+       call average_cc_to_face(nlevs,charge,Lorentz_force,1,c_bc_comp,1, &
+                               the_bc_tower%bc_tower_array)
+
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_mult_mult_s(Lorentz_force(n,i),-1.d0,0)
+             call multifab_mult_mult_c(Lorentz_force(n,i),1,grad_Epot(n,i),1,1,0)
+          end do
+       end do
+
+       return
+
+    end if
 
     ! temporary multifab to hold div(eps*E)
     do n=1,nlevs
@@ -747,7 +768,13 @@ contains
        end do
     else
        call average_cc_to_face(nlevs,permittivity,Lorentz_force,1,c_bc_comp,1, &
-                               the_bc_tower%bc_tower_array)
+                               the_bc_tower%bc_tower_array) 
+
+      if (zero_eps_on_wall_type .gt. 0) then
+          ! set beta to set to zero on certain boundary faces
+          call zero_eps_on_wall(mla,Lorentz_force,dx)
+       end if
+
     end if
 
     ! multiply by E to get eps*E on faces
@@ -925,5 +952,70 @@ contains
     end if
 
   end subroutine compute_E_ext
+
+  subroutine zero_eps_on_wall(mla,beta,dx)
+
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(in   ) :: beta(:,:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:)
+
+    integer :: i,dm,nlevs,n,ng_b
+    integer :: lo(mla%dim),hi(mla%dim)
+
+    real(kind=dp_t), pointer :: bpx(:,:,:,:)
+    real(kind=dp_t), pointer :: bpy(:,:,:,:)
+    real(kind=dp_t), pointer :: bpz(:,:,:,:)
+
+    nlevs = mla%nlevel
+    dm = mla%dim
+
+    ng_b = beta(1,1)%ng
+
+    do n=1,nlevs
+       do i=1,nfabs(beta(n,1))
+          lo = lwb(get_box(beta(n,1),i))
+          hi = upb(get_box(beta(n,1),i))
+          bpy => dataptr(beta(n,2),i)
+          select case (dm)
+          case (2)
+             call zero_eps_on_wall_2d(bpy(:,:,1,1),ng_b,lo,hi,dx(n,:))
+          case (3)
+             call bl_error("zero_eps_on_wall_3d not written yet")
+          end select
+       end do
+    end do
+
+  end subroutine zero_eps_on_wall
+
+  subroutine zero_eps_on_wall_2d(betay,ng_b,lo,hi,dx)
+      
+    integer         :: lo(:),hi(:),ng_b
+    real(kind=dp_t) :: betay(lo(1)-ng_b:,lo(2)-ng_b:)
+    real(kind=dp_t) :: dx(:)
+
+    integer :: i,j
+
+    real(kind=dp_t) :: x,y,Lx
+
+    Lx = prob_hi(1) - prob_lo(1)    
+
+    if (zero_eps_on_wall_type .eq. 1) then
+
+       ! y-faces
+       do j=lo(2),hi(2)+1
+          y = prob_lo(2) + dx(2)*j
+          do i=lo(1),hi(1)
+             x = prob_lo(1) + dx(1)*(i+0.5d0)
+
+             if (y .eq. 0.d0 .and. (x .le. 0.25d0*Lx .or. x .ge. 0.75d0*Lx) ) then
+                betay(i,j) = 0.d0
+             end if
+
+          end do
+       end do
+
+    end if
+
+  end subroutine zero_eps_on_wall_2d
 
 end module fluid_charge_module
