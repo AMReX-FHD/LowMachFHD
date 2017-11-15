@@ -174,14 +174,13 @@
 
   ! 1 = Dirichlet (fixed potential)
   ! 2 = Neumann (fixed charge density)
-  Epot_wall_bc_type(1,1) = 1
-  Epot_wall_bc_type(2,1) = 1
   Epot_wall_bc_type(1,2) = 2
   Epot_wall_bc_type(2,2) = 2
-  Epot_wall(1,1) = 0.d0
-  Epot_wall(2,1) = 0.d0
   Epot_wall(1,2) = 1.55600980222d12
   Epot_wall(2,2) = 0.d0
+
+  ! zero out charge on portions of a Neumann face so dphi/dn=0
+  zero_charge_on_wall_type = 1
 
   E_ext_type = 1
   E_ext_value(1:2) = 1.d11 0.d0

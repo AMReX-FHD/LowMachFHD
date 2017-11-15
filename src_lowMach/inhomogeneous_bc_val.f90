@@ -7,7 +7,7 @@ module inhomogeneous_bc_val_module
   use probin_multispecies_module, only: c_bc, rhotot_bc
   use probin_common_module, only: prob_lo, prob_hi, wallspeed_lo, wallspeed_hi, prob_type, &
                                   nspecies, algorithm_type, rho0
-  use probin_charged_module, only: Epot_wall, Epot_wall_bc_type
+  use probin_charged_module, only: Epot_wall, Epot_wall_bc_type, zero_charge_on_wall_type
 
   implicit none
 
@@ -86,7 +86,7 @@ contains
     real(kind=dp_t), intent(in), optional :: time_in
     real(kind=dp_t)                :: val
 
-    real(kind=dp_t) :: time
+    real(kind=dp_t) :: time, Lx
 
     if (present(time_in)) then
        time = time_in
@@ -189,6 +189,14 @@ contains
           val = Epot_wall(2,1)
        else if (y .eq. prob_lo(2)) then
           val = Epot_wall(1,2)
+
+          if (zero_charge_on_wall_type .eq. 1) then
+             Lx = prob_hi(1)-prob_lo(1)
+             if (x .le. Lx/4.d0 .or. x .ge. 3.d0*Lx/4.d0) then
+                val = 0.d0
+             end if
+          end if
+
        else if (y .eq. prob_hi(2)) then
           val = Epot_wall(2,2)
        else
