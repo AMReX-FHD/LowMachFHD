@@ -74,7 +74,6 @@
 
 \section{Electroosmotic Flow}
 
-\subsection{Problem Setup}
 Using the code from \cite{LowMachElectro}, the problem setup is as follows.
 
 The computational domain is square with $L=1.28\times 10^{-4}$~cm.
@@ -95,7 +94,7 @@ We have a temporary fix in the code to handle the Lorentz force using the
 discretization $qE$.  For the original formulation work we somehow need to
 subtract off the charge at the boundary.
 
-\subsubsection{Test 1: Debye length much smaller than the channel width}
+\subsection{Test 1: Debye length much smaller than the channel width}
 We initialize $w_{\rm Na} = 2.088\times 10^{-6}$ and
 $w_{\rm Cl} = 1.68\times 10^{-6}$ so the Debye length of the initial
 configuration is $3.66\times 10^{-6}$~cm.  The total charge in the interior
@@ -129,9 +128,7 @@ v(y) = -v_0(1-e^{-(|y|-L/2)/\lambda})
 
 The computationally measured velocity one Debye length from the wall is 4.3~cm/s.  
 
-
-
-\subsubsection{Test 2: Debye length comparable to the channel width}
+\subsection{Test 2: Debye length comparable to the channel width}
 We initialize $w_{\rm Na} = 2.088\times 10^{-9}$ and
 $w_{\rm Cl} = 1.68\times 10^{-9}$ so the Debye length is
 $1.16\times 10^{-4}$~cm.
@@ -151,9 +148,39 @@ The potential varies from $\zeta$ at the wall to $\zeta+11953$ at the centerline
 We compute $v_0=0.30$~cm/s using (\ref{eq:v0}) above, and thus the velocity at the 
 centerline using (\ref{eq:vgeneral}) is $0.08$, matching the computation.
 
-\section{Electrophoretic Flow}
+\subsection{Conductance Test}
+I instrumented the code to all up the total advective and diffusive mass fluxes on a face
+that spans the vertical direction.  As a proxy for measuring current, I subtract
+the total flux of the postively charged species from the total flux of the negatively
+charged species.
+
+The idea is to vary only the salt concentration and measure the current.  Experiments
+show that as the concentration decreases, the conductance does not linearly decrease once
+the concentration falls below a certain value, where the conductance reaches
+a constant value.  Thus as the concentration becomes smaller, the current should be
+proportional to the applied electric field and independent of the concentration.
+
+I have tried tests where I have kept the Na and Cl at a constant ratio (that has
+a net charge), and tests where I have kept the amount of Cl on the boundary
+fixed and decreased the Na and Cl in a way to maintain overall charge neutrality.
 
 \section{Electrokinetic Flow}
+The setup is a neutral salt on the interior.
+The lo and hi x-boundary conditions on electric potential
+are $\phi=-1$ and $\phi=1$.
+On the hi-y wall we use a homogeneous Neumann electric potential.
+On the lo-y wall we use a homogeneous Dirichlet electric potential,
+but outside the central 50\% of the domain we set $\epsilon$ on the
+boundary face to zero, which has the net effect of a homogeneous
+Neumann electric potential boundary condition.
+
+\section{Electrophoretic Flow}
+The setup is a salt with unequal ions so there is a net interior charge.
+The x-direction is periodic with an applied electric field.
+On the hi-y wall we homogeneous Neumann electric potential.
+On the lo-y wall we use a Neumann electric potential boundary condition, where the
+central 50\% of the domain has a net surface charge density to match
+the amount of charge on the interior, and the rest of the wall is homogeneous.
 
 \section{Strip/Square Diffusion Testing}
 
@@ -170,16 +197,16 @@ Simulation parameters:
 Domain Length = 2.56d-3 [cm]
 
 Approach 1.  4-species (Na, Cl, K, H2O), explicit electrodiffusion.
-             (inputs_trinary_test with electroneutral=F)
+             (inputs\_trinary\_test with electroneutral=F)
 
 Approach 2.  4-species, electroneutral.
-             (inputs_trinary_test with electroneutral=T)
+             (inputs\_trinary\_test with electroneutral=T)
 
 Approach 3.  3-species (NaCl, KCl, H2O), ambipolar approximation (no charges).
              The initial conditions in Approach 3 have been calibrated to
              match the amount of Na, Cl, and K used in Approach 1 and 2.
-             (inputs_ambipolar_trinary_test with optional hacked 
-              src_lowMach/write_plotfile.f90->write_plotfile_ambi.f90
+             (inputs\_ambipolar\_trinary\_test with optional hacked 
+              src\_lowMach/write\_plotfile.f90->write\_plotfile\_ambi.f90
               to see the individual species)
 
 For Approach 1 and 2, the Debye length is 4.42e-6cm (44.2nm).
@@ -196,7 +223,7 @@ the 3 approaches to 15 digits of accuracy.
 
 The mass diffusion stability limit is a function of dx
 
-n_cell       dx       dt_diff
+n\_cell       dx       dt\_diff
 32           8.e-5    7.88e-5
 64           4.e-5    1.97e-5
 128          2.e-5    4.93e-6
@@ -208,7 +235,7 @@ Setup: (tfinal = 6.4d-4)
 We coarsen both space and time by factors of 2, except for the reference solution which has
 a very small time step so it can overcome the mass diffusion stability limit.
 
-n_cell       dt       max_step   massdiff_cfl (1 is stability limit)  electrodiff_cfl
+n\_cell       dt       max\_step   massdiff\_cfl (1 is stability limit)  electrodiff\_cfl
 32           6.4d-6   100        0.08                                 6.65
 64           3.2d-6   200        0.16                                 3.32
 128          1.6d-6   400        0.32                                 1.66
@@ -413,6 +440,6 @@ Level:  0
 
 
 \bibliographystyle{plain}
-\bibliography{Electroosmosis}
+\bibliography{Applications}
 
 \end{document}
