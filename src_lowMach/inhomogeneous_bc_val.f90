@@ -19,7 +19,7 @@ contains
 
   subroutine scalar_bc(phys_bc, bc_code)
 
-    ! variable ordering for charged fluid code (num_scal_bc = 2*nspecies+3):
+    ! variable ordering for low Mach code (num_scal_bc = 2*nspecies+3):
     ! 1                       = total density
     ! 2:nspecies+1            = concentrations
     ! nspecies+2:2*nspecies+1 = molfrac or massfrac (dimensionless fractions
@@ -29,6 +29,7 @@ contains
     integer, intent(in   ) :: phys_bc
     integer, intent(inout) :: bc_code(1:num_scal_bc)
 
+    ! set bc types for everything except electric potential, which is handled in define_bc_tower.f90
     if ((phys_bc == NO_SLIP_WALL) .or. (phys_bc == SLIP_WALL)) then
 
        bc_code(1:num_scal_bc-2) = FOEXTRAP  ! Pure Neumann for total density, conctractions, mol/mass fractions
@@ -36,7 +37,7 @@ contains
 
     else if ((phys_bc == NO_SLIP_RESERVOIR) .or. (phys_bc == SLIP_RESERVOIR)) then
 
-       bc_code = EXT_DIR   ! Pure Dirichlet
+       bc_code(1:num_scal_bc-1) = EXT_DIR   ! Pure Dirichlet
 
     else if (phys_bc == PERIODIC .or. phys_bc == INTERIOR ) then
 
