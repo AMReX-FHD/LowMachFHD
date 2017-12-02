@@ -5,7 +5,7 @@ module diffusive_mass_fluxdiv_module
   use bc_module
   use div_and_grad_module
   use probin_multispecies_module, only: is_nonisothermal, correct_flux
-  use probin_common_module, only: barodiffusion_type, nspecies
+  use probin_common_module, only: barodiffusion_type, nspecies, shift_cc_to_boundary
   use mass_flux_utilities_module
   use ml_layout_module
   use convert_stag_module
@@ -110,8 +110,13 @@ contains
     end do 
 
     ! compute face-centered rhoWchi from cell-centered values 
-    call average_cc_to_face(nlevs, rhoWchi, rhoWchi_face, 1, tran_bc_comp, &
-                            nspecies**2, the_bc_tower%bc_tower_array, .false.) 
+    if (any(shift_cc_to_boundary(:,:) .eq. 1)) then
+       call shift_cc_to_boundary_face(nlevs, rhoWchi, rhoWchi_face, 1, tran_bc_comp, &
+                                      nspecies**2, the_bc_tower%bc_tower_array, .false.) 
+    else
+       call average_cc_to_face(nlevs, rhoWchi, rhoWchi_face, 1, tran_bc_comp, &
+                               nspecies**2, the_bc_tower%bc_tower_array, .false.) 
+    end if
 
     !==================================!
     ! compute flux-piece from molarconc
@@ -122,8 +127,13 @@ contains
                       the_bc_tower%bc_tower_array)
 
     ! compute face-centered Gama from cell-centered values 
-    call average_cc_to_face(nlevs, Gama, Gama_face, 1, tran_bc_comp, &
-                            nspecies**2, the_bc_tower%bc_tower_array, .false.)
+    if (any(shift_cc_to_boundary(:,:) .eq. 1)) then
+       call shift_cc_to_boundary_face(nlevs, Gama, Gama_face, 1, tran_bc_comp, &
+                                      nspecies**2, the_bc_tower%bc_tower_array, .false.)
+    else
+       call average_cc_to_face(nlevs, Gama, Gama_face, 1, tran_bc_comp, &
+                               nspecies**2, the_bc_tower%bc_tower_array, .false.)
+    end if
 
     ! compute Gama*grad(molarconc): Gama is nspecies^2 matrix; grad(x) is nspecies component vector 
     do n=1,nlevs
@@ -142,8 +152,13 @@ contains
        call compute_grad(mla, Temp, thermodiff_mass_flux, dx, 1, temp_bc_comp, 1, 1, the_bc_tower%bc_tower_array)
     
        ! compute face-centered zeta_by_T from cell-centered values 
-       call average_cc_to_face(nlevs, zeta_by_Temp, zeta_by_Temp_face, 1, tran_bc_comp, &
-                               nspecies, the_bc_tower%bc_tower_array, .false.) 
+       if (any(shift_cc_to_boundary(:,:) .eq. 1)) then
+          call shift_cc_to_boundary_face(nlevs, zeta_by_Temp, zeta_by_Temp_face, 1, tran_bc_comp, &
+                                         nspecies, the_bc_tower%bc_tower_array, .false.) 
+       else
+          call average_cc_to_face(nlevs, zeta_by_Temp, zeta_by_Temp_face, 1, tran_bc_comp, &
+                                  nspecies, the_bc_tower%bc_tower_array, .false.) 
+       end if
 
        ! compute zeta_by_T*grad(T): zeta_by_T is nspecies component vector; grad(T) is scalar
        do n=1,nlevs
@@ -175,8 +190,13 @@ contains
        call compute_baro_coef(mla,baro_coef,rho,rhotot,Temp)
 
        ! average baro_coef to faces
-       call average_cc_to_face(nlevs, baro_coef, baro_coef_face, 1, scal_bc_comp, &
-                               nspecies, the_bc_tower%bc_tower_array, .false.)
+       if (any(shift_cc_to_boundary(:,:) .eq. 1)) then
+          call shift_cc_to_boundary_face(nlevs, baro_coef, baro_coef_face, 1, scal_bc_comp, &
+                                         nspecies, the_bc_tower%bc_tower_array, .false.)
+       else
+          call average_cc_to_face(nlevs, baro_coef, baro_coef_face, 1, scal_bc_comp, &
+                                  nspecies, the_bc_tower%bc_tower_array, .false.)
+       end if
 
        ! store the fluxes, baro_coef(1:nspecies) * gradp_baro, in baro_coef_face
        do n=1,nlevs

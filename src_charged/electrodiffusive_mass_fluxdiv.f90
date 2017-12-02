@@ -12,7 +12,7 @@ module electrodiffusive_mass_fluxdiv_module
   use ml_solve_module
   use multifab_physbc_module
   use matvec_mul_module
-  use probin_common_module, only: nspecies, variance_coef_mass
+  use probin_common_module, only: nspecies, variance_coef_mass, shift_cc_to_boundary
   use probin_gmres_module, only: mg_verbose
   use probin_charged_module, only: Epot_wall_bc_type, Epot_wall, E_ext_type, electroneutral, &
                                    zero_eps_on_wall_type
@@ -187,8 +187,13 @@ contains
     end if
 
     ! compute face-centered rhoWchi from cell-centered values 
-    call average_cc_to_face(nlevs, rhoWchi, rhoWchi_face, 1, tran_bc_comp, &
-                            nspecies**2, the_bc_tower%bc_tower_array, .false.) 
+    if (any(shift_cc_to_boundary(:,:) .eq. 1)) then
+       call shift_cc_to_boundary_face(nlevs, rhoWchi, rhoWchi_face, 1, tran_bc_comp, &
+                                      nspecies**2, the_bc_tower%bc_tower_array, .false.) 
+    else
+       call average_cc_to_face(nlevs, rhoWchi, rhoWchi_face, 1, tran_bc_comp, &
+                               nspecies**2, the_bc_tower%bc_tower_array, .false.) 
+    end if
 
     ! solve poisson equation for phi (the electric potential)
     ! -del dot epsilon grad Phi = charge
@@ -207,8 +212,13 @@ contains
 
     if (.not. electroneutral .or. E_ext_type .ne. 0) then
        ! permittivity on faces
-       call average_cc_to_face(nlevs,permittivity,permittivity_fc,1,scal_bc_comp,1, &
-                               the_bc_tower%bc_tower_array)
+       if (any(shift_cc_to_boundary(:,:) .eq. 1)) then
+          call shift_cc_to_boundary_face(nlevs,permittivity,permittivity_fc,1,scal_bc_comp,1, &
+                                         the_bc_tower%bc_tower_array)
+       else
+          call average_cc_to_face(nlevs,permittivity,permittivity_fc,1,scal_bc_comp,1, &
+                                  the_bc_tower%bc_tower_array)
+       end if
     end if
 
     if (electroneutral) then
@@ -338,8 +348,13 @@ contains
     call compute_charge_coef(mla,rho,Temp,charge_coef)
 
     ! average charge flux coefficient to faces, store in flux
-    call average_cc_to_face(nlevs,charge_coef,electro_mass_flux,1,c_bc_comp,nspecies, &
-                            the_bc_tower%bc_tower_array,.true.)
+    if (any(shift_cc_to_boundary(:,:) .eq. 1)) then
+       call shift_cc_to_boundary_face(nlevs,charge_coef,electro_mass_flux,1,c_bc_comp,nspecies, &
+                                      the_bc_tower%bc_tower_array,.true.)
+    else
+       call average_cc_to_face(nlevs,charge_coef,electro_mass_flux,1,c_bc_comp,nspecies, &
+                               the_bc_tower%bc_tower_array,.true.)
+    end if
 
     ! multiply flux coefficient by gradient of electric potential
     do n=1,nlevs
