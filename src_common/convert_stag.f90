@@ -247,6 +247,13 @@ contains
        end do
     end do
 
+    ! y-faces
+    do j=ylo(2),yhi(2)
+       do i=ylo(1),yhi(1)
+          facey(i,j) = 0.5d0*(cc(i,j)+cc(i,j-1))
+       end do
+    end do
+
     ! overwrite x-boundary faces
     ! value in ghost cells represents boundary value
     if (xlo(1)+ng_f .eq. glo(1)) then
@@ -263,13 +270,6 @@ contains
        end do
     end if
     end if
-
-    ! y-faces
-    do j=ylo(2),yhi(2)
-       do i=ylo(1),yhi(1)
-          facey(i,j) = 0.5d0*(cc(i,j)+cc(i,j-1))
-       end do
-    end do
 
     ! overwrite y-boundary faces
     ! value in ghost cells represents boundary value
@@ -1026,17 +1026,17 @@ contains
              select case (dm)
              case (2)
                 call shift_cc_to_boundary_face_2d(cp(:,:,1,scomp),ng_c, &
-                                           epx(:,:,1,scomp),epy(:,:,1,scomp),ng_f, &
-                                           lo,hi, &
-                                           the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp), &
-                                           xlo,xhi,ylo,yhi)
+                                                  epx(:,:,1,scomp),epy(:,:,1,scomp),ng_f, &
+                                                  lo,hi, &
+                                                  the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp), &
+                                                  xlo,xhi,ylo,yhi)
              case (3)
                 epz => dataptr(face(n,3), i)
                 call shift_cc_to_boundary_face_3d(cp(:,:,:,scomp),ng_c, &
-                                           epx(:,:,:,scomp),epy(:,:,:,scomp),epz(:,:,:,scomp),ng_f, &
-                                           lo,hi, &
-                                           the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp), &
-                                           xlo,xhi,ylo,yhi,zlo,zhi)
+                                                  epx(:,:,:,scomp),epy(:,:,:,scomp),epz(:,:,:,scomp),ng_f, &
+                                                  lo,hi, &
+                                                  the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp), &
+                                                  xlo,xhi,ylo,yhi,zlo,zhi)
              end select
           end do
        end do
@@ -1061,6 +1061,20 @@ contains
 
     ! local
     integer :: i,j
+
+    ! x-faces
+    do j=xlo(2),xhi(2)
+       do i=xlo(1),xhi(1)
+          facex(i,j) = 0.5d0*(cc(i,j)+cc(i-1,j))
+       end do
+    end do
+
+    ! y-faces
+    do j=ylo(2),yhi(2)
+       do i=ylo(1),yhi(1)
+          facey(i,j) = 0.5d0*(cc(i,j)+cc(i,j-1))
+       end do
+    end do
 
     ! overwrite x-boundary faces
     ! value in ghost cells represents boundary value
@@ -1113,6 +1127,33 @@ contains
 
     ! local
     integer :: i,j,k
+
+    ! x-faces
+    do k=xlo(3),xhi(3)
+       do j=xlo(2),xhi(2)
+          do i=xlo(1),xhi(1)
+             facex(i,j,k) = 0.5d0*(cc(i,j,k)+cc(i-1,j,k))
+          end do
+       end do
+    end do
+
+    ! y-faces
+    do k=ylo(3),yhi(3)
+       do j=ylo(2),yhi(2)
+          do i=ylo(1),yhi(1)
+             facey(i,j,k) = 0.5d0*(cc(i,j,k)+cc(i,j-1,k))
+          end do
+       end do
+    end do
+
+    ! z-faces
+    do k=zlo(3),zhi(3)
+       do j=zlo(2),zhi(2)
+          do i=zlo(1),zhi(1)
+             facez(i,j,k) = 0.5d0*(cc(i,j,k)+cc(i,j,k-1))
+          end do
+       end do
+    end do
 
     ! overwrite x-boundary faces
     if (xlo(1)+ng_f .eq. glo(1) .and. shift_cc_to_boundary(1,1) .eq. 1) then
