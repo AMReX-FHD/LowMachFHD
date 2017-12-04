@@ -12,8 +12,9 @@ module compute_mass_fluxdiv_module
   use mass_flux_utilities_module
   use convert_stag_module
   use electrodiffusive_mass_fluxdiv_module
-  use probin_common_module, only: variance_coef_mass, nspecies
-  use probin_charged_module, only: use_charged_fluid
+  use probin_common_module, only: variance_coef_mass, nspecies, molmass, &
+                                  shift_cc_to_boundary, k_B
+  use probin_charged_module, only: use_charged_fluid, charge_per_mass
 
   implicit none
 
@@ -153,6 +154,19 @@ contains
        end if
     end if
 
+    if (any(shift_cc_to_boundary(:,:) .eq. 1)) then
+
+       ! need d+ = gamma*(grad w+)_n + a grad(phi)_n
+       ! need sum (a_i grad(phi)_n)
+       ! need each element of chi
+       ! in each boundary cell solve the linear system
+       ! overwrite total fluxes on boundary faces
+       ! update diff_mass_fluxdiv near boundary faces
+       call mixed_boundary_flux(mla,rho,rhotot,grad_Epot, &
+                                diff_mass_flux,diff_mass_fluxdiv,Temp,dx)
+
+    end if
+
     ! free the multifab allocated memory
     do n=1,nlevs
        call multifab_destroy(rhoWchi(n))
@@ -171,5 +185,173 @@ contains
     call destroy(bpt)
 
   end subroutine compute_mass_fluxdiv
+
+  ! need d+ = gamma*(grad w+)_n + a grad(phi)_n
+  ! need sum (a_i grad(phi)_n)
+  ! need each element of chi
+  ! in each boundary cell solve the linear system
+  ! overwrite total fluxes on boundary faces
+  ! update diff_mass_fluxdiv near boundary faces
+  subroutine mixed_boundary_flux(mla,rho,rhotot,grad_Epot, &
+                                 diff_mass_flux,diff_mass_fluxdiv,Temp,dx)
+
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(inout) :: rho(:)
+    type(multifab) , intent(inout) :: rhotot(:)
+    type(multifab) , intent(in   ) :: grad_Epot(:,:)
+    type(multifab) , intent(inout) :: diff_mass_flux(:,:)
+    type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
+    type(multifab) , intent(in   ) :: Temp(:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:)
+
+    ! local variables
+    integer :: i,dm,n,nlevs
+    integer :: ng_1,ng_2,ng_3,ng_4,ng_5,ng_6
+    integer :: lo(mla%dim),hi(mla%dim)
+
+    ! pointers into multifabs
+    real(kind=dp_t), pointer :: dp1(:,:,:,:)
+    real(kind=dp_t), pointer :: dp2(:,:,:,:)
+    real(kind=dp_t), pointer :: dp3x(:,:,:,:)
+    real(kind=dp_t), pointer :: dp3y(:,:,:,:)
+    real(kind=dp_t), pointer :: dp3z(:,:,:,:)
+    real(kind=dp_t), pointer :: dp4x(:,:,:,:)
+    real(kind=dp_t), pointer :: dp4y(:,:,:,:)
+    real(kind=dp_t), pointer :: dp4z(:,:,:,:)
+    real(kind=dp_t), pointer :: dp5(:,:,:,:)
+    real(kind=dp_t), pointer :: dp6(:,:,:,:)
+
+    dm = mla%dim
+    nlevs = mla%nlevel
+
+    ng_1 = rho(1)%ng
+    ng_2 = rhotot(1)%ng
+    ng_3 = grad_Epot(1,1)%ng
+    ng_4 = diff_mass_flux(1,1)%ng
+    ng_5 = diff_mass_fluxdiv(1)%ng
+    ng_6 = Temp(1)%ng
+
+    do n=1,nlevs
+       do i=1,nfabs(rho(n))
+
+          dp1  => dataptr(rho(n),i)
+          dp2  => dataptr(rhotot(n),i)
+          dp3x => dataptr(grad_Epot(n,1),i)
+          dp3y => dataptr(grad_Epot(n,2),i)
+          dp4x => dataptr(diff_mass_flux(n,1),i)
+          dp4y => dataptr(diff_mass_flux(n,2),i)
+          dp5  => dataptr(diff_mass_fluxdiv(n),i)
+          dp6  => dataptr(Temp(n),i)
+          lo = lwb(get_box(rho(n),i))
+          hi = upb(get_box(rho(n),i))
+          select case (dm)
+          case (2)
+             call mixed_boundary_flux_2d(dp1(:,:,1,:),ng_1, &
+                                         dp2(:,:,1,1),ng_2, &
+                                         dp3x(:,:,1,1),dp3y(:,:,1,1),ng_3, &
+                                         dp4x(:,:,1,:),dp4y(:,:,1,:),ng_4, &
+                                         dp5(:,:,1,:),ng_5, &
+                                         dp6(:,:,1,1),ng_6,lo,hi,dx(n,:))
+          case (3)
+
+          end select
+       end do
+    end do
+
+
+  end subroutine mixed_boundary_flux
+
+  subroutine mixed_boundary_flux_2d(rho,ng_1,rhotot,ng_2,grad_Epotx,grad_Epoty,ng_3, &
+                                    fluxx,fluxy,ng_4,fluxdiv,ng_5,Temp,ng_6,lo,hi,dx)
+
+    integer         :: lo(:),hi(:),ng_1,ng_2,ng_3,ng_4,ng_5,ng_6
+    real(kind=dp_t) ::        rho(lo(1)-ng_1:,lo(2)-ng_1:,:)
+    real(kind=dp_t) ::     rhotot(lo(1)-ng_2:,lo(2)-ng_2:)
+    real(kind=dp_t) :: grad_Epotx(lo(1)-ng_3:,lo(2)-ng_3:)
+    real(kind=dp_t) :: grad_Epoty(lo(1)-ng_3:,lo(2)-ng_3:)
+    real(kind=dp_t) ::      fluxx(lo(1)-ng_4:,lo(2)-ng_4:,:)
+    real(kind=dp_t) ::      fluxy(lo(1)-ng_4:,lo(2)-ng_4:,:)
+    real(kind=dp_t) ::    fluxdiv(lo(1)-ng_5:,lo(2)-ng_5:,:)
+    real(kind=dp_t) ::       Temp(lo(1)-ng_6:,lo(2)-ng_6:)
+    real(kind=dp_t) :: dx(2)
+
+    ! local
+    integer :: i,j
+    integer :: comp
+    
+    real(kind=dp_t) :: molmtot
+    real(kind=dp_t) :: molmtot_b ! boundary value
+    real(kind=dp_t) :: molarconc(nspecies)
+    real(kind=dp_t) :: molarconc_b(nspecies) ! boundary value
+    real(kind=dp_t) :: chi(nspecies,nspecies)
+    real(kind=dp_t) :: rhoWchi(nspecies,nspecies)
+    real(kind=dp_t) :: D_bar(nspecies,nspecies)
+    real(kind=dp_t) :: charge_coef(nspecies)
+    real(kind=dp_t) :: n
+
+    real(kind=dp_t) :: sumai, gradx(nspecies), W(nspecies)
+    real(kind=dp_t) :: A(2,2), b(2), detinv, dpls, dmin, dzero
+
+    ! hack - need to generalize this later to use shift_cc_to_boundary
+
+    if (lo(2) .eq. 0) then
+
+       ! molarconc and molm in valid cell
+       call compute_molconc_molmtot_local(nspecies,molmass,rho(i,j,:),rhotot(i,j), &
+                                          molarconc,molmtot)
+
+       ! molarconc and molm in ghost cell
+       call compute_molconc_molmtot_local(nspecies,molmass,rho(i,j-1,:),rhotot(i,j-1), &
+                                          molarconc_b,molmtot_b)
+       
+       call compute_chi(nspecies,molmass,rho(i,j,:),rhotot(i,j),molarconc,chi,D_bar)
+
+       call compute_rhoWchi_from_chi_local(rho(i,j,:),chi,rhoWchi)
+
+       n = 0.d0
+       do comp=1,nspecies
+          n = n + rho(i,j,comp)/molmass(comp)
+       end do
+            
+       sumai = 0.d0
+       do comp=1,nspecies
+          charge_coef(comp) = rho(i,j,comp)*charge_per_mass(comp)/(n*k_B*Temp(i,j))
+          sumai = sumai + charge_coef(comp)
+
+          gradx(comp) = (molarconc(comp) - molarconc_b(comp))/(0.5d0*dx(2))
+          W(comp) = rho(i,j,comp) / rhotot(i,j)
+       end do
+
+       dpls = gradx(1) + charge_coef(1)*grad_Epoty(i,j)
+
+       ! form 2x2 system
+       A(1,1) = chi(2,2)
+       A(1,2) = chi(2,3)
+       A(2,1) = 1
+       A(2,2) = 1
+       b(1) = -chi(2,1)*dpls
+       b(2) = sumai - dpls
+
+       ! solve 2x2 system
+       detinv = 1.d0 / (A(1,1)*A(2,2) - A(1,2)*A(2,1))
+       dmin = detinv * (A(2,2)*b(1) - A(1,2)*b(2))
+       dzero = detinv * (-A(2,1)*b(1) + A(1,1)*b(2))
+
+       ! update fluxes on face
+       fluxy(i,j,1) = W(1)*(chi(1,1)*dpls + chi(1,2)*dmin + chi(1,3)*dzero)
+       fluxy(i,j,2) = 0.d0
+       fluxy(i,j,3) = -fluxy(i,j,1)
+
+       ! update flux divergence on interior
+       do comp=1,nspecies
+          fluxdiv(i,j,comp) =   (fluxx(i+1,j,comp) - fluxx(i,j,comp)) / dx(1) &
+                              + (fluxy(i,j+1,comp) - fluxy(i,j,comp)) / dx(2)
+       end do
+
+    end if
+
+
+
+  end subroutine mixed_boundary_flux_2d
   
 end module compute_mass_fluxdiv_module

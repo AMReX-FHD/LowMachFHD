@@ -16,12 +16,15 @@ module mass_flux_utilities_module
   private
 
   public :: compute_molconc_molmtot, &
+            compute_molconc_molmtot_local, &
             compute_rhotot, &
             compute_Gama, &
             compute_rhoWchi, &
+            compute_chi, &
             compute_zeta_by_Temp, &
             compute_rhoWchi_from_chi, &
             compute_sqrtLonsager_fc, &
+            compute_rhoWchi_from_chi_local, &
             compute_baro_coef
 
 contains
