@@ -295,57 +295,62 @@ contains
     ! hack - need to generalize this later to use shift_cc_to_boundary
 
     if (lo(2) .eq. 0) then
-
-       ! molarconc and molm in valid cell
-       call compute_molconc_molmtot_local(nspecies,molmass,rho(i,j,:),rhotot(i,j), &
-                                          molarconc,molmtot)
-
-       ! molarconc and molm in ghost cell
-       call compute_molconc_molmtot_local(nspecies,molmass,rho(i,j-1,:),rhotot(i,j-1), &
-                                          molarconc_b,molmtot_b)
        
-       call compute_chi(nspecies,molmass,rho(i,j,:),rhotot(i,j),molarconc,chi,D_bar)
+       j = 0
+       do i=lo(1),hi(1)
 
-       call compute_rhoWchi_from_chi_local(rho(i,j,:),chi,rhoWchi)
+          ! molarconc and molm in valid cell
+          call compute_molconc_molmtot_local(nspecies,molmass,rho(i,j,:),rhotot(i,j), &
+                                             molarconc,molmtot)
 
-       n = 0.d0
-       do comp=1,nspecies
-          n = n + rho(i,j,comp)/molmass(comp)
-       end do
+          ! molarconc and molm in ghost cell
+          call compute_molconc_molmtot_local(nspecies,molmass,rho(i,j-1,:),rhotot(i,j-1), &
+                                             molarconc_b,molmtot_b)
+       
+          call compute_chi(nspecies,molmass,rho(i,j,:),rhotot(i,j),molarconc,chi,D_bar)
+
+          call compute_rhoWchi_from_chi_local(rho(i,j,:),chi,rhoWchi)
+
+          n = 0.d0
+          do comp=1,nspecies
+             n = n + rho(i,j,comp)/molmass(comp)
+          end do
             
-       sumai = 0.d0
-       do comp=1,nspecies
-          charge_coef(comp) = rho(i,j,comp)*charge_per_mass(comp)/(n*k_B*Temp(i,j))
-          sumai = sumai + charge_coef(comp)
+          sumai = 0.d0
+          do comp=1,nspecies
+             charge_coef(comp) = rho(i,j,comp)*charge_per_mass(comp)/(n*k_B*Temp(i,j))
+             sumai = sumai + charge_coef(comp)
+             
+             gradx(comp) = (molarconc(comp) - molarconc_b(comp))/(0.5d0*dx(2))
+             W(comp) = rho(i,j,comp) / rhotot(i,j)
+          end do
 
-          gradx(comp) = (molarconc(comp) - molarconc_b(comp))/(0.5d0*dx(2))
-          W(comp) = rho(i,j,comp) / rhotot(i,j)
-       end do
+          dpls = gradx(1) + charge_coef(1)*grad_Epoty(i,j)
 
-       dpls = gradx(1) + charge_coef(1)*grad_Epoty(i,j)
+          ! form 2x2 system
+          A(1,1) = chi(2,2)
+          A(1,2) = chi(2,3)
+          A(2,1) = 1
+          A(2,2) = 1
+          b(1) = -chi(2,1)*dpls
+          b(2) = sumai - dpls
 
-       ! form 2x2 system
-       A(1,1) = chi(2,2)
-       A(1,2) = chi(2,3)
-       A(2,1) = 1
-       A(2,2) = 1
-       b(1) = -chi(2,1)*dpls
-       b(2) = sumai - dpls
+          ! solve 2x2 system
+          detinv = 1.d0 / (A(1,1)*A(2,2) - A(1,2)*A(2,1))
+          dmin = detinv * (A(2,2)*b(1) - A(1,2)*b(2))
+          dzero = detinv * (-A(2,1)*b(1) + A(1,1)*b(2))
 
-       ! solve 2x2 system
-       detinv = 1.d0 / (A(1,1)*A(2,2) - A(1,2)*A(2,1))
-       dmin = detinv * (A(2,2)*b(1) - A(1,2)*b(2))
-       dzero = detinv * (-A(2,1)*b(1) + A(1,1)*b(2))
+          ! update fluxes on face
+          fluxy(i,j,1) = W(1)*(chi(1,1)*dpls + chi(1,2)*dmin + chi(1,3)*dzero)
+          fluxy(i,j,2) = 0.d0
+          fluxy(i,j,3) = -fluxy(i,j,1)
 
-       ! update fluxes on face
-       fluxy(i,j,1) = W(1)*(chi(1,1)*dpls + chi(1,2)*dmin + chi(1,3)*dzero)
-       fluxy(i,j,2) = 0.d0
-       fluxy(i,j,3) = -fluxy(i,j,1)
+          ! update flux divergence on interior
+          do comp=1,nspecies
+             fluxdiv(i,j,comp) =   (fluxx(i+1,j,comp) - fluxx(i,j,comp)) / dx(1) &
+                                 + (fluxy(i,j+1,comp) - fluxy(i,j,comp)) / dx(2)
+          end do
 
-       ! update flux divergence on interior
-       do comp=1,nspecies
-          fluxdiv(i,j,comp) =   (fluxx(i+1,j,comp) - fluxx(i,j,comp)) / dx(1) &
-                              + (fluxy(i,j+1,comp) - fluxy(i,j,comp)) / dx(2)
        end do
 
     end if
