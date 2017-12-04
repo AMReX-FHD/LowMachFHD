@@ -184,6 +184,7 @@ the amount of charge on the interior, and the rest of the wall is homogeneous.
 
 \section{Strip/Square Diffusion Testing}
 
+\begin{verbatim}
 We model a mixture of NaCl and KCl in water using 3 different approaches.
 In each case we have a horizontal strip of higher concentration NaCl,
 and a square region of higher concentration KCl centered in the domain.
@@ -437,7 +438,56 @@ Level:  0
                                 c2:      5.435538885e-10     0.0005937740117
                                 c3:      3.920152971e-09       0.00759369096
                                 c4:       2.40708431e-09     2.407088624e-09
+\end{verbatim}
 
+\section{Electroconvection Boundary Conditions}
+
+We model 3 species, $(w_+, w_-, w_0)$ (think Na$^+$, Cl$^-$, and water).
+The mass fractions are something like $(10^{-4}, 10^{-4}, \sim 1)$.\\ \\
+
+To simplify things (for now), we set each $\bar\rho=0$, so $\rho=1$.
+We set the charges per mass for $w_+$ and $w_-$ to be equal and
+opposite, and use the same molecular mass for all species.\\ \\
+
+The x-walls are periodic.\\ \\
+
+The upper y-wall is a no-slip, no-flow reservoir with fixed concentrations
+held at fixed electric potential.\\ \\
+
+The lower y-wall is the complicated case.  This wall 
+has no-slip, no-flow boundary conditions, but has a Dirichlet condition
+on $w_+$ and Dirichlet electric potential, and does not allow $w_-$ to
+pass through at all.
+To determine the boundary conditions for $w_-$ and $w_0$,
+we need to invoke physical conditions.  Ignoring fluctuations for now,
+the total flux is
+\begin{eqnarray}
+\bf{J} &=& \rho W \chi \left( \Gamma \nabla x + \underbrace{\frac{\bar{m} W z}{k_B T}}_{a}\nabla \Phi \right) \nonumber\\
+&=& \rho W \chi {\bf d}\label{eq:Jflux}
+\end{eqnarray}
+What we essentially do is multiply out (\ref{eq:Jflux})
+\begin{equation}
+\left(\begin{array}{c}
+J_+ \\
+J_- \\
+J_0
+\end{array}\right)
+=
+\left(\begin{array}{ccc}
+w_+(\chi_{++}d_+ + \chi_{+-}d_- + \chi_{+0}d_0) \\
+w_-(\chi_{-+}d_+ + \chi_{--}d_- + \chi_{-0}d_0) \\
+w_0(\chi_{0+}d_+ + \chi_{0-}d_- + \chi_{00}d_0)
+\end{array}\right)\label{eq:Jmult}
+\end{equation}
+We observe that we can obtain $d_+$ if we extrapolate the transport coefficients from
+the interior to the boundary and use a simple gradient stencil for $\nabla x$.
+The boundary does not allow $w_-$ to pass through at all, so we can invoke $J_-=0$.
+We use $J_-=0$ along with the condition
+\begin{equation}
+d_+ + d_- + d_0 = \sum a_i \nabla\phi
+\end{equation}
+to form a linear system for $d_+$ and $d_0$.
+Once we know $d_+$ and $d_0$ we can compute $J_-$ and $J_0$ using (\ref{eq:Jmult}).
 
 \bibliographystyle{plain}
 \bibliography{Applications}
