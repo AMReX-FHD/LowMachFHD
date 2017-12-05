@@ -323,7 +323,7 @@ contains
           sumai = 0.d0
           do comp=1,nspecies
              charge_coef(comp) = rho(i,j,comp)*charge_per_mass(comp)/(n*k_B*Temp(i,j))
-             sumai = sumai + charge_coef(comp)
+             sumai = sumai + charge_coef(comp)*grad_Epoty(i,j)
              
              gradx(comp) = (molarconc(comp) - molarconc_b(comp))/(0.5d0*dx(2))
              W(comp) = rho(i,j,comp) / rhotot(i,j)
