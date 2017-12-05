@@ -299,6 +299,9 @@ contains
        j = 0
        do i=lo(1),hi(1)
 
+          ! D_bar in valid cell
+          call compute_D_bar_local(rho(i,j,:),rhotot(i,j),D_bar)
+
           ! molarconc and molm in valid cell
           call compute_molconc_molmtot_local(nspecies,molmass,rho(i,j,:),rhotot(i,j), &
                                              molarconc,molmtot)
@@ -306,7 +309,8 @@ contains
           ! molarconc and molm in ghost cell
           call compute_molconc_molmtot_local(nspecies,molmass,rho(i,j-1,:),rhotot(i,j-1), &
                                              molarconc_b,molmtot_b)
-       
+
+      
           call compute_chi(nspecies,molmass,rho(i,j,:),rhotot(i,j),molarconc,chi,D_bar)
 
           call compute_rhoWchi_from_chi_local(rho(i,j,:),chi,rhoWchi)
