@@ -27,6 +27,7 @@ module advance_timestep_bousq_module
   use chemical_rates_module
   use fluid_charge_module
   use mk_grav_force_module
+  use bds_module
   use probin_common_module, only: advection_type, grav, variance_coef_mass, &
                                   variance_coef_mom, barodiffusion_type, project_eos_int, &
                                   molmass, use_bl_rng, nspecies, plot_int, max_step
@@ -113,6 +114,13 @@ contains
 
     ! only used when use_charged_fluid=T
     type(multifab) :: Lorentz_force(mla%nlevel,mla%dim)
+
+    ! only used for bds advection
+    type(multifab) ::    rho_tmp(mla%nlevel)
+    type(multifab) :: rho_update(mla%nlevel)
+    type(multifab) ::  bds_force(mla%nlevel)
+    type(multifab) ::     rho_nd(mla%nlevel)
+    type(multifab) ::   umac_tmp(mla%nlevel,mla%dim)
 
     integer :: i,dm,n,nlevs
 
@@ -426,12 +434,7 @@ contains
        end do
     end do
 
-    ! Step 2: compute mass fluxes and reactions at t^n
-
-    ! compute adv_mass_fluxdiv = -rho_i^n * v^n and then
-    ! increment adv_mass_fluxdiv by -rho_i^n * v^{n+1,*}
-    call mk_advective_s_fluxdiv(mla,umac_old,rho_fc,adv_mass_fluxdiv,.false.,dx,1,nspecies)
-    call mk_advective_s_fluxdiv(mla,umac    ,rho_fc,adv_mass_fluxdiv,.true. ,dx,1,nspecies)
+    ! Step 2: compute reactions and mass fluxes at t^n
 
     ! compute chemical rates m_i*R^n_i
     if (nreactions > 0) then
@@ -456,21 +459,101 @@ contains
 
     end if
 
+    if (advection_type .ge. 1) then
+
+       if (advection_type .eq. 1 .or. advection_type .eq. 2) then
+
+          ! bilinear bds advection
+          do n=1,nlevs
+             call multifab_build(    rho_tmp(n),mla%la(n),nspecies,rho_old(n)%ng)
+             call multifab_build( rho_update(n),mla%la(n),nspecies,0)
+             call multifab_build(  bds_force(n),mla%la(n),nspecies,1)
+             call multifab_build_nodal(rho_nd(n),mla%la(n),nspecies,1)
+             do i=1,dm
+                call multifab_build_edge(umac_tmp(n,i),mla%la(n),1,1,i)
+             end do
+          end do
+
+          do n=1,nlevs
+             do i=1,dm
+                ! create average of umac^n and umac^{n+1,*}
+                call multifab_copy_c(umac_tmp(n,i),1,umac_old(n,i),1,1,1)
+                call multifab_saxpy_3(umac_tmp(n,i),1.d0,umac(n,i),all=.true.)
+                call multifab_mult_mult_s(umac_tmp(n,i),0.5d0,1)
+             end do
+          end do
+
+          ! the input rho_tmp needs to have ghost cells filled with multifab_physbc_extrap
+          ! instead of multifab_physbc
+          do n=1,nlevs
+             call multifab_build(rho_tmp(n),mla%la(n),nspecies,rho_old(n)%ng)
+             call multifab_copy(rho_tmp(n),rho_old(n),rho_tmp(n)%ng)
+             call multifab_physbc_extrap(rho_tmp(n),1,c_bc_comp,nspecies, &
+                                         the_bc_tower%bc_tower_array(n))
+          end do
+
+          do n=1,nlevs
+             call multifab_copy_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies)
+             if (variance_coef_mass .ne. 0.d0) then
+                call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
+             end if
+             if (nreactions > 0) then
+                call multifab_plus_plus_c(rho_update(n),1,chem_rate(n),1,nspecies,0)
+             end if
+          end do
+
+          do n=1,nlevs
+             ! set to zero to make sure ghost cells behind physical boundaries don't have NaNs
+             call setval(bds_force(n),0.d0,all=.true.)
+             call multifab_copy_c(bds_force(n),1,rho_update(n),1,nspecies,0)
+             call multifab_fill_boundary(bds_force(n))
+          end do
+
+          call average_cc_to_node(nlevs,rho_old,rho_nd,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+
+          ! bds increments rho_update with the advection term
+          call bds(mla,umac_tmp,rho_tmp,rho_update,bds_force,rho_fc,rho_nd,dx,0.5d0*dt,1, &
+                   nspecies,c_bc_comp,the_bc_tower,proj_type_in=2)
+
+       else if (advection_type .eq. 3 .or. advection_type .eq. 4) then
+          call bl_error("advance_timestep_bousq.f90: quadratic bds not supported yet")
+       end if
+
+    else
+
+       ! compute adv_mass_fluxdiv = -rho_i^n * v^n and then
+       ! increment adv_mass_fluxdiv by -rho_i^n * v^{n+1,*}
+       call mk_advective_s_fluxdiv(mla,umac_old,rho_fc,adv_mass_fluxdiv,.false.,dx,1,nspecies)
+       call mk_advective_s_fluxdiv(mla,umac    ,rho_fc,adv_mass_fluxdiv,.true. ,dx,1,nspecies)
+
+    end if
+
     ! Step 3: density prediction to t^{n+1/2}
 
-    ! compute rho_i^{n+1/2} (store in rho_new)
-    ! multiply adv_mass_fluxdiv by (1/4) since it contains -rho_i^n * (v^n + v^{n+1,*})
-    do n=1,nlevs
-       call multifab_copy_c(rho_new(n),1,rho_old(n),1,nspecies,0)
-       call multifab_saxpy_3_cc(rho_new(n),1,0.25d0*dt, adv_mass_fluxdiv(n),1,nspecies)
-       call multifab_saxpy_3_cc(rho_new(n),1, 0.5d0*dt,diff_mass_fluxdiv(n),1,nspecies)
-       if (variance_coef_mass .ne. 0.d0) then
-          call multifab_saxpy_3_cc(rho_new(n),1,0.5d0*dt,stoch_mass_fluxdiv(n),1,nspecies)
-       end if
-       if (nreactions > 0) then
-          call multifab_saxpy_3_cc(rho_new(n),1,0.5d0*dt,chem_rate(n),1,nspecies)
-       end if
-    end do
+    if (advection_type .ge. 1) then
+
+       ! compute s^{n+1} = s^n + dt * (A^{n+1/2} + F^{*,n+1/2})
+       do n=1,nlevs
+          call multifab_saxpy_4(rho_new(n),rho_old(n),dt,rho_update(n))
+       end do
+
+    else
+
+       ! compute rho_i^{n+1/2} (store in rho_new)
+       ! multiply adv_mass_fluxdiv by (1/4) since it contains -rho_i^n * (v^n + v^{n+1,*})
+       do n=1,nlevs
+          call multifab_copy_c(rho_new(n),1,rho_old(n),1,nspecies,0)
+          call multifab_saxpy_3_cc(rho_new(n),1,0.25d0*dt, adv_mass_fluxdiv(n),1,nspecies)
+          call multifab_saxpy_3_cc(rho_new(n),1, 0.5d0*dt,diff_mass_fluxdiv(n),1,nspecies)
+          if (variance_coef_mass .ne. 0.d0) then
+             call multifab_saxpy_3_cc(rho_new(n),1,0.5d0*dt,stoch_mass_fluxdiv(n),1,nspecies)
+          end if
+          if (nreactions > 0) then
+             call multifab_saxpy_3_cc(rho_new(n),1,0.5d0*dt,chem_rate(n),1,nspecies)
+          end if
+       end do
+
+    end if
 
     ! compute rhotot^{n+1/2} from rho^{n+1/2} in VALID REGION
     call compute_rhotot(mla,rho_new,rhotot_new)
@@ -493,11 +576,6 @@ contains
                            the_bc_tower%bc_tower_array)
 
     ! Step 4: compute mass fluxes and reactions at t^{n+1/2}
-
-    ! compute adv_mass_fluxdiv = -rho_i^{n+1/2} * v^n and
-    ! increment adv_mass_fluxdiv by -rho_i^{n+1/2} * v^{n+1,*}
-    call mk_advective_s_fluxdiv(mla,umac_old,rho_fc,adv_mass_fluxdiv,.false.,dx,1,nspecies)
-    call mk_advective_s_fluxdiv(mla,umac    ,rho_fc,adv_mass_fluxdiv,.true. ,dx,1,nspecies)
 
     ! compute mass fluxes and reactions at t^{n+1/2}
     if (midpoint_stoch_mass_flux_type .eq. 1) then
@@ -586,6 +664,56 @@ contains
           call multifab_plus_plus_c(chem_rate(n),1,chem_rate_temp(n),1,nspecies,0)
           call multifab_mult_mult_s_c(chem_rate(n),1,0.5d0,nspecies,0)
        end do
+    end if
+
+    if (advection_type .ge. 1) then
+
+       if (advection_type .eq. 1 .or. advection_type .eq. 2) then
+
+          ! bilinear bds advection
+
+          do n=1,nlevs
+             call multifab_copy_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies)
+             if (variance_coef_mass .ne. 0.d0) then
+                call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
+             end if
+             if (nreactions > 0) then
+                call multifab_plus_plus_c(rho_update(n),1,chem_rate(n),1,nspecies,0)
+             end if
+          end do
+
+          do n=1,nlevs
+             ! set to zero to make sure ghost cells behind physical boundaries don't have NaNs
+             call setval(bds_force(n),0.d0,all=.true.)
+             call multifab_copy_c(bds_force(n),1,rho_update(n),1,nspecies,0)
+             call multifab_fill_boundary(bds_force(n))
+          end do
+
+          ! bds increments rho_update with the advection term
+          call bds(mla,umac_tmp,rho_tmp,rho_update,bds_force,rho_fc,rho_nd,dx,0.5d0*dt,1, &
+                   nspecies,c_bc_comp,the_bc_tower,proj_type_in=2)
+
+          do n=1,nlevs
+             call multifab_destroy(rho_tmp(n))
+             call multifab_destroy(rho_update(n))
+             call multifab_destroy(bds_force(n))
+             call multifab_destroy(rho_nd(n))
+             do i=1,dm
+                call multifab_destroy(umac_tmp(n,i))
+             end do
+          end do
+
+       else if (advection_type .eq. 3 .or. advection_type .eq. 4) then
+          call bl_error("advance_timestep_bousq.f90: quadratic bds not supported yet")
+       end if
+
+    else
+
+       ! compute adv_mass_fluxdiv = -rho_i^{n+1/2} * v^n and
+       ! increment adv_mass_fluxdiv by -rho_i^{n+1/2} * v^{n+1,*}
+       call mk_advective_s_fluxdiv(mla,umac_old,rho_fc,adv_mass_fluxdiv,.false.,dx,1,nspecies)
+       call mk_advective_s_fluxdiv(mla,umac    ,rho_fc,adv_mass_fluxdiv,.true. ,dx,1,nspecies)
+
     end if
 
     ! Step 5: density integration to t^{n+1}
