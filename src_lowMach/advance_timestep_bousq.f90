@@ -532,9 +532,8 @@ contains
 
     if (advection_type .ge. 1) then
 
-       ! compute s^{n+1} = s^n + dt * (A^{n+1/2} + F^{*,n+1/2})
        do n=1,nlevs
-          call multifab_saxpy_4(rho_new(n),rho_old(n),dt,rho_update(n))
+          call multifab_saxpy_4(rho_new(n),rho_old(n),0.5d0*dt,rho_update(n))
        end do
 
     else
@@ -690,7 +689,7 @@ contains
           end do
 
           ! bds increments rho_update with the advection term
-          call bds(mla,umac_tmp,rho_tmp,rho_update,bds_force,rho_fc,rho_nd,dx,0.5d0*dt,1, &
+          call bds(mla,umac_tmp,rho_tmp,rho_update,bds_force,rho_fc,rho_nd,dx,dt,1, &
                    nspecies,c_bc_comp,the_bc_tower,proj_type_in=2)
 
           do n=1,nlevs
@@ -718,19 +717,29 @@ contains
 
     ! Step 5: density integration to t^{n+1}
 
-    ! compute rho_i^{n+1}
-    ! multiply adv_mass_fluxdiv by (1/2) since it contains -rho_i^{n+1/2} * (v^n + v^{n+1,*})
-    do n=1,nlevs
-       call multifab_copy_c(rho_new(n),1,rho_old(n),1,nspecies,0)
-       call multifab_saxpy_3_cc(rho_new(n),1,0.5d0*dt, adv_mass_fluxdiv(n),1,nspecies)
-       call multifab_saxpy_3_cc(rho_new(n),1,      dt,diff_mass_fluxdiv(n),1,nspecies)
-       if (variance_coef_mass .ne. 0.d0) then
-          call multifab_saxpy_3_cc(rho_new(n),1,dt,stoch_mass_fluxdiv(n),1,nspecies)
-       end if
-       if (nreactions > 0) then
-          call multifab_saxpy_3_cc(rho_new(n),1,dt,chem_rate(n),1,nspecies)
-       end if
-    end do
+    if (advection_type .ge. 1) then
+
+       do n=1,nlevs
+          call multifab_saxpy_4(rho_new(n),rho_old(n),dt,rho_update(n))
+       end do
+
+    else
+
+       ! compute rho_i^{n+1}
+       ! multiply adv_mass_fluxdiv by (1/2) since it contains -rho_i^{n+1/2} * (v^n + v^{n+1,*})
+       do n=1,nlevs
+          call multifab_copy_c(rho_new(n),1,rho_old(n),1,nspecies,0)
+          call multifab_saxpy_3_cc(rho_new(n),1,0.5d0*dt, adv_mass_fluxdiv(n),1,nspecies)
+          call multifab_saxpy_3_cc(rho_new(n),1,      dt,diff_mass_fluxdiv(n),1,nspecies)
+          if (variance_coef_mass .ne. 0.d0) then
+             call multifab_saxpy_3_cc(rho_new(n),1,dt,stoch_mass_fluxdiv(n),1,nspecies)
+          end if
+          if (nreactions > 0) then
+             call multifab_saxpy_3_cc(rho_new(n),1,dt,chem_rate(n),1,nspecies)
+          end if
+       end do
+
+    end if
 
     ! compute rhotot^{n+1} from rho^{n+1} in VALID REGION
     call compute_rhotot(mla,rho_new,rhotot_new)
