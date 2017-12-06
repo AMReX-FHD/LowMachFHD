@@ -699,7 +699,7 @@ contains
     ! add A^{n+1/2} for scalars to rho_update
     if (advection_type .ge. 1) then
       do n=1,nlevs
-         call multifab_copy_c(bds_force(n),1,rho_update(n),1,2,0)
+         call multifab_copy_c(bds_force(n),1,rho_update(n),1,nspecies,0)
          call multifab_fill_boundary(bds_force(n))
       end do
       if (advection_type .eq. 1 .or. advection_type .eq. 2) then
