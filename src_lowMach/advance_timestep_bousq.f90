@@ -512,7 +512,7 @@ contains
 
           ! bds increments rho_update with the advection term
           call bds(mla,umac_tmp,rho_tmp,rho_update,bds_force,rho_fc,rho_nd,dx,0.5d0*dt,1, &
-                   nspecies,c_bc_comp,the_bc_tower,proj_type_in=0)
+                   nspecies,c_bc_comp,the_bc_tower,proj_type_in=3)
 
        else if (advection_type .eq. 3 .or. advection_type .eq. 4) then
           call bl_error("advance_timestep_bousq.f90: quadratic bds not supported yet")
@@ -689,7 +689,7 @@ contains
 
           ! bds increments rho_update with the advection term
           call bds(mla,umac_tmp,rho_tmp,rho_update,bds_force,rho_fc,rho_nd,dx,dt,1, &
-                   nspecies,c_bc_comp,the_bc_tower,proj_type_in=0)
+                   nspecies,c_bc_comp,the_bc_tower,proj_type_in=3)
 
           do n=1,nlevs
              call multifab_destroy(rho_tmp(n))

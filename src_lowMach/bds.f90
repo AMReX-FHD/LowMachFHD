@@ -6,7 +6,7 @@ module bds_module
   use define_bc_module
   use convert_stag_module
   use bc_module
-  use probin_common_module, only: advection_type, rhobar
+  use probin_common_module, only: advection_type, rhobar, rho0
 
   implicit none
 
@@ -1198,20 +1198,12 @@ contains
 
     real(kind=dp_t) :: w(ncomp), rhobar_sq, delta_eos, temp
 
-
-    if (proj_type .eq. 1 .or. proj_type .eq. 2) then
+    if (proj_type .eq. 2) then
 
        ! L2 projection: x-faces
        do j = xlo(2),xhi(2) 
        do i = xlo(1),xhi(1) 
           
-          if (proj_type .eq. 1) then
-             ! overwrite sedge so it contains rho_i instead of (rho,rho_1)
-             temp = sedgex(i,j,1)
-             sedgex(i,j,1) = sedgex(i,j,2)
-             sedgex(i,j,2) = temp - sedgex(i,j,1)
-          end if
-
           ! compute mass fractions, w_i = rho_i / rho
           temp = 0.d0
           do comp=1,ncomp
@@ -1238,13 +1230,6 @@ contains
              sedgex(i,j,comp) = sedgex(i,j,comp) - w(comp)*(rhobar_sq/rhobar(comp))*delta_eos
           end do
 
-          if (proj_type .eq. 1) then
-             ! overwrite sedge so it contains (rho,rho_1) instead of rho_i
-             temp = sedgex(i,j,1)
-             sedgex(i,j,1) = sedgex(i,j,1) + sedgex(i,j,2)
-             sedgex(i,j,2) = temp
-          end if
-          
        enddo
        enddo
 
@@ -1252,13 +1237,6 @@ contains
        do j = ylo(2),yhi(2) 
        do i = ylo(1),yhi(1) 
           
-          if (proj_type .eq. 1) then
-             ! overwrite sedge so it contains rho_i instead of (rho,rho_1)
-             temp = sedgey(i,j,1)
-             sedgey(i,j,1) = sedgey(i,j,2)
-             sedgey(i,j,2) = temp - sedgey(i,j,1)
-          end if
-
           ! compute mass fractions, w_i = rho_i / rho
           temp = 0.d0
           do comp=1,ncomp
@@ -1285,19 +1263,30 @@ contains
              sedgey(i,j,comp) = sedgey(i,j,comp) - w(comp)*(rhobar_sq/rhobar(comp))*delta_eos
           end do
 
-          if (proj_type .eq. 1) then
-             ! overwrite sedge so it contains (rho,rho_1) instead of rho_i
-             temp = sedgey(i,j,1)
-             sedgey(i,j,1) = sedgey(i,j,1) + sedgey(i,j,2)
-             sedgey(i,j,2) = temp
-          end if
-
        enddo
        enddo
 
+    else if (proj_type .eq. 3) then
+
+       ! boussinesq
+
+       ! x-faces
+       do j = xlo(2),xhi(2) 
+       do i = xlo(1),xhi(1) 
+          sedgex(i,j,ncomp) = rho0 - sum(sedgex(i,j,1:ncomp-1))
+       enddo
+       enddo
+
+       ! y-faces
+       do j = ylo(2),yhi(2) 
+       do i = ylo(1),yhi(1) 
+          sedgey(i,j,ncomp) = rho0 - sum(sedgey(i,j,1:ncomp-1))
+       enddo
+       enddo
+
+    else
+       call bl_error("bds.f90: invalid proj_type")
     end if
-
-
 
   end subroutine bdsupdate_2d
 
@@ -4019,20 +4008,13 @@ contains
 
     real(kind=dp_t) :: w(ncomp), rhobar_sq, delta_eos, temp
 
-    if (proj_type .eq. 1 .or. proj_type .eq. 2) then
+    if (proj_type .eq. 2) then
 
        ! L2 projection: x-faces
        do k = xlo(3),xhi(3)
        do j = xlo(2),xhi(2) 
        do i = xlo(1),xhi(1) 
           
-          if (proj_type .eq. 1) then
-             ! overwrite sedge so it contains rho_i instead of (rho,rho_1)
-             temp = sedgex(i,j,k,1)
-             sedgex(i,j,k,1) = sedgex(i,j,k,2)
-             sedgex(i,j,k,2) = temp - sedgex(i,j,k,1)
-          end if
-
           ! compute mass fractions, w_i = rho_i / rho
           temp = 0.d0
           do comp=1,ncomp
@@ -4059,13 +4041,6 @@ contains
              sedgex(i,j,k,comp) = sedgex(i,j,k,comp) - w(comp)*(rhobar_sq/rhobar(comp))*delta_eos
           end do
 
-          if (proj_type .eq. 1) then
-             ! overwrite sedge so it contains (rho,rho_1) instead of rho_i
-             temp = sedgex(i,j,k,1)
-             sedgex(i,j,k,1) = sedgex(i,j,k,1) + sedgex(i,j,k,2)
-             sedgex(i,j,k,2) = temp
-          end if
-          
        enddo
        enddo
        enddo
@@ -4075,13 +4050,6 @@ contains
        do j = ylo(2),yhi(2) 
        do i = ylo(1),yhi(1) 
           
-          if (proj_type .eq. 1) then
-             ! overwrite sedge so it contains rho_i instead of (rho,rho_1)
-             temp = sedgey(i,j,k,1)
-             sedgey(i,j,k,1) = sedgey(i,j,k,2)
-             sedgey(i,j,k,2) = temp - sedgey(i,j,k,1)
-          end if
-
           ! compute mass fractions, w_i = rho_i / rho
           temp = 0.d0
           do comp=1,ncomp
@@ -4108,13 +4076,6 @@ contains
              sedgey(i,j,k,comp) = sedgey(i,j,k,comp) - w(comp)*(rhobar_sq/rhobar(comp))*delta_eos
           end do
 
-          if (proj_type .eq. 1) then
-             ! overwrite sedge so it contains (rho,rho_1) instead of rho_i
-             temp = sedgey(i,j,k,1)
-             sedgey(i,j,k,1) = sedgey(i,j,k,1) + sedgey(i,j,k,2)
-             sedgey(i,j,k,2) = temp
-          end if
-          
        enddo
        enddo
        enddo
@@ -4124,13 +4085,6 @@ contains
        do j = zlo(2),zhi(2) 
        do i = zlo(1),zhi(1) 
           
-          if (proj_type .eq. 1) then
-             ! overwrite sedge so it contains rho_i instead of (rho,rho_1)
-             temp = sedgez(i,j,k,1)
-             sedgez(i,j,k,1) = sedgez(i,j,k,2)
-             sedgez(i,j,k,2) = temp - sedgez(i,j,k,1)
-          end if
-
           ! compute mass fractions, w_i = rho_i / rho
           temp = 0.d0
           do comp=1,ncomp
@@ -4157,17 +4111,43 @@ contains
              sedgez(i,j,k,comp) = sedgez(i,j,k,comp) - w(comp)*(rhobar_sq/rhobar(comp))*delta_eos
           end do
 
-          if (proj_type .eq. 1) then
-             ! overwrite sedge so it contains (rho,rho_1) instead of rho_i
-             temp = sedgez(i,j,k,1)
-             sedgez(i,j,k,1) = sedgez(i,j,k,1) + sedgez(i,j,k,2)
-             sedgez(i,j,k,2) = temp
-          end if
-          
        enddo
        enddo
        enddo
 
+    else if (proj_type .eq. 3) then
+
+       ! boussinesq
+
+       ! x-faces
+       do k = xlo(3),xhi(3)
+       do j = xlo(2),xhi(2) 
+       do i = xlo(1),xhi(1) 
+          sedgex(i,j,k,ncomp) = rho0 - sum(sedgex(i,j,k,1:ncomp-1))
+       enddo
+       enddo
+       enddo
+
+       ! y-faces
+       do k = ylo(3),yhi(3)
+       do j = ylo(2),yhi(2) 
+       do i = ylo(1),yhi(1) 
+          sedgey(i,j,k,ncomp) = rho0 - sum(sedgey(i,j,k,1:ncomp-1))
+       enddo
+       enddo
+       enddo
+
+       ! z-faces
+       do k = zlo(3),zhi(3)
+       do j = zlo(2),zhi(2) 
+       do i = zlo(1),zhi(1) 
+          sedgez(i,j,k,ncomp) = rho0 - sum(sedgez(i,j,k,1:ncomp-1))
+       enddo
+       enddo
+       enddo
+
+    else
+       call bl_error("bds.f90: invalid proj_type")
     end if
 
   end subroutine bdsupdate_3d
