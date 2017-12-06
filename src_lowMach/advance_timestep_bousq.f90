@@ -28,6 +28,7 @@ module advance_timestep_bousq_module
   use fluid_charge_module
   use mk_grav_force_module
   use bds_module
+  use project_onto_eos_module
   use probin_common_module, only: advection_type, grav, variance_coef_mass, &
                                   variance_coef_mom, barodiffusion_type, project_eos_int, &
                                   molmass, use_bl_rng, nspecies, plot_int, max_step
@@ -741,6 +742,13 @@ contains
           end if
        end do
 
+    end if
+
+    if ( project_eos_int .gt. 0 .and. mod(istep,project_eos_int) .eq. 0) then
+       call project_onto_eos(mla,rho_new)
+       if (use_charged_fluid) then
+          call enforce_charge_neutrality(mla,rho_new)
+       end if
     end if
 
     ! compute rhotot^{n+1} from rho^{n+1} in VALID REGION
