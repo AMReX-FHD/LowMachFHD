@@ -465,9 +465,9 @@ contains
 
           ! bilinear bds advection
           do n=1,nlevs
-             call multifab_build(    rho_tmp(n),mla%la(n),nspecies,rho_old(n)%ng)
-             call multifab_build( rho_update(n),mla%la(n),nspecies,0)
-             call multifab_build(  bds_force(n),mla%la(n),nspecies,1)
+             call multifab_build(     rho_tmp(n),mla%la(n),nspecies,rho_old(n)%ng)
+             call multifab_build(  rho_update(n),mla%la(n),nspecies,0)
+             call multifab_build(   bds_force(n),mla%la(n),nspecies,1)
              call multifab_build_nodal(rho_nd(n),mla%la(n),nspecies,1)
              do i=1,dm
                 call multifab_build_edge(umac_tmp(n,i),mla%la(n),1,1,i)
@@ -512,7 +512,7 @@ contains
 
           ! bds increments rho_update with the advection term
           call bds(mla,umac_tmp,rho_tmp,rho_update,bds_force,rho_fc,rho_nd,dx,0.5d0*dt,1, &
-                   nspecies,c_bc_comp,the_bc_tower,proj_type_in=2)
+                   nspecies,c_bc_comp,the_bc_tower,proj_type_in=0)
 
        else if (advection_type .eq. 3 .or. advection_type .eq. 4) then
           call bl_error("advance_timestep_bousq.f90: quadratic bds not supported yet")
@@ -554,7 +554,7 @@ contains
     end if
 
     ! compute rhotot^{n+1/2} from rho^{n+1/2} in VALID REGION
-    call compute_rhotot(mla,rho_new,rhotot_new)  
+    call compute_rhotot(mla,rho_new,rhotot_new)
 
     ! fill rho and rhotot ghost cells at t^{n+1/2}
     call fill_rho_rhotot_ghost(mla,rho_new,rhotot_new,dx,the_bc_tower)
@@ -689,7 +689,7 @@ contains
 
           ! bds increments rho_update with the advection term
           call bds(mla,umac_tmp,rho_tmp,rho_update,bds_force,rho_fc,rho_nd,dx,dt,1, &
-                   nspecies,c_bc_comp,the_bc_tower,proj_type_in=2)
+                   nspecies,c_bc_comp,the_bc_tower,proj_type_in=0)
 
           do n=1,nlevs
              call multifab_destroy(rho_tmp(n))
