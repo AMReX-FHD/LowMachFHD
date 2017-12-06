@@ -486,7 +486,6 @@ contains
           ! the input rho_tmp needs to have ghost cells filled with multifab_physbc_extrap
           ! instead of multifab_physbc
           do n=1,nlevs
-             call multifab_build(rho_tmp(n),mla%la(n),nspecies,rho_old(n)%ng)
              call multifab_copy(rho_tmp(n),rho_old(n),rho_tmp(n)%ng)
              call multifab_physbc_extrap(rho_tmp(n),1,c_bc_comp,nspecies, &
                                          the_bc_tower%bc_tower_array(n))
@@ -555,7 +554,7 @@ contains
     end if
 
     ! compute rhotot^{n+1/2} from rho^{n+1/2} in VALID REGION
-    call compute_rhotot(mla,rho_new,rhotot_new)
+    call compute_rhotot(mla,rho_new,rhotot_new)  
 
     ! fill rho and rhotot ghost cells at t^{n+1/2}
     call fill_rho_rhotot_ghost(mla,rho_new,rhotot_new,dx,the_bc_tower)
@@ -694,7 +693,6 @@ contains
 
           do n=1,nlevs
              call multifab_destroy(rho_tmp(n))
-             call multifab_destroy(rho_update(n))
              call multifab_destroy(bds_force(n))
              call multifab_destroy(rho_nd(n))
              do i=1,dm
@@ -721,6 +719,10 @@ contains
 
        do n=1,nlevs
           call multifab_saxpy_4(rho_new(n),rho_old(n),dt,rho_update(n))
+       end do
+
+       do n=1,nlevs
+          call multifab_destroy(rho_update(n))
        end do
 
     else
