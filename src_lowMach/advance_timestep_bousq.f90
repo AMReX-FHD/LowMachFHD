@@ -746,9 +746,6 @@ contains
 
     if ( project_eos_int .gt. 0 .and. mod(istep,project_eos_int) .eq. 0) then
        call project_onto_eos(mla,rho_new)
-       if (use_charged_fluid) then
-          call enforce_charge_neutrality(mla,rho_new)
-       end if
     end if
 
     ! compute rhotot^{n+1} from rho^{n+1} in VALID REGION
