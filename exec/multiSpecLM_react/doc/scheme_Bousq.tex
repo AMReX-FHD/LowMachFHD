@@ -119,7 +119,14 @@ or if electroneutral:
 
 \item Calculate $\rho^{n+\myhalf,*}_i$:
 \begin{equation}
-\rho^{n+\myhalf,*}_i = \rho^n_i + \frac{\D{t}}{2} \left[ -\divg\V{F}^n_i + m_i R^n_i + \divg\left( -\rho^n_i \frac{\V{v}^n+\V{v}^{n+1,*}}{2} \right) \right].
+\rho^{n+\myhalf,*}_i = \rho^n_i + \frac{\D{t}}{2} \left[ -\divg\V{F}^n_i + m_i R^n_i \right]
+-\frac{\D{t}}{2}\divg
+\left\{
+\begin{array}{l}
+\rho^n_i \frac{\V{v}^n+\V{v}^{n+1,*}}{2}, \\
+\mathrm{BDS}\left(\rho_i^n,\frac{\V{v}^n+\V{v}^{n+1,*}}{2},-\divg\V{F}_i^n+m_i R_i^n,\frac{\D{t}}{2}\right).
+\end{array}
+\right.
 \end{equation}
 
 \item Calculate $\V{F}_\mathrm{d}^{n+\myhalf,*}$:
@@ -148,8 +155,14 @@ or if electroneutral:
 
 \item Calculate $\rho^{n+1}_i$:
 \begin{equation}
-\rho^{n+1}_i = \rho^n_i + \D{t} \left[ -\divg\V{F}^{n+\myhalf}_i + m_i R^{n+\myhalf}_i 
-+ \divg\left( -\rho^{n+\myhalf,*}_i \frac{\V{v}^n + \V{v}^{n+1,*}}{2} \right) \right].
+\rho^{n+1}_i = \rho^n_i + \D{t} \left[ -\divg\V{F}^{n+\myhalf}_i + m_i R^{n+\myhalf}_i \right]
+- \D{t}\divg
+\left\{
+\begin{array}{l}
+\rho^{n+\myhalf,*}_i \frac{\V{v}^n + \V{v}^{n+1,*}}{2}, \\
+\mathrm{BDS}\left(\rho_i^{n+\myhalf,*},\frac{\V{v}^n+\V{v}^{n+1,*}}{2},-\divg\V{F}^{n+\myhalf}_i+m_i R_i^{n+\myhalf},\D{t}\right).
+\end{array}
+\right.
 \end{equation} 
 
 \item Solve for $\V{v}^{n+1}$ and $\pi^{n+\myhalf}$:
@@ -157,7 +170,7 @@ or if electroneutral:
 \label{boussinesq_stokes_v_2nd}
 \begin{split}
 \frac{\rho^{n+1}\V{v}^{n+1}-\rho^n\V{v}^n}{\D{t}} + \grad\pi^{n+\myhalf}
-&= \frac{1}{2}\divg\left(-\rho^n\V{v}^n\V{v}^n-\rho^{n+1}\V{v}^{n+1,*}\V{v}^{n+1,*}\right) 
+&= -\frac{1}{2}\divg\left(\rho^n\V{v}^n\V{v}^n+\rho^{n+1}\V{v}^{n+1,*}\V{v}^{n+1,*}\right)
 + \frac{1}{2}\divg\left( \eta^n \overline{\grad}\V{v}^n + \eta^{n+1} \overline{\grad}\V{v}^{n+1} \right) \\
 &+ \frac{1}{2}\divg\left[\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}}} + \sqrt{\frac{\eta^{n+1} k_\mathrm{B}T}{\D{V}\D{t}}} \right) \overline{\V{\mathcal{W}}}^n \right] \\
 &+ \big(\rho^{n+\myhalf,*}_\mathrm{EOS}-\rho_0\big)\V{g} 
