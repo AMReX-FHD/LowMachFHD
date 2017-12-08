@@ -171,7 +171,7 @@ contains
     ! local
     integer :: n,nlevs,comp
 
-    type(multifab) :: conc(mla%dim)
+    type(multifab) :: conc(mla%dim), rhoinv(mla%dim)
 
     type(bl_prof_timer),save :: bpt
 
@@ -181,16 +181,19 @@ contains
 
     do n=1,nlevs
        call multifab_build(conc(n),mla%la(n),nspecies,0)
+       call multifab_build(rhoinv(n),mla%la(n),1,0)
     end do
 
     call convert_rhoc_to_c(mla,rho,rhotot,conc,.true.)
     
     do n=1,nlevs
-       call multifab_setval_c(rhotot_eos(n),0.d0,rhotot_eos_comp,1,all=.true.)
+       call multifab_setval_c(rhotot_eos(n),1.d0,rhotot_eos_comp,1,all=.true.)
+       call multifab_setval_c(rhoinv(n),0.d0,1,1,all=.true.)
        do comp=1,nspecies
           call multifab_mult_mult_s_c(conc(n),comp,1.d0/rhobar(comp),1,0)
-          call multifab_plus_plus_c(rhotot_eos(n),rhotot_eos_comp,conc(n),comp,1,0)
+          call multifab_plus_plus_c(rhoinv(n),1,conc(n),comp,1,0)
        end do
+       call multifab_div_div_c(rhotot_eos(n),rhotot_eos_comp,rhoinv(n),1,1,0)
     end do
 
     do n=1,nlevs
