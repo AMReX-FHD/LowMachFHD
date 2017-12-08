@@ -2,13 +2,14 @@ module eos_check_module
 
   use multifab_module
   use ml_layout_module
+  use convert_rhoc_to_c_module
   use probin_common_module, only: rhobar, nspecies, algorithm_type, rho0
 
   implicit none
 
   private
 
-  public :: eos_check
+  public :: eos_check, compute_rhotot_eos
 
 contains
 
@@ -156,5 +157,48 @@ contains
     end if
 
   end subroutine eos_check_3d
+
+  subroutine compute_rhotot_eos(mla,rho,rhotot,rhotot_eos,rhotot_eos_comp)
+
+    ! compute rhotot_eos = sum(c_i/rhobar_i) in the valid region
+
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(inout) :: rho(:)
+    type(multifab) , intent(in   ) :: rhotot(:)
+    type(multifab) , intent(inout) :: rhotot_eos(:)
+    integer        , intent(in   ) :: rhotot_eos_comp
+
+    ! local
+    integer :: n,nlevs,comp
+
+    type(multifab) :: conc(mla%dim)
+
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"compute_rhotot_eos")
+
+    nlevs = mla%nlevel
+
+    do n=1,nlevs
+       call multifab_build(conc(n),mla%la(n),nspecies,0)
+    end do
+
+    call convert_rhoc_to_c(mla,rho,rhotot,conc,.true.)
+    
+    do n=1,nlevs
+       call multifab_setval_c(rhotot_eos(n),0.d0,rhotot_eos_comp,1,all=.true.)
+       do comp=1,nspecies
+          call multifab_mult_mult_s_c(conc(n),comp,1.d0/rhobar(comp),1,0)
+          call multifab_plus_plus_c(rhotot_eos(n),rhotot_eos_comp,conc(n),comp,1,0)
+       end do
+    end do
+
+    do n=1,nlevs
+       call multifab_destroy(conc(n))
+    end do
+
+    call destroy(bpt)
+
+  end subroutine compute_rhotot_eos
 
 end module eos_check_module

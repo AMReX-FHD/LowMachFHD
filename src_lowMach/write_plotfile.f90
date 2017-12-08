@@ -6,8 +6,9 @@ module write_plotfile_module
   use convert_stag_module
   use convert_rhoc_to_c_module
   use fluid_charge_module
+  use eos_check_module
   use probin_multispecies_module, only: plot_stag
-  use probin_common_module, only: prob_lo, prob_hi, nspecies, plot_base_name
+  use probin_common_module, only: prob_lo, prob_hi, nspecies, plot_base_name, algorithm_type
   use probin_charged_module, only: use_charged_fluid
 
   implicit none
@@ -68,6 +69,11 @@ contains
        ! grad_Epot averaged
        ! gradPhiApprox averaged
        nvarsCC = nvarsCC + 2 + 2*dm
+    end if
+
+    if (algorithm_type .eq. 6) then
+       ! add rho_eos
+       nvarsCC = nvarsCC+1
     end if
 
     allocate(plot_names(nvarsCC))
@@ -133,6 +139,11 @@ contains
           plot_names(counter) = "av_gradPhiApproxz"
           counter = counter + 1
        end if
+    end if
+
+    if (algorithm_type .eq. 6) then
+       plot_names(counter) = "rho_eos"
+       counter = counter+1
     end if
 
     ! staggered quantities
@@ -250,6 +261,11 @@ contains
           call average_face_to_cc(mla,gradPhiApprox(:,i),1,plotdata,counter,1)
           counter = counter + 1
        end do
+    end if
+
+    if (algorithm_type .eq. 6) then
+       call compute_rhotot_eos(mla,rho,rhotot,plotdata,counter)
+       counter = counter+1
     end if
 
     counter = 1
