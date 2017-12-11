@@ -4355,17 +4355,26 @@ contains
     end do
 
     ! do L2 projection and increment s_update
-    
-    !$omp parallel private(mfi,i,xnodalbox,xlo,xhi,ynodalbox,ylo,yhi) &
-    !$omp private(sup,sxp,syp,uadvp,vadvp,lo,hi)
-    do i = 1, nfabs(s(lev))
-       sup => dataptr(s_update(lev), i)
+    !$omp parallel private(mfi,i,xnodalbox,xlo,xhi) &
+    !$omp private(ynodalbox,ylo,yhi,sxp,syp) &
+    !$omp private(uadvp,vadvp,lo,hi)
+    call mfiter_build(mfi, s_update(lev), tiling=.true.)
+    do while (more_tile(mfi))
+       i = get_fab_index(mfi)
+
+       xnodalbox = get_nodaltilebox(mfi,1)
+       xlo = lwb(xnodalbox)
+       xhi = upb(xnodalbox)
+       ynodalbox = get_nodaltilebox(mfi,2)
+       ylo = lwb(ynodalbox)
+       yhi = upb(ynodalbox)
+
        sxp => dataptr(sedge(1), i)
        syp => dataptr(sedge(2), i)
        uadvp  => dataptr(umac(lev,1), i)
        vadvp  => dataptr(umac(lev,2), i)
-       lo =  lwb(get_box(s(lev), i))
-       hi =  upb(get_box(s(lev), i))
+       lo =  lwb(get_box(s_update(lev), i))
+       hi =  upb(get_box(s_update(lev), i))
        select case (dm)
        case (2)
           call bdsupdate_2d(lo, hi, &
@@ -4377,8 +4386,6 @@ contains
        end select
     end do ! end loop over fabs
     !$omp end parallel
-
-    ! do L2 projection and increment s_update
 
     !$omp parallel private(mfi,i,tilebox,tlo,thi) &
     !$omp private(sup,sxp,syp) &
