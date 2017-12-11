@@ -462,27 +462,45 @@ contains
 
     if (advection_type .ge. 1) then
 
+       ! bds advection
+       do n=1,nlevs
+          call multifab_build(     rho_tmp(n),mla%la(n),nspecies,rho_old(n)%ng)
+          call multifab_build(  rho_update(n),mla%la(n),nspecies,0)
+          call multifab_build(   bds_force(n),mla%la(n),nspecies,1)
+          call multifab_build_nodal(rho_nd(n),mla%la(n),nspecies,1)
+          do i=1,dm
+             call multifab_build_edge(umac_tmp(n,i),mla%la(n),1,1,i)
+          end do
+       end do
+
+       do n=1,nlevs
+          do i=1,dm
+             ! create average of umac^n and umac^{n+1,*}
+             call multifab_copy_c(umac_tmp(n,i),1,umac_old(n,i),1,1,1)
+             call multifab_saxpy_3(umac_tmp(n,i),1.d0,umac(n,i),all=.true.)
+             call multifab_mult_mult_s(umac_tmp(n,i),0.5d0,1)
+          end do
+       end do
+
+       ! add the diff/stoch/react terms to rho_update
+       do n=1,nlevs
+          call multifab_copy_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies)
+          if (variance_coef_mass .ne. 0.d0) then
+             call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
+          end if
+          if (nreactions > 0) then
+             call multifab_plus_plus_c(rho_update(n),1,chem_rate(n),1,nspecies,0)
+          end if
+       end do
+
+       do n=1,nlevs
+          ! set to zero to make sure ghost cells behind physical boundaries don't have NaNs
+          call setval(bds_force(n),0.d0,all=.true.)
+          call multifab_copy_c(bds_force(n),1,rho_update(n),1,nspecies,0)
+          call multifab_fill_boundary(bds_force(n))
+       end do
+
        if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-
-          ! bilinear bds advection
-          do n=1,nlevs
-             call multifab_build(     rho_tmp(n),mla%la(n),nspecies,rho_old(n)%ng)
-             call multifab_build(  rho_update(n),mla%la(n),nspecies,0)
-             call multifab_build(   bds_force(n),mla%la(n),nspecies,1)
-             call multifab_build_nodal(rho_nd(n),mla%la(n),nspecies,1)
-             do i=1,dm
-                call multifab_build_edge(umac_tmp(n,i),mla%la(n),1,1,i)
-             end do
-          end do
-
-          do n=1,nlevs
-             do i=1,dm
-                ! create average of umac^n and umac^{n+1,*}
-                call multifab_copy_c(umac_tmp(n,i),1,umac_old(n,i),1,1,1)
-                call multifab_saxpy_3(umac_tmp(n,i),1.d0,umac(n,i),all=.true.)
-                call multifab_mult_mult_s(umac_tmp(n,i),0.5d0,1)
-             end do
-          end do
 
           ! the input rho_tmp needs to have ghost cells filled with multifab_physbc_extrap
           ! instead of multifab_physbc
@@ -492,23 +510,6 @@ contains
                                          the_bc_tower%bc_tower_array(n))
           end do
 
-          do n=1,nlevs
-             call multifab_copy_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies)
-             if (variance_coef_mass .ne. 0.d0) then
-                call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
-             end if
-             if (nreactions > 0) then
-                call multifab_plus_plus_c(rho_update(n),1,chem_rate(n),1,nspecies,0)
-             end if
-          end do
-
-          do n=1,nlevs
-             ! set to zero to make sure ghost cells behind physical boundaries don't have NaNs
-             call setval(bds_force(n),0.d0,all=.true.)
-             call multifab_copy_c(bds_force(n),1,rho_update(n),1,nspecies,0)
-             call multifab_fill_boundary(bds_force(n))
-          end do
-
           call average_cc_to_node(nlevs,rho_old,rho_nd,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
 
           ! bds increments rho_update with the advection term
@@ -516,7 +517,8 @@ contains
                    nspecies,c_bc_comp,the_bc_tower,proj_type_in=3)
 
        else if (advection_type .eq. 3 .or. advection_type .eq. 4) then
-          call bl_error("advance_timestep_bousq.f90: quadratic bds not supported yet")
+          call bds_quad(mla,umac_tmp,rho_old,rho_update,bds_force,rho_fc,dx,0.5d0*dt,1,nspecies, &
+                        c_bc_comp,the_bc_tower,proj_type_in=3)
        end if
 
     else
@@ -667,43 +669,42 @@ contains
 
     if (advection_type .ge. 1) then
 
+       ! add the diff/stoch/react terms to rho_update
+       do n=1,nlevs
+          call multifab_copy_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies)
+          if (variance_coef_mass .ne. 0.d0) then
+             call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
+          end if
+          if (nreactions > 0) then
+             call multifab_plus_plus_c(rho_update(n),1,chem_rate(n),1,nspecies,0)
+          end if
+       end do
+
+       do n=1,nlevs
+          ! set to zero to make sure ghost cells behind physical boundaries don't have NaNs
+          call setval(bds_force(n),0.d0,all=.true.)
+          call multifab_copy_c(bds_force(n),1,rho_update(n),1,nspecies,0)
+          call multifab_fill_boundary(bds_force(n))
+       end do
+
        if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-
-          ! bilinear bds advection
-
-          do n=1,nlevs
-             call multifab_copy_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies)
-             if (variance_coef_mass .ne. 0.d0) then
-                call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
-             end if
-             if (nreactions > 0) then
-                call multifab_plus_plus_c(rho_update(n),1,chem_rate(n),1,nspecies,0)
-             end if
-          end do
-
-          do n=1,nlevs
-             ! set to zero to make sure ghost cells behind physical boundaries don't have NaNs
-             call setval(bds_force(n),0.d0,all=.true.)
-             call multifab_copy_c(bds_force(n),1,rho_update(n),1,nspecies,0)
-             call multifab_fill_boundary(bds_force(n))
-          end do
-
           ! bds increments rho_update with the advection term
           call bds(mla,umac_tmp,rho_tmp,rho_update,bds_force,rho_fc,rho_nd,dx,dt,1, &
                    nspecies,c_bc_comp,the_bc_tower,proj_type_in=3)
 
-          do n=1,nlevs
-             call multifab_destroy(rho_tmp(n))
-             call multifab_destroy(bds_force(n))
-             call multifab_destroy(rho_nd(n))
-             do i=1,dm
-                call multifab_destroy(umac_tmp(n,i))
-             end do
-          end do
-
        else if (advection_type .eq. 3 .or. advection_type .eq. 4) then
-          call bl_error("advance_timestep_bousq.f90: quadratic bds not supported yet")
+          call bds_quad(mla,umac_tmp,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies, &
+                        c_bc_comp,the_bc_tower,proj_type_in=3)
        end if
+
+       do n=1,nlevs
+          call multifab_destroy(rho_tmp(n))
+          call multifab_destroy(bds_force(n))
+          call multifab_destroy(rho_nd(n))
+          do i=1,dm
+             call multifab_destroy(umac_tmp(n,i))
+          end do
+       end do
 
     else
 
