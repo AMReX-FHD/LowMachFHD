@@ -762,10 +762,9 @@ subroutine main_driver()
              print*,'Time to advance timestep: ',runtime1,' seconds'
      end if
 
-     if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
-          .or. &
+     if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) .or. &
           (istep .eq. max_step) ) then
-        if (parallel_IOProcessor()) write(*,*) "After time step ", istep, " t=", time           
+        if (parallel_IOProcessor()) write(*,*) "After time step ", istep, " t=", time
         call sum_mass(rho_new, istep) ! print out the total mass to check conservation
         ! compute rhotot on faces
         call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,scal_bc_comp,1, &
@@ -774,6 +773,14 @@ subroutine main_driver()
         call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
         call sum_momenta(mla,mtemp)
         call eos_check(mla,rho_new)
+
+        if (use_charged_fluid) then
+           total_charge = multifab_sum_c(charge_new(1),1,1)
+           if (parallel_IOProcessor()) then
+              print*,'Total charge',total_charge*product(dx(1,1:dm))
+           end if
+        end if
+
      end if
 
      ! write plotfile at specific intervals
