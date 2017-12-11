@@ -198,6 +198,7 @@ contains
 
     do n=1,nlevs
        call multifab_destroy(conc(n))
+       call multifab_destroy(rhoinv(n))
     end do
 
     call destroy(bpt)
