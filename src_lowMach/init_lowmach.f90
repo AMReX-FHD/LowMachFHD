@@ -122,6 +122,9 @@ module init_lowmach_module
   ! c=c_init(1,:) inside; c=c_init(2,:) outside
   ! if prob_type=-15, add another tanh along other dimension for last two species (two stripes crossing)
 
+  !=========================================================
+  ! case 16:
+  ! Same as case 15 but now the central stripe is 1/3 of the domain
 
 contains
 
@@ -539,7 +542,7 @@ contains
           enddo
        enddo
 
-    case (15)
+    case (15,16)
 
        !=========================================================
        ! Discontinuous band in central 50% of domain
@@ -549,20 +552,20 @@ contains
        u = 0.d0
        v = 0.d0
 
-       ! first quarter of domain
-       y1 = (3*prob_lo(2) + prob_hi(2)) / 4.d0
-       x1 = (3*prob_lo(1) + prob_hi(1)) / 4.d0
-       
-       ! last quarter of domain
-       y2 = (prob_lo(2) + 3*prob_hi(2)) / 4.d0
-       x2 = (prob_lo(1) + 3*prob_hi(1)) / 4.d0
-       
-       if (prob_type==-15) then
+       if(prob_type==15) then
           ! first quarter of domain
+          y1 = (3*prob_lo(2) + prob_hi(2)) / 4.d0
+          x1 = (3*prob_lo(1) + prob_hi(1)) / 4.d0
+
+          ! last quarter of domain
+          y2 = (prob_lo(2) + 3*prob_hi(2)) / 4.d0
+          x2 = (prob_lo(1) + 3*prob_hi(1)) / 4.d0       
+       else
+          ! first third of domain
           y1 = (2*prob_lo(2) + prob_hi(2)) / 3.d0
           x1 = (2*prob_lo(1) + prob_hi(1)) / 3.d0
        
-          ! last quarter of domain
+          ! last third of domain
           y2 = (prob_lo(2) + 2*prob_hi(2)) / 3.d0
           x2 = (prob_lo(1) + 2*prob_hi(1)) / 3.d0
        end if
