@@ -6,7 +6,7 @@
   prob_type = 2                         ! see src_lowmach/init_lowmach.f90
                                         ! 2 = const conc grad along y
   prob_lo(1:3) = 0.  0.  0.             ! physical lo coordinate
-  prob_hi(1:3) = 32. 32. 40.            ! physical hi coordinate
+  prob_hi(1:3) = 32. 32. 1.             ! physical hi coordinate
   n_cells(1:3) = 32  32  1              ! number of cells in domain
   max_grid_size(1:3) = 32 32 1          ! max number of cells in a box
 
@@ -31,10 +31,10 @@
   nspecies = 2
   molmass(1:2) = 1. 2.                  ! molecular masses for nspecies (mass per molecule, *not* molar mass)
   rhobar(1:2) = 1. 1.                   ! pure component densities for all species (chosen from EOS)
-  rho0 = 1.
+  rho0 = 40.
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
-  variance_coef_mom = 0.                ! global scaling epsilon for stochastic momentum forcing
+  variance_coef_mom = 1.                ! global scaling epsilon for stochastic momentum forcing
   variance_coef_mass = 1.               ! global scaling epsilon for stochastic mass forcing
   k_B = 1.                              ! Boltzmann's constant
 
@@ -73,7 +73,7 @@
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
   visc_type = 2
-  visc_coef = 1.                        ! momentum diffusion coefficient 'eta'   
+  visc_coef = 1.e3                      ! momentum diffusion coefficient 'eta'
 
   advection_type = 0                    ! 0 = centered explicit
                                         ! 1 = unlimited bilinear bds in space and time
@@ -188,7 +188,7 @@
 
   ! Initial and boundary conditions 
   !----------------------
-  T_init(1:2) = 1. 1.                   ! initial values for temperature (bottom/top, inside/outside circle, etc.)
+  T_init(1:2) = 1.e4 1.e4               ! initial values for temperature (bottom/top, inside/outside circle, etc.)
   temp_type = 0                         ! for initializing temperature
 
   ! initial values for w
@@ -249,7 +249,9 @@
 
   include_discrete_LMA_correction = F
 
-  rate_multiplier = 0.021
+  !rate_multiplier = 0.421875           ! N0=20, d = sqrt(10)*dx, k1 = 27*N0/1280
+  rate_multiplier = 0.84375             ! N0=40
+  !rate_multiplier = 1.265625           ! N0=60
 
   ! if positive n, exclude species n (=solvent) when computing reaction rates
   ! in this case, the concentration of the solvent is assumed to be constant,
