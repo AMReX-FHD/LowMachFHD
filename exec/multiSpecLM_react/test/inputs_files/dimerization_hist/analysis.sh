@@ -46,6 +46,12 @@ do
   cp res.hist ../$RUNNAME/res.hist$i
   cp res.N_stat ../$RUNNAME/res.N_stat$i
 
+  # extract a vtk file of S(k) for sample average
+  python ../extract_Sk_vtk.py
+  cp Sk_vtk_out0 ../$RUNNAME/Sk_vtk_out0
+  cp Sk_vtk_out1 ../$RUNNAME/Sk_vtk_out1.$i
+  cp Sk_vtk_out2 ../$RUNNAME/Sk_vtk_out2
+
   echo 
   cd ..
 done
@@ -90,3 +96,19 @@ rm $TMP
 
 echo "try: cd $RUNNAME; gnuplot"
 echo "     gnuplot> set log y; plot \"../res.hist_CME_40\" u ((40-\$1)/2):2 w l,\"res.hist_stat\" u 1:2:(\$3*2) w e"
+
+## Sk vtk
+
+cmd_awk=""
+for ((i=1;i<=$NRUN;i++))
+do
+  cmd_tmp="Sk_vtk_out1.$i"
+  cmd_awk="$cmd_awk $cmd_tmp"
+done
+
+TMP="Sk_vtk_out1_stat"
+FINAL="Sk_stat.vtk"
+eval paste $cmd_awk | awk '{sum=0;for(i=1;i<=NF;i++){sum+=$i}sum/=NF;printf "%.12e\n",sum}' > $TMP
+cat Sk_vtk_out0 > $FINAL
+cat $TMP >> $FINAL
+cat Sk_vtk_out2 >> $FINAL
