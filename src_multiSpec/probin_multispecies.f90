@@ -177,6 +177,16 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) use_lapack
 
+       case ('--T_init_1')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) T_init(1)
+
+       case ('--T_init_2')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) T_init(2)
+
        case ('--chi_iterations')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
