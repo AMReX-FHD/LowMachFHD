@@ -17,6 +17,7 @@ module init_lowmach_module
   use probin_multispecies_module, only: alpha1, beta, delta, sigma, Dbar, Dtherm, &
                                         c_init, T_init, temp_type, sigma, is_ideal_mixture
   use probin_charged_module, only: charge_per_mass
+  use stochastic_mass_fluxdiv_module, only: add_mass_fluctuations
  
   implicit none
 
@@ -741,8 +742,19 @@ contains
           end if
 
           ! add mass fluctuations
-          if (abs(initial_variance_mass) .gt. 0.d0) then
-             call add_mass_fluctuations(c(i,j,1:nspecies),dx,rho_total)
+          if (abs(initial_variance_mass) .gt. 0.d0) then ! Recompute rho from EOS with fluctuations added
+             call add_mass_fluctuations(c(i,j,1:nspecies),dx,abs(initial_variance_mass),rho_total)
+
+             ! calculate rho_total from eos including fluctuations
+             if (algorithm_type /= 6) then
+                sum = 0.d0
+                do n=1,nspecies
+                   ! sum represents rhoinv
+                   sum = sum + c(i,j,n)/rhobar(n)
+                end do
+                rho_total = 1.d0/sum
+             end if
+
           end if
 
           ! calculate rho_i
@@ -1162,7 +1174,16 @@ contains
 
              ! add mass fluctuations
              if (abs(initial_variance_mass) .gt. 0.d0) then
-                call add_mass_fluctuations(c(i,j,k,1:nspecies),dx,rho_total)
+                call add_mass_fluctuations(c(i,j,k,1:nspecies),dx,abs(initial_variance_mass),rho_total)
+
+                if (algorithm_type /= 6) then ! Recompute rho from EOS with fluctuations added
+                   sum = 0.d0
+                   do n=1,nspecies
+                      ! sum represents rhoinv
+                      sum = sum + c(i,j,k,n)/rhobar(n)
+                   end do
+                   rho_total = 1.d0/sum
+                end if
              end if
 
              ! calculate rho_i
@@ -1173,57 +1194,6 @@ contains
     end do
 
   end subroutine init_rho_and_umac_3d
-
-  subroutine add_mass_fluctuations(c,dx,rho_init)
-    real(dp_t), intent(inout) :: c(nspecies)
-    real(dp_t), intent(in)    :: dx(:)
-    real(dp_t), intent(in)    :: rho_init
-
-    ! local variables
-    real(dp_t) :: L(nspecies,nspecies)
-    real(dp_t) :: z(nspecies)
-    real(dp_t) :: sqrtdv
-
-    real(dp_t) :: tmp
-    integer    :: i,j
-
-    sqrtdv = sqrt(product(dx(1:MAX_SPACEDIM)))
-
-    ! construct chelesky decomposition matrix L (S_w = L*L^T)
-    ! for ideal mixture, L = 1/sqrt(rho)*(I-w*1^T)*sqrt(W)*sqrt(M)
-    do j=1,nspecies
-       tmp = sqrt(c(j)*molmass(j)/rho_init)
-       do i=1,nspecies
-          if (i.eq.j) then
-             L(i,j) = tmp*(1.d0-c(i))
-          else
-             L(i,j) = -tmp*c(i)
-          end if
-       end do
-    end do
-
-    ! construct random vector z having nspecies N(0,1) random variables
-    if (use_bl_rng) then
-       call NormalRNGs(z, nspecies, engine=rng_eng_init%p)
-    else
-       call NormalRNGs(z, nspecies)
-    end if
-
-    ! add fluctuations
-    ! dw = L*z gives S_w = <dw*dw^T> = L*L^T = S_w
-    do i=1,nspecies
-       tmp = 0.d0
-       do j=1,nspecies
-          tmp = tmp + L(i,j)*z(j)
-       end do
-       c(i) = c(i) + tmp/sqrtdv
-    end do
-
-    ! replace negative values by zero and normalize
-    c(1:nspecies) = max(c(1:nspecies),0.d0)
-    c(1:nspecies) = c(1:nspecies)/sum(c(1:nspecies))
-
-  end subroutine add_mass_fluctuations
 
   subroutine init_Temp(Temp,dx,time,the_bc_level)
 

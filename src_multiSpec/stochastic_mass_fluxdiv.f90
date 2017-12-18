@@ -14,15 +14,16 @@ module stochastic_mass_fluxdiv_module
   use matvec_mul_module
   use correction_flux_module
   use zero_edgeval_module
+  use BoxLibRNGs
   use bl_rng_module
-  use probin_common_module, only: k_B, variance_coef_mass, use_bl_rng, nspecies
+  use probin_common_module, only: k_B, molmass, variance_coef_mass, use_bl_rng, nspecies
   use probin_multispecies_module, only: correct_flux, is_nonisothermal
 
   implicit none
 
   private
 
-  public :: init_mass_stochastic, destroy_mass_stochastic, &
+  public :: init_mass_stochastic, destroy_mass_stochastic, add_mass_fluctuations, &
             stochastic_mass_fluxdiv, fill_mass_stochastic
             
 
@@ -211,6 +212,60 @@ contains
     call destroy(bpt)
 
   end subroutine fill_mass_stochastic
+
+  ! Add local natural random fluctuations to the mass fractions assuming an ideal mixture
+  ! This routine does not require singling out a solvent but only works for ideal mixtures
+  subroutine add_mass_fluctuations(c,dx,variance,rho_tot)
+    real(dp_t), intent(inout) :: c(nspecies) ! Mass fractions
+    real(dp_t), intent(in)    :: dx(:)
+    real(dp_t), intent(in)    :: rho_tot, variance
+
+    ! local variables
+    real(dp_t) :: L(nspecies,nspecies)
+    real(dp_t) :: z(nspecies)
+    real(dp_t) :: sqrtdv
+
+    real(dp_t) :: tmp
+    integer    :: i,j
+
+    sqrtdv = sqrt(product(dx(1:MAX_SPACEDIM)))
+
+    ! construct chelesky decomposition matrix L (S_w = L*L^T)
+    ! for ideal mixture, L = 1/sqrt(rho)*(I-w*1^T)*sqrt(W)*sqrt(M)
+    do j=1,nspecies
+       tmp = sqrt(c(j)*molmass(j)/rho_tot)
+       do i=1,nspecies
+          if (i.eq.j) then
+             L(i,j) = tmp*(1.d0-c(i))
+          else
+             L(i,j) = -tmp*c(i)
+          end if
+       end do
+    end do
+
+    ! construct random vector z having nspecies N(0,1) random variables
+    if (use_bl_rng) then
+       call NormalRNGs(z, nspecies, engine=rng_eng_init%p)
+    else
+       call NormalRNGs(z, nspecies)
+    end if
+
+    ! add fluctuations
+    ! dw = L*z gives S_w = <dw*dw^T> = L*L^T = S_w
+    do i=1,nspecies
+       tmp = 0.d0
+       do j=1,nspecies
+          tmp = tmp + L(i,j)*z(j)
+       end do
+       c(i) = c(i) + sqrt(variance)*tmp/sqrtdv
+    end do
+
+    ! replace negative values by zero and normalize
+    c(1:nspecies) = max(c(1:nspecies),0.d0)
+    c(1:nspecies) = c(1:nspecies)/sum(c(1:nspecies))
+
+  end subroutine add_mass_fluctuations
+
 
   subroutine stoch_mass_bc(mla,the_bc_level)
     

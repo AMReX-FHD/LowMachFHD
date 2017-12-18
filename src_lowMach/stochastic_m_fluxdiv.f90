@@ -985,7 +985,7 @@ contains
    
    if(variance<0) then ! Ensure zero total momentum
       if (parallel_IOProcessor()) then
-         write(*,"(A,100G17.9)") "Randomly INITIALized momenta"
+         !write(*,"(A,100G17.9)") "Randomly INITIALized momenta"
       end if
       
       call sum_momenta(mla, m_face, av_mom)

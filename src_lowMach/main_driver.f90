@@ -40,7 +40,7 @@ subroutine main_driver()
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
                                   probin_common_init, print_int, nspecies, &
                                   advection_type, fixed_dt, max_step, cfl, &
-                                  algorithm_type, variance_coef_mom, initial_variance, &
+                                  algorithm_type, variance_coef_mom, initial_variance_mom, &
                                   variance_coef_mass, barodiffusion_type, use_bl_rng
   use probin_multispecies_module, only: Dbar, start_time, probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
@@ -514,10 +514,9 @@ subroutine main_driver()
      ! add initial momentum fluctuations
      ! do not call for overdamped codes since the steady Stokes solver will 
      ! wipe out the initial condition to solver tolerance
-     if (algorithm_type .ne. 2 .and. &
-         variance_coef_mom .ne. 0.d0 .and. &
-         initial_variance .ne. 0.d0) then
-        call add_m_fluctuations(mla,dx,initial_variance*variance_coef_mom, &
+     if ((algorithm_type .ne. 2) .and. &
+         (initial_variance_mom .ne. 0.d0)) then
+        call add_m_fluctuations(mla,dx,initial_variance_mom, &
                                 umac,rhotot_old,Temp,the_bc_tower)
 
         if (print_int .gt. 0) then
