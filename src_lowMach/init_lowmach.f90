@@ -742,11 +742,11 @@ contains
           end if
 
           ! add mass fluctuations
-          if (abs(initial_variance_mass) .gt. 0.d0) then ! Recompute rho from EOS with fluctuations added
+          if (abs(initial_variance_mass) .gt. 0.d0) then
              call add_mass_fluctuations(c(i,j,1:nspecies),dx,abs(initial_variance_mass),rho_total)
 
              ! calculate rho_total from eos including fluctuations
-             if (algorithm_type /= 6) then
+             if (algorithm_type .ne. 6) then
                 sum = 0.d0
                 do n=1,nspecies
                    ! sum represents rhoinv

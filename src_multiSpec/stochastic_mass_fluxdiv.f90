@@ -223,12 +223,12 @@ contains
     ! local variables
     real(dp_t) :: L(nspecies,nspecies)
     real(dp_t) :: z(nspecies)
-    real(dp_t) :: sqrtdv
+    real(dp_t) :: factor
 
     real(dp_t) :: tmp
     integer    :: i,j
 
-    sqrtdv = sqrt(product(dx(1:MAX_SPACEDIM)))
+    factor = sqrt(variance/product(dx(1:MAX_SPACEDIM)))
 
     ! construct chelesky decomposition matrix L (S_w = L*L^T)
     ! for ideal mixture, L = 1/sqrt(rho)*(I-w*1^T)*sqrt(W)*sqrt(M)
@@ -257,7 +257,7 @@ contains
        do j=1,nspecies
           tmp = tmp + L(i,j)*z(j)
        end do
-       c(i) = c(i) + sqrt(variance)*tmp/sqrtdv
+       c(i) = c(i) + factor*tmp
     end do
 
     ! replace negative values by zero and normalize
