@@ -49,7 +49,7 @@
 
   ! Initial conditions
   !----------------------
-  initial_variance = 0.d0   ! multiplicative factor for initial fluctuations
+  initial_variance_mass = 0.d0   ! multiplicative factor for initial fluctuations
                             ! (if negative, total momentum is set to zero)
 
   ! Algorithm control / selection

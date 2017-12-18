@@ -30,8 +30,8 @@
   !----------------------
   perturb_width = 120.d0      
   smoothing_width = 1.d0    ! scale factor for smoothing initial profile
-  !initial_variance = 0.d0   ! multiplicative factor for initial fluctuations
-  initial_variance = 1.d0   ! multiplicative factor for initial fluctuations
+  !initial_variance_mass = 0.d0   ! multiplicative factor for initial fluctuations
+  initial_variance_mass = 1.d0   ! multiplicative factor for initial fluctuations
                             ! (if negative, total mass fluctuation is set to zero)
 
   ! Algorithm control / selection

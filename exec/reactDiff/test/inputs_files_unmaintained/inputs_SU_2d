@@ -62,7 +62,7 @@
   !----------------------
   perturb_width = 0.               ! scale factor for perturbed part in initial profile (for prob_type=4,5)
   smoothing_width = 1.             ! scale factor for smoothing initial profile (for prob_type=4,5)
-  initial_variance = 0.            ! multiplicative factor for initial fluctuations
+  initial_variance_mass = 0.            ! multiplicative factor for initial fluctuations
                                    ! if negative, total mass fluctuation is set to zero (for integer_populations=F)
 
   ! Boundary conditions

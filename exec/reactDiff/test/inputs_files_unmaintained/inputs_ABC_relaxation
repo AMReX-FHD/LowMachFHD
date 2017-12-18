@@ -44,7 +44,7 @@
   ! Initial conditions
   !----------------------
   smoothing_width = 1.d0   ! scale factor for smoothing initial profile
-  initial_variance = -1     ! multiplicative factor for initial fluctuations on  TOP of 1/dV
+  initial_variance_mass = -1     ! multiplicative factor for initial fluctuations on  TOP of 1/dV
      ! Set to negative to make the total number of particles unchanged by the fluctuations (i.e., remove k=0)
 
   ! Algorithm control / selection

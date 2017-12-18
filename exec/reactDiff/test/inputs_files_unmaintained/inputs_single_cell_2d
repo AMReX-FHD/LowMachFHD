@@ -46,7 +46,7 @@
 
   ! Initial conditions
   !----------------------
-  initial_variance = 0.d0  ! multiplicative factor for initial fluctuations  !!! turn it off because it is initial fluctuation over the cells.
+  initial_variance_mass = 0.d0  ! multiplicative factor for initial fluctuations  !!! turn it off because it is initial fluctuation over the cells.
                            ! (if negative, total momentum is set to zero)    !!! see the comments above.
 
   ! Boundary conditions
