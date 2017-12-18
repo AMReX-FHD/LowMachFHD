@@ -22,7 +22,7 @@ subroutine main_driver()
                                    restart, use_bl_rng, nspecies, &
                                    probin_common_init, fixed_dt, max_step, n_steps_skip, &
                                    hydro_grid_int, stats_int, n_steps_save_stats, &
-                                   cfl, initial_variance
+                                   cfl, initial_variance_mass
    use probin_reactdiff_module, only: probin_reactdiff_init, D_Fick, &
                                       inhomogeneous_bc_fix, temporal_integrator, &
                                       n_steps_write_avg, &
@@ -302,7 +302,7 @@ subroutine main_driver()
 
       end if
       
-      if (abs(initial_variance) .gt. 0.d0) then
+      if (abs(initial_variance_mass) .gt. 0.d0) then
          ! For integer populations fluctuations have already been added at initialization via the Poisson distribution
          if(.not.integer_populations) call add_init_n_fluctuations(mla,n_old,dx,the_bc_tower)
       end if

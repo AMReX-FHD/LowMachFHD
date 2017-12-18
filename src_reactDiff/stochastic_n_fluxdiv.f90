@@ -12,7 +12,7 @@ module stochastic_n_fluxdiv_module
   use average_to_faces_module
   use div_and_grad_module
   use bl_rng_module
-  use probin_common_module, only: variance_coef_mass, initial_variance, &
+  use probin_common_module, only: variance_coef_mass, initial_variance_mass, &
                                   density_weights, use_bl_rng, nspecies
 
   implicit none
@@ -585,16 +585,16 @@ contains
        if (use_bl_rng) then
           call multifab_fill_random(n_temp(n:n), &
                                     variance_mfab=n_init, &
-                                    variance=abs(initial_variance)/dv, &  ! We do not multiply here by variance_coef_mass
+                                    variance=abs(initial_variance_mass)/dv, &  ! We do not multiply here by variance_coef_mass
                                     rng_eng=rng_eng_init)
        else
           call multifab_fill_random(n_temp(n:n), &
                                     variance_mfab=n_init, &
-                                    variance=abs(initial_variance)/dv)  ! We do not multiply here by variance_coef_mass
+                                    variance=abs(initial_variance_mass)/dv)  ! We do not multiply here by variance_coef_mass
 
        end if
   
-       if(initial_variance<0.0d0) then
+       if(initial_variance_mass<0.0d0) then
           ! Make sure this sums to zero
           do spec=1, nspecies
              dn_sum = multifab_sum_c(n_temp(n),spec,1) / dble(n_cell)

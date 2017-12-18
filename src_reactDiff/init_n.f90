@@ -10,7 +10,7 @@ module init_n_module
   use bl_rng_module
   use bl_random_module
   use BoxLibRNGs
-  use probin_common_module, only: prob_lo, prob_hi, prob_type, initial_variance, nspecies, &
+  use probin_common_module, only: prob_lo, prob_hi, prob_type, initial_variance_mass, nspecies, &
                                   perturb_width, smoothing_width, use_bl_rng
   use probin_reactdiff_module, only: n_init_in, model_file_init, integer_populations
   
@@ -238,7 +238,7 @@ contains
     end select
 
     if(integer_populations) then ! Ensure that the initial number of molecules are integers
-       if(initial_variance<0.0d0) then ! Distribute the particles on the box using a multinomial sampler
+       if(initial_variance_mass<0.0d0) then ! Distribute the particles on the box using a multinomial sampler
        
           ! To do this really correctly one should do this for the whole system, not box per box
           if (parallel_IOProcessor()) write(*,*) "Using multinomial initial distribution PER BOX, not domain"
@@ -436,7 +436,7 @@ contains
     end select
 
     if(integer_populations) then ! Ensure that the initial number of molecules are integers
-       if(initial_variance<0.0d0) then ! Distribute the particles on the box using a multinomial sampler
+       if(initial_variance_mass<0.0d0) then ! Distribute the particles on the box using a multinomial sampler
        
           ! To do this really correctly one should do this for the whole system, not box per box
           if (parallel_IOProcessor()) write(*,*) "Using multinomial initial distribution PER BOX, not domain"
@@ -470,7 +470,7 @@ contains
     integer :: comp, nparticles
     real(dp_t) :: random(nspecies)
     
-    if(initial_variance>0.0d0) then
+    if(initial_variance_mass>0.0d0) then
        do comp=1, nspecies
           ! Generate the initial fluctuations using a Poisson random number generator
           ! This assumes that the distribution of initial conditions is a product Poisson measure
