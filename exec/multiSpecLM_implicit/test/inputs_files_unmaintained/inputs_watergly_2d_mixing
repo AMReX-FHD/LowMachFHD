@@ -69,7 +69,7 @@
   ! Stochastic fluxes: Here only variance_coef_mom*k_B*temperature matters in the end
   variance_coef_mom = 1.0       ! global scaling epsilon for stochastic forcing = 1/DZ = 1/THICKNESS in IBAMR
   variance_coef_mass = 0.d0
-  initial_variance = 0.d0   ! multiplicative factor for initial fluctuations (if negative, total momentum is set to zero)
+  initial_variance_mom = 0.d0   ! multiplicative factor for initial fluctuations (if negative, total momentum is set to zero)
 
   k_B = 1.38E-16 ! kT=4.045d-14  ! Boltzmann's constant
   filtering_width = 0        ! If positive the random numbers will be filtered to smooth out the fields
