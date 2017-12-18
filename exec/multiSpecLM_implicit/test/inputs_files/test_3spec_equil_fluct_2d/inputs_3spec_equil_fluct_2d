@@ -96,7 +96,7 @@
   u_init(1:2) = 0. 0.                   ! controls initial velocity
   smoothing_width = 1.                  ! scale factor for smoothing initial profile
 
-  initial_variance = -1.                ! multiplicative factor for initial fluctuations
+  initial_variance_mom = -1.                ! multiplicative factor for initial fluctuations
                                         ! (if negative, total momentum is set to zero)
 
   ! Boundary conditions

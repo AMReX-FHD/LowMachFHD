@@ -109,7 +109,7 @@
   ! stochastic properties
   variance_coef_mom = 0.d0  ! global scaling epsilon for stochastic momentum forcing
   variance_coef_mass = 0.d0 ! global scaling epsilon for stochastic mass forcing
-  initial_variance = 0.d0   ! multiplicative factor for initial fluctuations
+  initial_variance_mom = 0.d0   ! multiplicative factor for initial fluctuations
                             ! (if negative, total momentum is set to zero)
 
   k_B = 1.d0            ! Boltzmann's constant
