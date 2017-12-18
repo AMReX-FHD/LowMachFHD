@@ -4,7 +4,7 @@
 !  systems: A fluctuating-hydrodynamics approach"
 !  J. Chem. Phys. 146, 124110 (2017).
 ! You can change some relevant parameters such as
-! - initial_variance: 0 (smooth initial condition) 1 (with fluctuations):wq
+! - initial_variance_mass: 0 (smooth initial condition) 1 (with fluctuations):wq
 ! - variance_coef_mass: 0 (deterministic diffusion) 1 (stochastic)
 ! - use_Poisson_rng: -1 (deterministic reaction) 1 (tau leaping) 2 (SSA) 
 ! and run this inputs file.
@@ -75,7 +75,7 @@
   !----------------------
   perturb_width = 16.                   ! scale factor for perturbed part in initial profile (for prob_type=4,5)
   smoothing_width = 2.                  ! scale factor for smoothing initial profile (for prob_type=4,5)
-  initial_variance = 1.                 ! multiplicative factor for initial fluctuations
+  initial_variance_mass = 1.            ! multiplicative factor for initial fluctuations
                                         ! if negative, total mass fluctuation is set to zero (for integer_populations=F)
 
   ! Boundary conditions

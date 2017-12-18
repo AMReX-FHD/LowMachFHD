@@ -21,8 +21,8 @@ EXEC=../../main.Linux.Intel.mpi.exe
 INPUTSFILE=inputs_Lemarchand_AB_bubble_3d
 
 # initial conditions
-OPT1="--initial_variance 1. --integer_populations T"        # noisy init cond
-#OPT1="--initial_variance 0. --integer_populations F"       # smooth init cond (no fluctuations)
+OPT1="--initial_variance_mass 1. --integer_populations T"   # noisy init cond
+#OPT1="--initial_variance_mass 0. --integer_populations F"  # smooth init cond (no fluctuations)
 
 # stochastic diffusion and reaction
 OPT2="--variance_coef_mass 1. --use_Poisson_rng 1"          # diff fluct on, react fluct on
