@@ -770,6 +770,8 @@ contains
 
     real(kind=dp_t) :: random
 
+    real(kind=dp_t)  :: rho_total
+
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
     
     select case (abs(prob_type))
@@ -1135,53 +1137,40 @@ contains
 
     end select
 
-    ! set final c_i such that sum(c_i) = 1
     do k=lo(3),hi(3)
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
 
-             sum = 0
+             ! set final c_i such that sum(c_i) = 1 to within roundoff
+             sum = 0.d0
              do n=1,nspecies-1
                 sum = sum + c(i,j,k,n)
              end do
              c(i,j,k,nspecies) = 1.d0 - sum
 
+             ! calculate rho_total from eos
+             if (algorithm_type .eq. 6) then
+                rho_total = rho0
+             else
+                sum = 0.d0
+                do n=1,nspecies
+                   ! sum represents rhoinv
+                   sum = sum + c(i,j,k,n)/rhobar(n)
+                end do
+                rho_total = 1.d0/sum
+             end if
+
+             ! add mass fluctuations
+             if (abs(initial_variance_mass) .gt. 0.d0) then
+                call add_mass_fluctuations(c(i,j,k,1:nspecies),dx,rho_total)
+             end if
+
+             ! calculate rho_i
+             rho(i,j,k,1:nspecies) = rho_total*c(i,j,k,1:nspecies)
+
           end do
        end do
     end do
-
-    if (algorithm_type .eq. 6) then
-
-       ! set rho=rho0
-       do k=lo(3),hi(3)
-       do j=lo(2),hi(2)
-       do i=lo(1),hi(1)
-
-          rho(i,j,k,1:nspecies) = rho0*c(i,j,k,1:nspecies)
-
-       end do
-       end do
-       end do
-
-    else
-
-       ! compute rho using the eos
-       do k=lo(3),hi(3)
-       do j=lo(2),hi(2)
-       do i=lo(1),hi(1)
-
-          sum = 0.d0
-          do n=1,nspecies
-             ! sum represents rhoinv
-             sum = sum + c(i,j,k,n)/rhobar(n)
-          end do
-          rho(i,j,k,1:nspecies) = c(i,j,k,1:nspecies)/sum
-
-       end do
-       end do
-       end do
-
-    end if
 
   end subroutine init_rho_and_umac_3d
 
