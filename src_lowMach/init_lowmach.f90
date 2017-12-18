@@ -157,8 +157,8 @@ contains
 
     ! currently, adding initial mass fluctuations is only available for ideal mixture
     if (abs(initial_variance_mass) .gt. 0.d0) then
-      if ((.not. is_ideal_mixture) .or. (algorithm_type .ne. 6)) then
-        call bl_error("currently, nonzero initial_variance_mass is supported only for ideal mixture with algorithm_type = 6")
+      if (.not. is_ideal_mixture) then
+        call bl_error("currently, nonzero initial_variance_mass is supported only for ideal mixture")
       end if
     end if
 
@@ -228,6 +228,8 @@ contains
     real(kind=dp_t)  :: gradToverT,m_e
  
     real(kind=dp_t)  :: random
+
+    real(kind=dp_t)  :: rho_total
 
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
 
@@ -716,52 +718,38 @@ contains
 
     end select
 
-    ! set final c_i such that sum(c_i) = 1 to within roundoff
     do j=lo(2),hi(2)
        do i=lo(1),hi(1)
 
-          sum = 0
+          ! set final c_i such that sum(c_i) = 1 to within roundoff
+          sum = 0.d0
           do n=1,nspecies-1
              sum = sum + c(i,j,n)
           end do
           c(i,j,nspecies) = 1.d0 - sum
 
+          ! calculate rho_total from eos
+          if (algorithm_type .eq. 6) then
+             rho_total = rho0
+          else
+             sum = 0.d0
+             do n=1,nspecies
+                ! sum represents rhoinv
+                sum = sum + c(i,j,n)/rhobar(n)
+             end do
+             rho_total = 1.d0/sum
+          end if
+
           ! add mass fluctuations
           if (abs(initial_variance_mass) .gt. 0.d0) then
-             call add_mass_fluctuations(c(i,j,1:nspecies),dx,rho0)
-             ! need max(w,0.d0) ??
+             call add_mass_fluctuations(c(i,j,1:nspecies),dx,rho_total)
           end if
+
+          ! calculate rho_i
+          rho(i,j,1:nspecies) = rho_total*c(i,j,1:nspecies)
+
        end do
     end do
-
-    if (algorithm_type .eq. 6) then
-
-       ! set rho=rho0
-       do j=lo(2),hi(2)
-       do i=lo(1),hi(1)
-
-          rho(i,j,1:nspecies) = rho0*c(i,j,1:nspecies)
-
-       end do
-       end do
-
-    else
-
-       ! compute rho using the eos
-       do j=lo(2),hi(2)
-       do i=lo(1),hi(1)
-
-          sum = 0.d0
-          do n=1,nspecies
-             ! sum represents rhoinv
-             sum = sum + c(i,j,n)/rhobar(n)
-          end do
-          rho(i,j,1:nspecies) = c(i,j,1:nspecies)/sum
-
-       end do
-       end do
-
-    end if
 
   end subroutine init_rho_and_umac_2d
 
