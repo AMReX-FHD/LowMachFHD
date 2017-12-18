@@ -13,9 +13,9 @@ module init_lowmach_module
   use bl_rng_module
   use probin_common_module, only: prob_lo, prob_hi, prob_type, k_B, grav, &
                                   molmass, rhobar, rho0, smoothing_width, u_init, n_cells, &
-                                  use_bl_rng, nspecies, algorithm_type
+                                  use_bl_rng, nspecies, algorithm_type, initial_variance_mass
   use probin_multispecies_module, only: alpha1, beta, delta, sigma, Dbar, Dtherm, &
-                                        c_init, T_init, temp_type, sigma
+                                        c_init, T_init, temp_type, sigma, is_ideal_mixture
   use probin_charged_module, only: charge_per_mass
  
   implicit none
@@ -154,6 +154,13 @@ contains
     type(multifab) :: conc(mla%dim)
 
     type(bl_prof_timer), save :: bpt
+
+    ! currently, adding initial mass fluctuations is only available for ideal mixture
+    if (abs(initial_variance_mass) .gt. 0.d0) then
+      if ((.not. is_ideal_mixture) .or. (algorithm_type .ne. 6)) then
+        call bl_error("currently, nonzero initial_variance_mass is supported only for ideal mixture with algorithm_type = 6")
+      end if
+    end if
 
     call build(bpt, "init_rho_and_umac")
 
@@ -719,6 +726,11 @@ contains
           end do
           c(i,j,nspecies) = 1.d0 - sum
 
+          ! add mass fluctuations
+          if (abs(initial_variance_mass) .gt. 0.d0) then
+             call add_mass_fluctuations(c(i,j,1:nspecies),dx,rho0)
+             ! need max(w,0.d0) ??
+          end if
        end do
     end do
 
@@ -1184,6 +1196,57 @@ contains
     end if
 
   end subroutine init_rho_and_umac_3d
+
+  subroutine add_mass_fluctuations(c,dx,rho_init)
+    real(dp_t), intent(inout) :: c(nspecies)
+    real(dp_t), intent(in)    :: dx(:)
+    real(dp_t), intent(in)    :: rho_init
+
+    ! local variables
+    real(dp_t) :: L(nspecies,nspecies)
+    real(dp_t) :: z(nspecies)
+    real(dp_t) :: sqrtdv
+
+    real(dp_t) :: tmp
+    integer    :: i,j
+
+    sqrtdv = sqrt(product(dx(1:MAX_SPACEDIM)))
+
+    ! construct chelesky decomposition matrix L (S_w = L*L^T)
+    ! for ideal mixture, L = 1/sqrt(rho)*(I-w*1^T)*sqrt(W)*sqrt(M)
+    do j=1,nspecies
+       tmp = sqrt(c(j)*molmass(j)/rho_init)
+       do i=1,nspecies
+          if (i.eq.j) then
+             L(i,j) = tmp*(1.d0-c(i))
+          else
+             L(i,j) = -tmp*c(i)
+          end if
+       end do
+    end do
+
+    ! construct random vector z having nspecies N(0,1) random variables
+    if (use_bl_rng) then
+       call NormalRNGs(z, nspecies, engine=rng_eng_init%p)
+    else
+       call NormalRNGs(z, nspecies)
+    end if
+
+    ! add fluctuations
+    ! dw = L*z gives S_w = <dw*dw^T> = L*L^T = S_w
+    do i=1,nspecies
+       tmp = 0.d0
+       do j=1,nspecies
+          tmp = tmp + L(i,j)*z(j)
+       end do
+       c(i) = c(i) + tmp/sqrtdv
+    end do
+
+    ! replace negative values by zero and normalize
+    c(1:nspecies) = max(c(1:nspecies),0.d0)
+    c(1:nspecies) = c(1:nspecies)/sum(c(1:nspecies))
+
+  end subroutine add_mass_fluctuations
 
   subroutine init_Temp(Temp,dx,time,the_bc_level)
 

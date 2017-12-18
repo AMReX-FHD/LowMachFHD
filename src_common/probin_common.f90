@@ -26,7 +26,7 @@ module probin_common_module
   integer,save    :: hydro_grid_int,project_dir,max_grid_projection(2)
   integer,save    :: stats_int,n_steps_save_stats,n_steps_skip,histogram_unit
   logical,save    :: analyze_conserved,center_snapshots
-  real(dp_t),save :: variance_coef_mom,variance_coef_mass,initial_variance
+  real(dp_t),save :: variance_coef_mom,variance_coef_mass,initial_variance,initial_variance_mass
   real(dp_t),save :: k_B,Runiv,visc_coef
   integer,save    :: stoch_stress_form,filtering_width,max_step
   integer,save    :: restart,print_int,project_eos_int,algorithm_type
@@ -144,6 +144,7 @@ module probin_common_module
   namelist /probin_common/ smoothing_width    ! scale factor for smoothing initial profile
   namelist /probin_common/ initial_variance   ! multiplicative factor for initial fluctuations
                                               ! (if negative, total momentum is set to zero)
+  namelist /probin_common/ initial_variance_mass   ! multiplicative factor for initial mass fluctuations
 
   ! Boundary conditions
   !----------------------
@@ -287,6 +288,7 @@ contains
     perturb_width = 0.d0
     smoothing_width = 1.d0
     initial_variance = 0.d0
+    initial_variance_mass = 0.d0
 
     bc_lo(1:MAX_SPACEDIM) = PERIODIC
     bc_hi(1:MAX_SPACEDIM) = PERIODIC
@@ -606,6 +608,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) initial_variance
+
+       case ('--initial_variance_mass')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) initial_variance_mass
 
        case ('--bc_lo_x')
           farg = farg + 1
