@@ -139,12 +139,12 @@ module probin_common_module
 
   ! Initial conditions
   !----------------------
-  namelist /probin_common/ u_init             ! controls initial velocity
-  namelist /probin_common/ perturb_width      ! scale factor for perturbed part in initial profile 
-  namelist /probin_common/ smoothing_width    ! scale factor for smoothing initial profile
-  namelist /probin_common/ initial_variance_mom   ! multiplicative factor for initial fluctuations
-                                              ! (if negative, total momentum is set to zero)
-  namelist /probin_common/ initial_variance_mass   ! multiplicative factor for initial mass fluctuations
+  namelist /probin_common/ u_init                       ! controls initial velocity
+  namelist /probin_common/ perturb_width                ! scale factor for perturbed part in initial profile
+  namelist /probin_common/ smoothing_width              ! scale factor for smoothing initial profile
+  namelist /probin_common/ initial_variance_mom         ! multiplicative factor for initial momentum fluctuations
+                                                        ! (if negative, total momentum is set to zero)
+  namelist /probin_common/ initial_variance_mass        ! multiplicative factor for initial mass fluctuations
 
   ! Boundary conditions
   !----------------------
