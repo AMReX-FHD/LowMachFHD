@@ -239,7 +239,7 @@
   ! using rate_multiplier, reaction rates can be changed by the same factor
   ! if include_discrete_LMA_correction, n^2 and n^3 in rate expressions become
   ! n*(n-1/dv) and n*(n-/dv)*(n-2/dv).
-  rate_const(1:2) = 2.8d-30 5.5d-3
+  rate_const(1:2) = 2.8d-34 5.5d-7
   rate_multiplier = 1.d0
   include_discrete_LMA_correction = T
 

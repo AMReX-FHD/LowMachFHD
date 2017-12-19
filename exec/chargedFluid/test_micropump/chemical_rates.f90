@@ -6,7 +6,8 @@ module chemical_rates_module
   use bl_rng_module
   use compute_reaction_rates_module
   use probin_common_module, only: use_bl_rng, nspecies
-  use probin_chemistry_module, only: nreactions, stoichiometric_factors, use_Poisson_rng, rate_const
+  use probin_chemistry_module, only: nreactions, stoichiometric_factors, use_Poisson_rng, &
+       rate_const, rate_multiplier
 
   implicit none
 
@@ -59,6 +60,7 @@ contains
     logical         :: lin_comb_avg_react_rate  ! whether to use linearly combined average reaction rates
     real(kind=dp_t) :: lin_comb_coef(1:2)       ! coefficients for the linear combination 
 
+    real(kind=dp_t) :: rate_multiplier_tmp
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -92,6 +94,9 @@ contains
     end if
 
     dv = product(dx(1,1:MAX_SPACEDIM))
+
+    rate_multiplier_tmp = rate_multiplier
+    rate_multiplier = rate_multiplier / dx(1,dm)
 
     !!!!! omp tiling
 
@@ -140,6 +145,8 @@ contains
       end do
     end do
     !$omp end parallel
+
+    rate_multiplier = rate_multiplier_tmp
 
     call destroy(bpt)
 
