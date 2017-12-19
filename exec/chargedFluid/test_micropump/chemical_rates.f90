@@ -5,7 +5,7 @@ module chemical_rates_module
   use BoxLibRNGs
   use bl_rng_module
   use compute_reaction_rates_module
-  use probin_common_module, only: use_bl_rng, nspecies
+  use probin_common_module, only: use_bl_rng, nspecies, prob_lo, prob_hi
   use probin_chemistry_module, only: nreactions, stoichiometric_factors, use_Poisson_rng, &
        rate_const, rate_multiplier
 
@@ -137,10 +137,10 @@ contains
         select case (dm)
         case (2)
           call chemical_rates_2d(np(:,:,1,:),ng_n,rp(:,:,1,:),ng_r,lo,hi,tlo,thi,dv,dt,  &
-                                 lin_comb_avg_react_rate,ip(:,:,1,:),ng_i,lin_comb_coef)
+                                 lin_comb_avg_react_rate,ip(:,:,1,:),ng_i,lin_comb_coef,dx(1,1))
         case (3)
           call chemical_rates_3d(np(:,:,:,:),ng_n,rp(:,:,:,:),ng_r,lo,hi,tlo,thi,dv,dt,  &
-                                 lin_comb_avg_react_rate,ip(:,:,:,:),ng_i,lin_comb_coef)
+                                 lin_comb_avg_react_rate,ip(:,:,:,:),ng_i,lin_comb_coef,dx(1,1))
         end select
       end do
     end do
@@ -177,7 +177,7 @@ contains
 
 
   subroutine chemical_rates_2d(n_cc,ng_n,chem_rate,ng_r,glo,ghi,tlo,thi,dv,dt,      &
-                               lin_comb_avg_react_rate,n_interm,ng_i,lin_comb_coef)
+                               lin_comb_avg_react_rate,n_interm,ng_i,lin_comb_coef,dx)
 
     integer        , intent(in   ) :: glo(:), ghi(:), tlo(:), thi(:), ng_n, ng_r, ng_i
     real(kind=dp_t), intent(in   ) :: n_cc     (glo(1)-ng_n:,glo(2)-ng_n:,:)
@@ -185,7 +185,7 @@ contains
     real(kind=dp_t), intent(in   ) :: n_interm (glo(1)-ng_i:,glo(2)-ng_i:,:)
     real(kind=dp_t), intent(in   ) :: dv, dt
     logical        , intent(in   ) :: lin_comb_avg_react_rate 
-    real(kind=dp_t), intent(in   ) :: lin_comb_coef(:)
+    real(kind=dp_t), intent(in   ) :: lin_comb_coef(:),dx
     
     ! local
     integer :: i, j
@@ -194,7 +194,7 @@ contains
     do i=tlo(1),thi(1)
       call chemical_rates_cell(n_cc(i,j,1:nspecies),chem_rate(i,j,1:nspecies),dv,dt,           &
                                lin_comb_avg_react_rate,n_interm(i,j,1:nspecies),lin_comb_coef, &
-                               i,j,0)
+                               i,j,0,dx)
     end do
     end do
 
@@ -202,7 +202,7 @@ contains
 
 
   subroutine chemical_rates_3d(n_cc,ng_n,chem_rate,ng_r,glo,ghi,tlo,thi,dv,dt,      &
-                               lin_comb_avg_react_rate,n_interm,ng_i,lin_comb_coef)
+                               lin_comb_avg_react_rate,n_interm,ng_i,lin_comb_coef,dx)
 
     integer        , intent(in   ) :: glo(:), ghi(:), tlo(:), thi(:), ng_n, ng_r, ng_i
     real(kind=dp_t), intent(in   ) :: n_cc     (glo(1)-ng_n:,glo(2)-ng_n:,glo(3)-ng_n:,:)
@@ -210,7 +210,7 @@ contains
     real(kind=dp_t), intent(in   ) :: n_interm (glo(1)-ng_i:,glo(2)-ng_i:,glo(3)-ng_i:,:)
     real(kind=dp_t), intent(in   ) :: dv, dt
     logical,         intent(in   ) :: lin_comb_avg_react_rate 
-    real(kind=dp_t), intent(in   ) :: lin_comb_coef(:)
+    real(kind=dp_t), intent(in   ) :: lin_comb_coef(:),dx
     
     ! local
     integer :: i, j, k
@@ -220,7 +220,7 @@ contains
     do i=tlo(1),thi(1)
       call chemical_rates_cell(n_cc(i,j,k,1:nspecies),chem_rate(i,j,k,1:nspecies),dv,dt,         &
                                lin_comb_avg_react_rate,n_interm(i,j,k,1:nspecies),lin_comb_coef, &
-                               i,j,k)
+                               i,j,k,dx)
     end do
     end do
     end do
@@ -229,7 +229,7 @@ contains
 
 
   subroutine chemical_rates_cell(n_cc,chem_rate,dv,dt,lin_comb_avg_react_rate,n_interm,lin_comb_coef, &
-                                 i,j,k)
+                                 i,j,k,dx)
 
     real(kind=dp_t), intent(in   ) :: n_cc(:)
     real(kind=dp_t), intent(inout) :: chem_rate(:)
@@ -238,6 +238,7 @@ contains
     real(kind=dp_t), intent(in   ) :: n_interm(:)
     real(kind=dp_t), intent(in   ) :: lin_comb_coef(:)
     integer        , intent(in   ) :: i,j,k
+    real(kind=dp_t), intent(in   ) :: dx
 
     ! local
     integer         :: reaction
@@ -251,20 +252,23 @@ contains
     real(kind=dp_t) :: n_tmp(1:nspecies)
 
     real(kind=dp_t) :: rate_const_tmp(1:nreactions)
+    real(kind=dp_t) :: L,x,fac
 
     ! hack
+
+
     if (j .ne. 0) then
        chem_rate(1:nspecies) = 0.d0
        return
     else
        rate_const_tmp(1:nreactions) = rate_const(1:nreactions)
-       if (i .le. 15 .or. i .ge. 48) then
-          ! disable reaction 1
-          rate_const(1) = 0.d0
-       else
-          ! disable reaction 2
-          rate_const(2) = 0.d0
-       end if
+
+       L = prob_hi(1) - prob_lo(1)
+       x = (i+0.5d0)*dx
+       fac = (0.5d0 + 0.5d0*tanh((x-0.25*L)/(0.02*L)))*(0.5d0 + 0.5d0*tanh((0.75*L-x)/(0.02*L)))
+
+       rate_const(1) = fac*rate_const(1)
+       rate_const(2) = (1.d0-fac)*rate_const(2)
 
     end if
 
