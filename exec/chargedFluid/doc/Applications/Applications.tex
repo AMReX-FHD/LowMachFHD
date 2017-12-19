@@ -514,7 +514,12 @@ a molarity of $10^{-7}$, corresponding to mass fractions of $1.7\times 10^{-9}$
 and $10^{-10}$.  The initial O$_2$ molarity is $2\times 10^{-4}$, corresponding
 to a mass fraction of $6.4\times 10^{-6}$.  The remaining solution is H$_2$O.
 
-
+The chemical rates are found in \cite{MoranPosner11} as $k_{\rm anode}=5.5\times 10^{-9}$~m/s
+and $k_{\rm cathode}=1$~m$^7$s$^{-1}$/mol$^2$.  Converting to our CGS formulation where
+reactions are computed using number densities, and expressed as a change over a volume
+rather than a flux over a surface (encapsulated by a final division by $\Delta x$) gives
+$\tilde k_{\rm anode} = k_{\rm anode} 100 / \Delta x$ and
+$\tilde k_{\rm cathode} = k_{\rm cathode} 100^7 / (N_A^2 \Delta x)$.
 
 \bibliographystyle{plain}
 \bibliography{Applications}
