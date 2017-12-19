@@ -10,10 +10,10 @@
   n_cells(1:2) = 64 64                  ! number of cells in domain
   max_grid_size(1:2) = 32 32            ! max number of cells in a box
 
-  fixed_dt = 1.d-10                     ! time step
+  fixed_dt = 5.d-6                      ! time step
 
-  max_step = 100                        ! maximum number of time steps
-  plot_int = 1                          ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 10000                      ! maximum number of time steps
+  plot_int = 100                        ! Interval for writing a plotfile (for visit/amrvis)
   plot_base_name = "plt"                ! prefix for plotfile name
   chk_int = -1                          ! Interval for writing a checkpoint
   check_base_name = "chk"               ! prefix for checkpoint name
@@ -90,7 +90,7 @@
   ! -2 is sinusoidal
   smoothing_width = -2.d0               ! scale factor for smoothing initial profile
 
-  initial_variance_mom = 1.                 ! multiplicative factor for initial fluctuations
+  initial_variance_mom = 0.                 ! multiplicative factor for initial fluctuations
                                         ! (if negative, total momentum is set to zero -- relevant for periodic)
 
   ! Boundary conditions
@@ -102,8 +102,6 @@
   ! 200 = slip wall         (Dir condition for normal vel; Dir traction condition for trans vel)
   ! 201 = slip reservoir    (Dir condition for normal vel; Dir traction condition for trans vel)
   ! For a complete list see bc.f90
-
-  ! reservoir in y
   bc_lo(1:2) = -1 100
   bc_hi(1:2) = -1 101
 
@@ -123,7 +121,7 @@
   ! It is better to use the conserved variables but it does not quite work for staggered
 
   max_grid_projection(1:2) = 32 32      ! parallelization parameters
-  stats_int = 200                       ! Project grid for analysis
+  stats_int = 0                         ! Project grid for analysis
                                         ! If positive, how often to compute mean and 
                                         ! standard deviation over reduced dimensions
   n_steps_save_stats = 200              ! How often to dump HydroGrid output files
@@ -224,13 +222,13 @@
 
 &probin_chemistry
 
-  nreactions = 1                      ! number of reactions
+  nreactions = 2                      ! number of reactions
 
   ! stoichiometric factors for each reaction (species,LHS(1)/RHS(2),reaction)
   ! Example: For N1 + 2*N2 -> N3 use
   ! stoichiometric_factors(1:3,1,1) = 1 2 0
   ! stoichiometric_factors(1:3,2,1) = 0 0 1
-  ! Cathode (center of domain) H2O2 + 2H+ -> 2 H2O
+  ! Cathode (center of domain) 2H+ + H2O2 -> 2 H2O
   stoichiometric_factors(1:5,1,1) = 2 0 1 0 0
   stoichiometric_factors(1:5,2,1) = 0 0 0 0 2
   ! Anonde (outer domain) H2O2 -> 2H+ + O2 + 2e-
@@ -241,8 +239,8 @@
   ! using rate_multiplier, reaction rates can be changed by the same factor
   ! if include_discrete_LMA_correction, n^2 and n^3 in rate expressions become
   ! n*(n-1/dv) and n*(n-/dv)*(n-2/dv).
-  rate_const(1:2) = 5.d-11 !5.d-13
-  rate_multiplier = 7.5d-9 !7.5d-11
+  rate_const(1:2) = 2.8d-30 5.5d-3
+  rate_multiplier = 1.d0
   include_discrete_LMA_correction = T
 
   ! if n is positive, exclude species n (=solvent) when computing reaction rates
