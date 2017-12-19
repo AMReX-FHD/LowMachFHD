@@ -758,12 +758,7 @@ contains
           end if
 
           ! calculate rho_i
-          if (algorithm_type .eq. 6) then
-             ! keep this case once I fix precision regression issues
-             rho(i,j,1:nspecies) = rho_total*c(i,j,1:nspecies)
-          else
-             rho(i,j,1:nspecies) = c(i,j,1:nspecies) / sum
-          end if
+          rho(i,j,1:nspecies) = rho_total*c(i,j,1:nspecies)
 
        end do
     end do
@@ -1192,12 +1187,7 @@ contains
              end if
 
              ! calculate rho_i
-             if (algorithm_type .eq. 6) then
-                ! keep this case once I fix precision regression issues
-                rho(i,j,k,1:nspecies) = rho_total*c(i,j,k,1:nspecies)
-             else
-                rho(i,j,k,1:nspecies) = c(i,j,k,1:nspecies) / sum
-             end if
+             rho(i,j,k,1:nspecies) = rho_total*c(i,j,k,1:nspecies)
 
           end do
        end do
