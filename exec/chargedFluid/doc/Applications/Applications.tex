@@ -489,6 +489,33 @@ d_+ + d_- + d_0 = \sum a_i \nabla\phi
 to form a linear system for $d_-$ and $d_0$.
 Once we know $d_-$ and $d_0$ we can compute $J_-$ and $J_0$ using (\ref{eq:Jmult}).
 
+\section{Micropump}
+We model 5 species, H$^+$, OH$^-$, H$_2$O$_2$, and H$_2$O.
+
+The binary diffusion coefficients into water (in cgs units [cm$^2$/s]) are given by 
+$D_{15}=9.3\times 10^{-5}, D_{25}=5.3\times 10^{-5}, D_{35}=6.6\times 10^{-6}, 
+D_{45}=2.0\times 10^{-5}$ \cite{Esplandiu16,MoranPosner11}.  The self-diffusion
+coefficient for water is $D_5=2.3\times 10^{-5}$ \cite{LowMachMulti}.
+We can evaluate the remaining binary diffusion coefficients by using the
+infinite dilution approxmation in \cite{LowMachMulti},
+\begin{equation}
+D_{jk} = \frac{D_{ij}D_{ik}}{D_i}
+\end{equation}
+giving
+$D_{12}=2.143\times 10^{-4},
+D_{13}=2.669\times 10^{-4}, D_{23}=1.521\times 10^{-4}
+D_{14}=8.09\times 10^{-5}, D_{24}=4.61\times 10^{-5}, D_{34}=5.74\times 10^{-5}$.
+
+We assume the density of each species as well as the the solution is 1~g/cm$^3$,
+even though pure hydrogen peroxide is 1.45~g/cm$^3$.  For the initial conditions,
+we assume a 0.3 molar (moles/liter) solution of H$_2$O$_2$, which is approximately
+a mass fraction of 0.01.  We assume neutral water, so that OH$^-$ and H$^+$ have
+a molarity of $10^{-7}$, corresponding to mass fractions of $1.7\times 10^{-9}$
+and $10^{-10}$.  The initial O$_2$ molarity is $2\times 10^{-4}$, corresponding
+to a mass fraction of $6.4\times 10^{-6}$.  The remaining solution is H$_2$O.
+
+
+
 \bibliographystyle{plain}
 \bibliography{Applications}
 
