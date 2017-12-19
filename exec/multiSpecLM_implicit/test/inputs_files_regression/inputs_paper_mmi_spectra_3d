@@ -84,7 +84,7 @@
   ! -2 is sinusoidal
   smoothing_width = -0.1d0 ! scale factor for smoothing initial profile
 
-  initial_variance_mom = 1.d0   ! multiplicative factor for initial fluctuations
+  initial_variance_mom = 0.d0   ! multiplicative factor for initial fluctuations
                             ! (if negative, total momentum is set to zero -- relevant for periodic)
 
   ! Boundary conditions
