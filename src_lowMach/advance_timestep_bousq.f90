@@ -23,6 +23,7 @@ module advance_timestep_bousq_module
   use zero_edgeval_module
   use fill_rho_ghost_cells_module
   use ml_solve_module
+  use bl_rng_module
   use bl_random_module
   use chemical_rates_module
   use fluid_charge_module
@@ -281,6 +282,10 @@ contains
 
     if (variance_coef_mass .ne. 0.d0) then
        call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+       if (use_bl_rng) then
+          ! save random state for restart
+          call bl_rng_copy_engine(rng_eng_diffusion_chk,rng_eng_diffusion)
+       end if
     end if
 
     ! compute diffusive, stochastic, potential mass fluxes
@@ -665,6 +670,12 @@ contains
           call multifab_plus_plus_c(chem_rate(n),1,chem_rate_temp(n),1,nspecies,0)
           call multifab_mult_mult_s_c(chem_rate(n),1,0.5d0,nspecies,0)
        end do
+
+       if (use_bl_rng) then
+          ! save random state for restart
+          call bl_rng_copy_engine(rng_eng_reaction_chk,rng_eng_reaction)
+       end if
+
     end if
 
     if (advection_type .ge. 1) then
