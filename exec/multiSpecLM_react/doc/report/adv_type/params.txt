@@ -1,0 +1,22 @@
+** see also: ../../../test/inputs_files/dimerization_hist/
+
+parameters
+dx = dz = 1 (2d simulations)
+m1 = 1
+diffusion coefficient D = 1
+
+rho1 = rho2 = 20 (20 monomers and 10 dimers per cell)
+
+dt = 0.01 (I told you I used dt = 0.1 but actually I used dt = 0.01 even at that time.)
+(diffusive CFL = 0.01)
+
+u = sqrt(kT/m/N) (I just simply put N=40; this is anyway rough estimate and we may want to multiply by 2 or 3 for max velocity.)
+advective CFL = u*dt / dx = 0.01*u
+cell Peclet number = u*dx / D = u
+
+kBT=1, u= 0.16, CFL=0.0016, Pe=0.16
+kBT=10, u=0.5, CFL=0.005, Pe=0.5 (this value of kBT not computed)
+kBT=10^2,  u=1.6, CFL=0.016, Pe=1.6
+kBT=10^3, u=5, CFL=0.05, Pe=5
+kBT=10^4, u=16, CFL=0.16, Pe=16
+kBT=10^5, u=50, CFL=0.5, Pe=50
