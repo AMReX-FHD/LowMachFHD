@@ -66,6 +66,11 @@ contains
         call multifab_build(pi(n)    , mla%la(n),        1, 1)
         do i=1,dm
            call multifab_build_edge(umac(n,i), mla%la(n), 1, 1, i)
+
+           ! with mixed boundary conditions some of the corner umac ghost cells that
+           ! never affect the solution aren't filled, causing segfaults on some compilers
+           ! this prevents segfaults
+           call setval(umac(n,i),0.d0,all=.true.)
         end do
      end do
 
