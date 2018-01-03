@@ -122,12 +122,12 @@ contains
        plot_names(counter) = "Epot"
        counter = counter + 1
 
-       plot_names(counter) = "av_gradEpotx"
+       plot_names(counter) = "averaged_Ex"
        counter = counter + 1
-       plot_names(counter) = "av_gradEpoty"
+       plot_names(counter) = "averaged_Ey"
        counter = counter + 1
        if (dm > 2) then
-          plot_names(counter) = "av_gradEpotz"
+          plot_names(counter) = "averaged_Ez"
           counter = counter + 1
        end if
 
@@ -151,7 +151,7 @@ contains
     ! vel
     nvarsStag = 1
     if (use_charged_fluid) then
-       ! grad_Epot
+       ! electric field (Ex, Ey, Ez)
        ! gradPhiApprox
        nvarsStag = nvarsStag + 2
     end if
@@ -168,9 +168,9 @@ contains
     counter = counter + 1
 
     if (use_charged_fluid) then
-       plot_names_stagx(counter) = "grad_Epotx"
-       plot_names_stagy(counter) = "grad_Epoty"
-       plot_names_stagz(counter) = "grad_Epotz"
+       plot_names_stagx(counter) = "Ex"
+       plot_names_stagy(counter) = "Ey"
+       plot_names_stagz(counter) = "Ez"
        counter = counter + 1
 
        plot_names_stagx(counter) = "gradPhiApproxx"
@@ -250,13 +250,16 @@ contains
        enddo
        counter = counter + 1
 
-       ! grad_Epot_averaged
+       ! averaged electric field
        do i=1,dm
           call average_face_to_cc(mla,grad_Epot(:,i),1,plotdata,counter,1)
+          do n = 1,nlevs
+             call multifab_mult_mult_s_c(plotdata(n),counter,-1.d0,1,0)
+          end do
           counter = counter + 1
        end do
 
-       ! gradPhiApprox_averaged
+       ! averaged gradPhiApprox
        do i=1,dm
           call average_face_to_cc(mla,gradPhiApprox(:,i),1,plotdata,counter,1)
           counter = counter + 1
@@ -280,10 +283,11 @@ contains
 
     if (use_charged_fluid) then
 
-       ! grad_Epot
+       ! electric field
        do n=1,nlevs
           do i=1,dm
              call multifab_copy_c(plotdata_stag(n,i),counter,grad_Epot(n,i),1,1)
+             call multifab_mult_mult_s_c(plotdata_stag(n,i),counter,-1.d0,1,0)
           end do
        end do
        counter = counter + 1
