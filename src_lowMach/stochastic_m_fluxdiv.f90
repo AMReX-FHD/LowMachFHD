@@ -965,7 +965,7 @@ contains
                                       variance=abs(variance)*k_B/product(dx(n,1:MAX_SPACEDIM)), &
                                       variance_mfab=s_face(n:n,i), &
                                       variance_mfab2=temperature_face(n:n,i), &
-                                      rng_eng=rng_eng_momentum)
+                                      rng_eng=rng_eng_init)
          else
             call multifab_fill_random(mactemp(n:n,i), &
                                       variance=abs(variance)*k_B/product(dx(n,1:MAX_SPACEDIM)), &
