@@ -26,7 +26,7 @@
   grav(1:3) = 0. 0. 0.                  ! gravity vector (negative is downwards)
   nspecies = 5                          ! number of species H+ OH- H2O2 O2 H2O 
 
-  molmass(1:5) = 1.67372370845724d-24 2.82424477979252d-23 5.64827368951132d-23 2.65669639180976d-23 2.99150755506235d-23
+  molmass(1:5) = 1.67372370845724d-24 2.82424477979252d-23 5.64827368951132d-23 5.31339278361953d-23 2.99150755506235d-23
 
   rhobar(1:5) = 1.d0 1.d0 1.d0 1.d0 1.d0
   rho0 = 1.                             ! reference density
@@ -206,14 +206,10 @@
 
   ! 1 = Dirichlet (fixed potential)
   ! 2 = Neumann (fixed charge density)
-  Epot_wall_bc_type(1,1) = 1
-  Epot_wall_bc_type(2,1) = 1
   Epot_wall_bc_type(1,2) = 1
   Epot_wall_bc_type(2,2) = 1
 
   ! Dirichlet or Neumann condition
-  Epot_wall(1,1) = 0.d0
-  Epot_wall(2,1) = 0.d0
   Epot_wall(1,2) = 0.d0
   Epot_wall(2,2) = 0.d0
 
@@ -239,7 +235,11 @@
   ! using rate_multiplier, reaction rates can be changed by the same factor
   ! if include_discrete_LMA_correction, n^2 and n^3 in rate expressions become
   ! n*(n-1/dv) and n*(n-/dv)*(n-2/dv).
-  rate_const(1:2) = 2.8d-34 5.5d-7
+!  rate_const(1:2) = 2.8d-34 5.5d-7
+  rate_const(1:2) = 2.8d-35 0.8d-7
+!  rate_const(1:2) = 2.8d-34 5.5d-7
+!  rate_const(1:2) = 2.8d-35 0.8d-8
+!  rate_const(1:2) = 2.8d-35 5.5d-6
   rate_multiplier = 1.d0
   include_discrete_LMA_correction = T
 
