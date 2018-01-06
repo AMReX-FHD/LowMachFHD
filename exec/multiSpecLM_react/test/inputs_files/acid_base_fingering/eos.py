@@ -38,9 +38,11 @@ tmp = w1/rhobar1+w2/rhobar2+w3/rhobar3+w4/rhobar4
 print "(w1,w2,w3,w4) = (%f,%f,%f,%f), rho = %f" % (w1,w2,w3,w4,1/tmp)
 
 # from de Wit's paper
-# 0.5M NaOH rho = 1.0208
+# 0.4M NaOH rho = 1.0167 (for double diffusion)
+# 0.5M NaOH rho = 1.0208 (for Rayleigh-Taylor)
 w1 = 0.
-w2 = 40.00*0.5/1020.8   
+w2 = 40.00*0.4/1016.7  
+#w2 = 40.00*0.5/1020.8   
 w3 = 0.
 w4 = 1-w2 
 
