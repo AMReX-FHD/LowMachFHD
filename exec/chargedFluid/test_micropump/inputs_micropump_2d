@@ -159,8 +159,8 @@
   ! These are lower-triangules of symmetric matrices represented as vectors
   ! Number of elements is (nspecies*(nspecies-1)/2)
   ! The values are red row by row starting from top going down (this allows easy addition/deletion of new species/rows)
-  ! So             D_12;    D_13,    D_23;   D_14,   D_24,   D_34;  D_15,  D_25,  D_35,  D_45
-  Dbar(1:10) = 2.143d-4 2.669d-4 1.521d-4 8.09d-5 4.61d-5 5.74d-5 9.3d-5 5.3d-5 6.6d-6 2.0d-5
+  ! So             D_12;   D_13,   D_23;   D_14,   D_24,  D_34;  D_15,  D_25,  D_35,  D_45
+  Dbar(1:10) = 2.143d-4 2.67d-5 1.52d-5 8.09d-5 4.61d-5 5.7d-6 9.3d-5 5.3d-5 6.6d-6 2.0d-5 
                                         ! Maxwell-Stefan diffusion constant  
   H_offdiag(1:1) = 0.                   ! Off diagonal elements of H=d^2F/dx^2  
 
