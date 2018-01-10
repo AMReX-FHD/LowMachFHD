@@ -12,8 +12,8 @@
 
   fixed_dt = 5.d-6                      ! time step
 
-  max_step = 1000                      ! maximum number of time steps
-  plot_int = 10                        ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 10000                     ! maximum number of time steps
+  plot_int = 100                       ! Interval for writing a plotfile (for visit/amrvis)
   plot_base_name = "plt"                ! prefix for plotfile name
   chk_int = -1                          ! Interval for writing a checkpoint
   check_base_name = "chk"               ! prefix for checkpoint name
@@ -213,7 +213,7 @@
   Epot_wall(1,2) = 0.d0
   Epot_wall(2,2) = 0.d0
 
-  electroneutral = T
+  electroneutral = F
 /
 
 &probin_chemistry
@@ -236,7 +236,7 @@
   ! if include_discrete_LMA_correction, n^2 and n^3 in rate expressions become
   ! n*(n-1/dv) and n*(n-/dv)*(n-2/dv).
 
-  rate_const(1:2) = 4.d-35 5.5d-8
+  rate_const(1:2) = 4.d-33 5.5d-9
 !  rate_const(1:2) = 2.8d-34 5.5d-7
 !  rate_const(1:2) = 2.8d-35 0.8d-7
 !  rate_const(1:2) = 2.8d-34 5.5d-7
