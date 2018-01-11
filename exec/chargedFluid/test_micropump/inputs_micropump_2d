@@ -26,7 +26,7 @@
   grav(1:3) = 0. 0. 0.                  ! gravity vector (negative is downwards)
   nspecies = 5                          ! number of species H+ OH- H2O2 O2 H2O 
 
-  molmass(1:5) = 1.67372370845724d-24 2.82424477979252d-23 5.64827368951132d-23 5.31339278361953d-23 2.99150755506235d-23
+  molmass(1:5) = 1.673723708457240d-24 2.824244779792520d-23 5.648273689511320d-23 5.313392783619530d-23 2.991507555062350d-23
 
   rhobar(1:5) = 1.d0 1.d0 1.d0 1.d0 1.d0
   rho0 = 1.                             ! reference density
@@ -176,8 +176,8 @@
   ! initial values for c
   ! The last value for water will be overwritten to enforce the EOS
   ! These are MASS FRACTIONS (concentrations), not partial densities
-  c_init(1,1:5) = 1.d-10 1.7d-9 0.01d0 6.4d-6 0.9899935982d0
-  c_init(2,1:5) = 1.d-10 1.7d-9 0.01d0 6.4d-6 0.9899935982d0
+  c_init(1,1:5) = 5.668063153123600d-10 9.56430125883746d-9 1.d-2 6.4d-6 9.899934380449800d-1
+  c_init(2,1:5) = 5.668063153123600d-10 9.56430125883746d-9 1.d-2 6.4d-6 9.899934380449800d-1
 
   ! c_i boundary conditions (dir,lohi,species)
   ! These are MASS FRACTIONS (concentrations), not partial densities
@@ -186,7 +186,7 @@
   c_bc(2,1,1:5) = 0. 0. 0. 0. 0.
 
   ! use this for the upper reservoir (Dirichlet Values)
-  c_bc(2,2,1:5) = 1.d-10 1.7d-9 0.01d0 6.4d-6 0.9899935982d0
+  c_bc(2,2,1:5) = 5.668063153123600d-10 9.56430125883746d-9 1.d-2 6.4d-6 9.899934380449800d-1
 
   midpoint_stoch_mass_flux_type = 1     ! 1 = Strato
                                         ! 2 = Ito
@@ -236,12 +236,8 @@
   ! if include_discrete_LMA_correction, n^2 and n^3 in rate expressions become
   ! n*(n-1/dv) and n*(n-/dv)*(n-2/dv).
 
-  rate_const(1:2) = 4.d-33 5.5d-9
-!  rate_const(1:2) = 2.8d-34 5.5d-7
-!  rate_const(1:2) = 2.8d-35 0.8d-7
-!  rate_const(1:2) = 2.8d-34 5.5d-7
-!  rate_const(1:2) = 2.8d-35 0.8d-8
-!  rate_const(1:2) = 2.8d-35 5.5d-6
+  rate_const(1:2) = 2.757389865405490d-35 8.d-8
+
   rate_multiplier = 1.d0
   include_discrete_LMA_correction = T
 
