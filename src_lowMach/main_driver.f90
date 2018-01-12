@@ -519,6 +519,21 @@ subroutine main_driver()
         call add_m_fluctuations(mla,dx,initial_variance_mom, &
                                 umac,rhotot_old,Temp,the_bc_tower)
 
+        do n=1,nlevs
+           do i=1,dm
+              ! set normal velocity on physical domain boundaries
+              call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
+                                             the_bc_tower%bc_tower_array(n), &
+                                             dx(n,:),vel_bc_n(n,:))
+              ! set transverse velocity behind physical boundaries
+              call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
+                                          the_bc_tower%bc_tower_array(n), &
+                                          dx(n,:),vel_bc_t(n,:))
+              ! fill periodic and interior ghost cells
+              call multifab_fill_boundary(umac(n,i))
+           end do
+        end do
+
         if (print_int .gt. 0) then
            if (parallel_IOProcessor()) write(*,*) "After adding momentum fluctuations:"
            call sum_mass(rho_old, 0) ! print out the total mass to check conservation
