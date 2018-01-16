@@ -115,21 +115,21 @@ contains
        counter = counter + 1
     end if
 
-    plot_names(counter) = "timeavg_averaged_velx"
+    plot_names(counter) = "tavg_averaged_velx"
     counter = counter + 1
-    plot_names(counter) = "timeavg_averaged_vely"
+    plot_names(counter) = "tavg_averaged_vely"
     counter = counter + 1
     if (dm > 2) then
-       plot_names(counter) = "timeavg_averaged_velz"
+       plot_names(counter) = "tavg_averaged_velz"
        counter = counter + 1
     end if
 
-    plot_names(counter) = "timeavg_shifted_velx"
+    plot_names(counter) = "tavg_shifted_velx"
     counter = counter + 1
-    plot_names(counter) = "timeavg_shifted_vely"
+    plot_names(counter) = "tavg_shifted_vely"
     counter = counter + 1
     if (dm > 2) then
-       plot_names(counter) = "timeavg_shifted_velz"
+       plot_names(counter) = "tavg_shifted_velz"
        counter = counter + 1
     end if
 
@@ -256,7 +256,7 @@ contains
        counter = counter + 1
     end do
 
-    !time-averaged  vel shifted
+    ! time-averaged vel shifted
     do i=1,dm
        call shift_face_to_cc(mla,umac_avg(:,i),1,plotdata,counter,1)
        counter = counter + 1
