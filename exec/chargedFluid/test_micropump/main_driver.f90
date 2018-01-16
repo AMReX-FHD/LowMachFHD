@@ -955,6 +955,13 @@ subroutine main_driver()
      end do
   end if
 
+  do n=1,nlevs 
+     do i=1,dm
+        call multifab_destroy(umac_sum(n,i))
+        call multifab_destroy(umac_avg(n,i))
+     end do
+  end do
+
   deallocate(lo,hi,pmask)
   deallocate(rho_old,rhotot_old,pi)
   deallocate(rho_new,rhotot_new)
