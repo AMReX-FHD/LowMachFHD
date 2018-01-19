@@ -494,6 +494,9 @@ subroutine main_driver()
                                     dx(n,:),vel_bc_t(n,:))
         ! fill periodic and interior ghost cells
         call multifab_fill_boundary(umac(n,i))
+        ! protect against roundoff issues and sync up 
+        ! faces with the same physical location
+         call multifab_internal_sync(umac(n,i))
      end do
   end do
 
