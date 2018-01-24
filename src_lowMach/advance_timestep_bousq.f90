@@ -403,6 +403,16 @@ contains
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc_old, &
                eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
 
+     call fabio_ml_multifab_write_d(gmres_rhs_v(:,1),mla%mba%rr(:,1),"a_grut")
+     call fabio_ml_multifab_write_d(gmres_rhs_v(:,2),mla%mba%rr(:,1),"a_grvt")
+     call fabio_ml_multifab_write_d(gmres_rhs_p,mla%mba%rr(:,1),"a_grpt")
+     call fabio_ml_multifab_write_d(dpi,mla%mba%rr(:,1),"a_dpit")
+     call fabio_ml_multifab_write_d(dumac(:,1),mla%mba%rr(:,1),"a_dut")
+     call fabio_ml_multifab_write_d(dumac(:,2),mla%mba%rr(:,1),"a_dvt")
+     call fabio_ml_multifab_write_d(rhotot_fc_old(:,1),mla%mba%rr(:,1),"a_rxt")
+     call fabio_ml_multifab_write_d(rhotot_fc_old(:,2),mla%mba%rr(:,1),"a_ryt")
+     call bl_error("HERE")
+
     ! for the corrector gmres solve we want the stopping criteria based on the
     ! norm of the preconditioned rhs from the predictor gmres solve.  otherwise
     ! for cases where du in the corrector should be small the gmres stalls

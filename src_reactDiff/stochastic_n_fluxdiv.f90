@@ -586,7 +586,7 @@ contains
           call multifab_fill_random(n_temp(n:n), &
                                     variance_mfab=n_init, &
                                     variance=abs(initial_variance_mass)/dv, &  ! We do not multiply here by variance_coef_mass
-                                    rng_eng=rng_eng_init)
+                                    rng_eng=rng_eng_init_mass)
        else
           call multifab_fill_random(n_temp(n:n), &
                                     variance_mfab=n_init, &

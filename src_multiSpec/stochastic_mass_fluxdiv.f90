@@ -245,7 +245,7 @@ contains
 
     ! construct random vector z having nspecies N(0,1) random variables
     if (use_bl_rng) then
-       call NormalRNGs(z, nspecies, engine=rng_eng_init%p)
+       call NormalRNGs(z, nspecies, engine=rng_eng_init_mass%p)
     else
        call NormalRNGs(z, nspecies)
     end if

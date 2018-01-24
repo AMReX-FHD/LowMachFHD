@@ -18,7 +18,8 @@ module probin_common_module
   real(dp_t),save :: perturb_width,smoothing_width,u_init(2)
   integer,save    :: visc_type,bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM),nspecies
   logical,save    :: use_bl_rng
-  integer,save    :: seed,seed_momentum,seed_diffusion,seed_reaction,seed_init
+  integer,save    :: seed,seed_momentum,seed_diffusion,seed_reaction
+  integer,save    :: seed_init_mass,seed_init_momentum
   integer,save    :: n_cells(MAX_SPACEDIM),max_grid_size(MAX_SPACEDIM)  
   real(dp_t),save :: prob_lo(MAX_SPACEDIM),prob_hi(MAX_SPACEDIM)
   real(dp_t),save :: wallspeed_lo(MAX_SPACEDIM-1,MAX_SPACEDIM)
@@ -114,7 +115,8 @@ module probin_common_module
   namelist /probin_common/ seed_momentum
   namelist /probin_common/ seed_diffusion
   namelist /probin_common/ seed_reaction
-  namelist /probin_common/ seed_init
+  namelist /probin_common/ seed_init_mass
+  namelist /probin_common/ seed_init_momentum
 
   ! Viscous friction L phi operator
   ! if abs(visc_type) = 1, L = div beta grad
@@ -274,7 +276,8 @@ contains
     seed_momentum = 1
     seed_diffusion = 1
     seed_reaction = 1
-    seed_init = 1
+    seed_init_mass = 1
+    seed_init_momentum = 1
 
     visc_type = 1
     visc_coef = 1.d0
@@ -555,10 +558,15 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) seed_reaction
 
-       case ('--seed_init')
+       case ('--seed_init_mass')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
-          read(fname, *) seed_init
+          read(fname, *) seed_init_mass
+
+       case ('--seed_init_momentum')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) seed_init_momentum
 
        case ('--visc_type')
           farg = farg + 1

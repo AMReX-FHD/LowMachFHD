@@ -475,7 +475,7 @@ contains
           ! Generate the initial fluctuations using a Poisson random number generator
           ! This assumes that the distribution of initial conditions is a product Poisson measure
           if (use_bl_rng) then
-             call PoissonRNG(number=nparticles, mean=n(comp)*dv, engine=rng_eng_init%p)
+             call PoissonRNG(number=nparticles, mean=n(comp)*dv, engine=rng_eng_init_mass%p)
           else
              call PoissonRNG(number=nparticles, mean=n(comp)*dv)
           end if
@@ -485,7 +485,7 @@ contains
        ! It is important here to use smart rounding so that the average concentration is preserved in expectation
        ! Using nearest integer n = nint(n*dv)/dv will not work except for lots of molecules
        if (use_bl_rng) then
-          call UniformRNGs(random, nspecies, engine=rng_eng_init%p)
+          call UniformRNGs(random, nspecies, engine=rng_eng_init_mass%p)
        else
           call UniformRNGs(random, nspecies)
        end if      
@@ -507,7 +507,7 @@ contains
     p=p/sum(p) ! Make sure it sums to 1 to roundoff again
 
     if (use_bl_rng) then
-       call MultinomialRNG(samples=n_molecules, n_samples=ncells, N=nint(sum(n)*dv), p=p, engine=rng_eng_init%p)
+       call MultinomialRNG(samples=n_molecules, n_samples=ncells, N=nint(sum(n)*dv), p=p, engine=rng_eng_init_mass%p)
     else
        call MultinomialRNG(samples=n_molecules, n_samples=ncells, N=nint(sum(n)*dv), p=p)
     end if

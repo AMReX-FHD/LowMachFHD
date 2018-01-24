@@ -5,7 +5,7 @@ module bl_rng_module
   use parallel
   use bl_error_module
   use probin_common_module, only: restart, seed_momentum, seed_diffusion, &
-                                  seed_reaction, seed_init
+                                  seed_reaction, seed_init_mass, seed_init_momentum
 
   implicit none
 
@@ -17,7 +17,8 @@ module bl_rng_module
             rng_eng_diffusion_chk, &
             rng_eng_reaction, &
             rng_eng_reaction_chk, &
-            rng_eng_init
+            rng_eng_init_mass, &
+            rng_eng_init_momentum
 
   ! randon number engines
   type(bl_rng_engine)      , save :: rng_eng_momentum
@@ -25,7 +26,8 @@ module bl_rng_module
   type(bl_rng_engine)      , save :: rng_eng_diffusion_chk
   type(bl_rng_engine)      , save :: rng_eng_reaction
   type(bl_rng_engine)      , save :: rng_eng_reaction_chk
-  type(bl_rng_engine)      , save :: rng_eng_init
+  type(bl_rng_engine)      , save :: rng_eng_init_mass
+  type(bl_rng_engine)      , save :: rng_eng_init_momentum
 
 contains
 
@@ -67,7 +69,8 @@ contains
     call bl_rng_build_engine(rng_eng_reaction_chk, 1)
 
     ! initialization
-    call bl_rng_build_engine(rng_eng_init, seed_init)
+    call bl_rng_build_engine(rng_eng_init_mass,     seed_init_mass)
+    call bl_rng_build_engine(rng_eng_init_momentum, seed_init_momentum)
 
   end subroutine rng_init
 
@@ -78,7 +81,8 @@ contains
     call bl_rng_destroy_engine(rng_eng_diffusion_chk)
     call bl_rng_destroy_engine(rng_eng_reaction)
     call bl_rng_destroy_engine(rng_eng_reaction_chk)
-    call bl_rng_destroy_engine(rng_eng_init)
+    call bl_rng_destroy_engine(rng_eng_init_mass)
+    call bl_rng_destroy_engine(rng_eng_init_momentum)
 
   end subroutine rng_destroy
 

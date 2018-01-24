@@ -346,7 +346,7 @@ contains
                 do i=lo(1),hi(1)
                    x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
                    if (use_bl_rng) then
-                      call UniformRNG(random,engine=rng_eng_init%p)
+                      call UniformRNG(random,engine=rng_eng_init_mass%p)
                    else
                       call UniformRNG(random)
                    end if
@@ -609,7 +609,7 @@ contains
                 do i=lo(1),hi(1)
                    x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
                    if (use_bl_rng) then
-                      call UniformRNG(random,engine=rng_eng_init%p)
+                      call UniformRNG(random,engine=rng_eng_init_mass%p)
                    else
                       call UniformRNG(random)
                    end if
@@ -624,7 +624,7 @@ contains
                 do i=lo(1),hi(1)
                    x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
                    if (use_bl_rng) then
-                      call UniformRNG(random,engine=rng_eng_init%p)
+                      call UniformRNG(random,engine=rng_eng_init_mass%p)
                    else
                       call UniformRNG(random)
                    end if
@@ -913,7 +913,7 @@ contains
                 do k=lo(3),hi(3)
                    do i=lo(1),hi(1)
                       if (use_bl_rng) then
-                         call UniformRNG(random,engine=rng_eng_init%p)
+                         call UniformRNG(random,engine=rng_eng_init_mass%p)
                       else
                          call UniformRNG(random)
                       end if
