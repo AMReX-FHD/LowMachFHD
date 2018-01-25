@@ -24,7 +24,7 @@ OPT3="--avg_type 1"
 
 # which random number generator 
 OPTMISC1="--use_bl_rng F --seed 0"
-#OPTMISC1="--use_bl_rng T --seed_diffusion 0 --seed_reaction 0 --seed_init 0"
+#OPTMISC1="--use_bl_rng T --seed_diffusion 0 --seed_reaction 0 --seed_init_mass 0"
 
 # for testing with large dt
 #OPTMISC2="--fixed_dt 0.1  --max_step 110000  --print_int 10000  --hydro_grid_int 10  --n_steps_skip 10000"
