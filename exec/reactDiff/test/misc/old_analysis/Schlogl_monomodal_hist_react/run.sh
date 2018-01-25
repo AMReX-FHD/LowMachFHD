@@ -43,7 +43,7 @@ OPT5="--fixed_dt 1.    --max_step 110000    --print_int 1000    --hydro_grid_int
 
 # rng
 OPT6="--use_bl_rng F --seed 0"
-#OPT6="--use_bl_rng T --seed_diffusion 0 --seed_reaction 0 --seed_init 0"
+#OPT6="--use_bl_rng T --seed_diffusion 0 --seed_reaction 0 --seed_init_mass 0"
 
 #######
 # RUN #

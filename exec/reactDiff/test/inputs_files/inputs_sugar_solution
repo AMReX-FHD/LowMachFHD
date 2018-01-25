@@ -62,7 +62,7 @@
   ! if -1 (only for restart), RNGs status is restored from checkpoint data
   seed_diffusion = 0
   seed_reaction = 0
-  seed_init = 0
+  seed_init_mass = 0
 
   ! Initial conditions
   !----------------------

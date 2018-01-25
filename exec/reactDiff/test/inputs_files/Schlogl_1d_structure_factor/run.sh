@@ -32,7 +32,7 @@ OPT3="--max_step 60000  --n_steps_skip 10000 --hydro_grid_int 1 --print_int 1000
 
 # which random number generator 
 OPTMISC1="--use_bl_rng F --seed 0"
-#OPTMISC1="--use_bl_rng T --seed_diffusion 0 --seed_reaction 0 --seed_init 0"
+#OPTMISC1="--use_bl_rng T --seed_diffusion 0 --seed_reaction 0 --seed_init_mass 0"
 
 OPTS="$OPT1 $OPT2 $OPT3 $OPTMISC1"
 

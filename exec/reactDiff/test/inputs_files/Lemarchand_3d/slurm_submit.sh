@@ -33,7 +33,7 @@ OPT3="--fixed_dt 0.25 --max_step 1000 --plot_int 20 --print_int 4"
 
 # which random number generator 
 OPTMISC1="--use_bl_rng F --seed 0"
-#OPTMISC1="--use_bl_rng T --seed_diffusion 0 --seed_reaction 0 --seed_init 0"
+#OPTMISC1="--use_bl_rng T --seed_diffusion 0 --seed_reaction 0 --seed_init_mass 0"
 
 # max_grid_size
 OPTMISC2="--max_grid_size_x 64 --max_grid_size_y 64 --max_grid_size_z 64"

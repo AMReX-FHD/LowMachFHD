@@ -29,7 +29,7 @@ OPT4="--fixed_dt 0.5 --max_step  20000 --print_int  20 --n_steps_write_avg 2 --p
 
 # which random number generator 
 OPTMISC1="--use_bl_rng F --seed 0"
-#OPTMISC1="--use_bl_rng T --seed_diffusion 0 --seed_reaction 0 --seed_init 0"
+#OPTMISC1="--use_bl_rng T --seed_diffusion 0 --seed_reaction 0 --seed_init_mass 0"
 
 OPTS="$OPT1 $OPT2 $OPT3 $OPT4 $OPTMISC1"
 

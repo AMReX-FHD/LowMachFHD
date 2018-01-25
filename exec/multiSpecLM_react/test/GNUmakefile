@@ -4,7 +4,7 @@ AMREX_HOME := ../../../../../amrex
 HYDROLIB_HOME := ../../../../HydroGrid
 STAGGERED_HOME := ../../..
 
-NDEBUG    :=
+NDEBUG    := t
 MPI       := t
 OMP       :=
 PROF      :=
