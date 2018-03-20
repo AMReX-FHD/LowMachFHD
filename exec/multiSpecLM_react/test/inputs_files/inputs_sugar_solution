@@ -3,8 +3,7 @@
 ! species 3: fructose (solute; B)
 ! species 4: water    (solvent; W)
 !
-! if reaction is on (by setting nreaction=2), we consider the hydrolysis of sucrose: 
-! G + W <-> R + B
+! hydrolysis of sucrose: G + W <-> R + B
 
 &probin_common
  
@@ -13,21 +12,20 @@
   dim_in = 2                            ! 2D or 3D  
   prob_type = 2                         ! see src_lowmach/init_lowmach.f90
                                         ! 2 = const conc grad along y
-                                        ! 3 = one fluid on top of another
   prob_lo(1:3) = 0. 0. 0.               ! physical lo coordinate
-  prob_hi(1:3) = 8.e-5 8.e-5 0.16       ! physical hi coordinate
+  prob_hi(1:3) = 3.2e-3 3.2e-3 1.e-4    ! physical hi coordinate
   n_cells(1:3) = 32 32 1                ! number of cells in domain
   max_grid_size(1:3) = 16 16 1          ! max number of cells in a box
 
   ! Time-step control
   !----------------------
-  fixed_dt = 2.5e-8                     ! time step (if positive, fixed)
+  fixed_dt = 5.e-5                      ! time step (if positive, fixed)
   cfl = 0.5                             ! advective cfl number (used if fixed_dt<0) to determine time step
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 1000                       ! maximum number of time steps
-  plot_int = 100                        ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 10000                      ! maximum number of time steps
+  plot_int = 0                          ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = -1                          ! Interval for writing a checkpoint
   restart = -1                          ! checkpoint restart number
   print_int = 100                       ! how often to output EOS drift and sum of conserved quantities
@@ -38,8 +36,9 @@
   grav(1:2) = 0. 0.                     ! gravity vector (negative is downwards)
   nspecies = 4
   ! molecular masses for nspecies (mass per molecule, *not* molar mass)
-  molmass(1:4) = 2.9917e-22 5.6842e-22 2.9917e-22 2.992-23
+  molmass(1:4) = 2.9917e-22 5.6842e-22 2.9917e-22 0.2992-22
   rhobar(1:4) = 1. 1. 1. 1.             ! pure component densities for all species (chosen from EOS)
+  rho0 = 1.                             ! used in some Boussinesq algorithms
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
   variance_coef_mom = 1.                ! global scaling epsilon for stochastic momentum forcing
@@ -48,11 +47,12 @@
 
   ! Algorithm control / selection
   !----------------------
-  algorithm_type = 5                    ! 0 = Inertial algorithm (trapezoidal)
+  algorithm_type = 6                    ! 0 = Inertial algorithm (trapezoidal)
                                         ! 2 = Overdamped with 2 RNGs
                                         ! 3 = Iterative
                                         ! 4 = imp_bousq
                                         ! 5 = Inertial algorithm (midpoint)
+                                        ! 6 = Boussinesq
 
   ! Random number generator
   !----------------------
@@ -81,7 +81,7 @@
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
   visc_type = 2
-  visc_coef = 8.5e-3                    ! momentum diffusion coefficient 'eta'   
+  visc_coef = 1.002e-2                  ! momentum diffusion coefficient 'eta'   
 
   advection_type = 0                    ! 0 = centered explicit
                                         ! 1 = unlimited bilinear bds in space and time
@@ -102,8 +102,9 @@
   !----------------------
   u_init(1:2) = 0. 0.                   ! controls initial velocity
   smoothing_width = 1.                  ! scale factor for smoothing initial profile
-  initial_variance_mom = 1.                 ! multiplicative factor for initial fluctuations
+  initial_variance_mom = 1.             ! multiplicative factor for initial fluctuations
                                         ! (if negative, total momentum is set to zero)
+  initial_variance_mass = 0.            ! multiplicative factor for initial mass fluctuations
 
   ! Boundary conditions
   !----------------------
@@ -134,7 +135,7 @@
 
   ! Control for analyze_spectra.90 for calling HydroGrid
   !----------------------
-  hydro_grid_int = 0                    ! How often to call updateHydroGrid
+  hydro_grid_int = 1                    ! How often to call updateHydroGrid
                                         ! 0 if never
                                         ! negative for projectHydroGrid custom analysis
                                         ! positive for updateHydroGrid
@@ -151,12 +152,12 @@
                                         ! If positive, how often to compute mean and 
                                         ! standard deviation over reduced dimensions
   n_steps_save_stats = -1               ! How often to dump HydroGrid output files
-  n_steps_skip = 100                    ! How many steps to skip
+  n_steps_skip = 1000                   ! How many steps to skip
   analyze_conserved = F                 ! Should we use conserved variables for the analysis
                                         ! (does not work well)
   center_snapshots = F                  ! Should we use cell-centered momenta for the analysis
                                         ! (will smooth fluctuations)
-  histogram_unit = -1                   ! If positive, write the values of the densities
+  histogram_unit = 10                   ! If positive, write the values of the densities
                                         ! to a file for histogramming
 /
 
@@ -196,7 +197,7 @@
 
   ! Initial and boundary conditions 
   !----------------------
-  T_init(1:2) = 300. 300.               ! initial values for temperature (bottom/top, inside/outside circle, etc.)
+  T_init(1:2) = 293. 293.               ! initial values for temperature (bottom/top, inside/outside circle, etc.)
   temp_type = 0                         ! for initializing temperature
 
   ! initial values for w
@@ -213,7 +214,7 @@
 
   ! Algorithm control
   !----------------------
-  midpoint_stoch_mass_flux_type = 2     ! 1 = Strato
+  midpoint_stoch_mass_flux_type = 1     ! 1 = Strato
                                         ! 2 = Ito
 
   avg_type = 1                          ! how to compute stochastc_mass_fluxdiv
@@ -241,14 +242,14 @@
   ! Example: For N1 + 2*N2 -> N3 use
   ! stoichiometric_factors(1:3,1,1) = 1 2 0
   ! stoichiometric_factors(1:3,2,1) = 0 0 1
-  ! R + B -> G + W
   ! G + W -> R + B
-  stoichiometric_factors(1:4,1,1) = 1 0 1 0
-  stoichiometric_factors(1:4,2,1) = 0 1 0 1
-  stoichiometric_factors(1:4,1,2) = 0 1 0 1
-  stoichiometric_factors(1:4,2,2) = 1 0 1 0
+  ! R + B -> G + W
+  stoichiometric_factors(1:4,1,1) = 0 1 0 1
+  stoichiometric_factors(1:4,2,1) = 1 0 1 0
+  stoichiometric_factors(1:4,1,2) = 1 0 1 0
+  stoichiometric_factors(1:4,2,2) = 0 1 0 1
 
-  rate_const(1:2) = 6.750773e-21 1.805000e+05 
+  rate_const(1:2) = 1.000000e+01 3.740040e-25
   rate_multiplier = 1. 
 
   include_discrete_LMA_correction = T
@@ -297,6 +298,7 @@
   mg_nsmooths_bottom = 8                ! number of smooths at the bottom (only if mg_bottom_solver=0)
   mg_max_bottom_nlevels = 10            ! for mg_bottom_solver=4, number of additional levels of multigrid
   mg_rel_tol = 1.e-10                   ! relative tolerance stopping criteria
+  mg_abs_tol = 1.e-14                   ! absolute tolerance stopping criteria
 
   ! Staggered multigrid solver parameters
   stag_mg_verbosity = 0                 ! verbosity (set to 1 for debugging the gmres solver!)

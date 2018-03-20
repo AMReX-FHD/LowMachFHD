@@ -1,139 +1,194 @@
 import math
 import numpy as np
-import numpy.linalg
 
-# assume cgs units
+################################################################################
+# hydrolysis of sucrose:
+# sucrose + water <-> glucose + fructose
+#    G    +   W   <->    R    +    B
+# C12H22O11 + H2O <-> C6C12O6 + C6O12O6
+################################################################################
 
-# C12H22O11 (sucrose) + H2O (water) -> C6H12O6 (glucose) + C6H12O6 (fructose)
-# R = glucose
-# G = sucrose
-# B = fructose
-# W = water
+print
+print "#########################"
+print "# Hydrolysis of sucrose #"
+print "#########################"
+print
+print "* in cgs units"
+print 
 
-# Avogadro number
-NA = 6.022e23
+################################################################################
+# physical parameters
+################################################################################
 
-# mass of a single molecule
-mR = 180.16/NA 
-mG = 342.30/NA 
+# basic constants
+NA = 6.022e23           # Avogadro's number
+kB = 1.381e-16          # Bolzmann's constant
+
+# parameters for aqueous solution
+T = 293.                # temperature
+rho0 = 1.               # mass density
+eta = 1.e-2             # shear viscosity
+
+# molecular mass of each species (per single molecule)
+mR = 180.16/NA
+mG = 342.30/NA
 mB = 180.16/NA
 mW =  18.02/NA
-print "mR = %e, mG = %e, mB = %e, mW = %e" % (mR,mG,mB,mW)
 
-# equilibrium constant (w.r.t. concentration)
+# equilibrium constant
 #  from Goldberg et al. J. Biol. Chem. 264, 9901 (1989)
-K0 = 4.44e4
+Kc = 4.44e4             # for concentration (mol/L), c_i = n_i/NA*1e3
+K = NA/1e3*Kc           # for number density
 
-# equilibrium constant (w.r.t. number density)
-K = NA/1e3*K0
-print "equilibrium constant: K0 = %e (conc), K = %e (num dens)" % (K0,K)
-
-# hydrolysis rate constant (HCl-catalyzed)
+# rate constant (for dissociation)
 #  from Tombari et al. J. Phys. Chem. B 111, 496 (2007)
-kd = 1.805e5
+#kd = 1.805e-5
+kd = 10. 
 
-# dissociation rate constant (w.r.t. number density)
-ka = kd/K
-print "rate const: kd = %e, ka = %e" % (kd,ka)
+# trace diffusion coefficient of glucose in water
+#  from Venancio et al. Biotechnology Techniques 11, 183 (1997)
+DR = 7.0e-6
 
-# cell size
-dx = 2.5e-6
-dz = 0.16
-dV = dx**2*dz
-print "dx = dy = %e, dz = %e, dV = %e" % (dx,dz,dV)
+# trace diffusion coefficient of sucrose in water
+#  from Tilley et al. J. Phys. Chem. 71, 2756 (1967)
+DG = 5.25e-6
 
-# number densities of R/G/B molecules
-NG = 10 
-nG = NG/dV
-nR = math.sqrt(K*nG)
-nB = math.sqrt(K*nG)
-NR = nR*dV
-NB = nB*dV
-
-print "NR = %e, NG = %e, NB = %e" % (NR,NG,NB)
-print "nR = %e, nG = %e, nB = %e" % (nR,nG,nB)
-print "cR = %e, cG = %e, cB = %e" % (1e3*nR/NA,1e3*nG/NA,1e3*nB/NA)
-
-# mass densities of R/G/B molecules
-rhoR = nR*mR
-rhoG = nG*mG
-rhoB = nB*mB
-print "rhoR = %e, rhoG = %e, rhoB = %e" % (rhoR,rhoG,rhoB)
-
-# assume rhobar = rho for all species (Boussinesq approximation)
-rho = 1.
-print "rhobarR = rhobarG = rhobarB = rhobarW = %e, rhoTot = %e" % (rho,rho)
-
-# W molecules
-rhoW = rho-rhoR-rhoG-rhoB
-nW = rhoW/mW
-NW = nW*dV
-print "rhoW = %e, nW = %e, NW = %e" % (rhoW,nW,NW)
+# trace diffusion coefficient of fructose in water
+#  from Venancio et al. Biotechnol. Tech. 11, 183 (1997)
+DB = 6.84e-6
 
 # self-diffusion coefficient of water 
 #  from Krynicki et al. Faraday Discuss. Chem. Soc. 66, 199 (1978)
 DW = 2.30e-5
-# tracer-diffusion coefficient of sucrose in water
-#  from Tilley et al. J. Phys. Chem. 71, 2756 (1967)
-DG = 5.25e-6
-# tracer-diffusion coefficient of glucose in water
-#  from Venancio et al. Biotechnology Techniques 11, 183 (1997)
-DR = 7.0e-6
-# tracer-diffusion coefficient of fructose in water
-#  from Venancio et al. Biotechnol. Tech. 11, 183 (1997)
-DB = 6.84e-6
+
+################################################################################
+# numerical parameters
+################################################################################
+
+# number of sucrose molecules
+NG = 10
+
+# cell dimensions
+dx = 1.e-4
+dz = 1.e-4
+
+# time step size
+dt = 5.e-5
+
+################################################################################
+# equilibrium composition
+################################################################################
+
+dv = dx*dx*dz
+
+nG = NG/dv
+nR = math.sqrt(K*nG) 
+nB = nR
+
+rhoR = mR*nR
+rhoG = mG*nG
+rhoB = mB*nB
+rhoW = rho0 - rhoR - rhoG - rhoB
+
+nW = rhoW/mW
+
+NR = nR*dv 
+NB = nB*dv 
+NW = nW*dv 
+
+cR = 1e3/NA*nR
+cG = 1e3/NA*nG
+cB = 1e3/NA*nB
+cW = 1e3/NA*nW
+
+print "dx= %e\tdz= %e\tdv= %e"  % (dx,dz,dv)
+print 
+
+print "mR=   %e\tmG=   %e\tmB=   %e\tmW=   %e" % (mR,mG,mB,mW)
+print "nR=   %e\tnG=   %e\tnB=   %e\tnW=   %e" % (nR,nG,nB,nW)
+print "rhoR= %e\trhoG= %e\trhoB= %e\trhoW= %e" % (rhoR,rhoG,rhoB,rhoW)
+print "NR=   %e\tNG=   %e\tNB=   %e\tNW=   %e" % (NR,NG,NB,NW)
+print "cR=   %e\tcG=   %e\tcB=   %e\tcW=   %e" % (cR,cG,cB,cW)
+print
+
+#print "check:"
+#print "cR*cB/cG %e" % (cR*cB/cG)
+#print "Kc       %e" % (Kc)
+#print 
+
+if (rhoW/rho0<0.99):
+  print "Warning: rhoW/rho0= %e" % (rhoW/rho)
+
+################################################################################
+# reaction
+################################################################################
+
+ka = kd/K
+r = kd+ka*(nR+nB)
+
+print "K=  %e\tKc= %e" % (K,Kc)
+print "kd= %e\tka= %e" % (kd,ka)
+print "r= %e" % (r)
+print
+
+################################################################################
+# diffusion
+################################################################################
 
 D12 = DR*DG/DW
 D13 = DR*DB/DW
 D14 = DR
-D23 = DG*DB/DW 
+D23 = DG*DB/DW
 D24 = DG
 D34 = DB
-print "diff coeff: DR = %e, DG = %e, DB = %e, DW = %e" % (DR,DG,DB,DW)
-print "D12 = %e, D13 = %e, D14 = %e, D23 = %e, D24 = %e, D34 = %e" % (D12,D13,D14,D23,D24,D34)
 
-# rough estimate for NTot
-Napprox = rho/mW*dV
-print "total number of molecules per cell: %e (approx)" % Napprox 
+pendep = math.sqrt(min(DR,DG,DB)/r)
 
-# physical parameters
-kT = 1.381e-16*300. 
-# kinematic viscosity from http://www.viscopedia.com/viscosity-tables/substances/water/
-nu = 0.0085
-print "kT = %e" % kT
-print "nu = %e" % nu
+print "D12= %e\tD13= %e\tD23= %e\tD14= %e\tD24= %e\tD34= %e" % (D12,D13,D23,D14,D24,D34)
+print "pendep= %e\tdx= %e\tpendep/dx= %e" % (pendep,dx,pendep/dx)
+print
 
-# random advection
-uRand = math.sqrt(kT/mW/Napprox)
-print "magnitude of random advection: %e" % uRand
+################################################################################
+# advection
+################################################################################
 
-# cell Peclet number 
-print "cell Peclet number: %e" % (uRand*dx/min(DR,DG,DB))
+urand = math.sqrt(kB*T/rho0/dv)
+cellPe = urand*dx/min(DR,DG,DB)
 
-# linearized reaction rate and penetration length
-r = ka*(nR+nB)+kd
-print "linearized reaction rate = %e" % r
-print "penetration length / dx = %e" % (math.sqrt(min(DR,DG,DB)/r)/dx)
+print "urand= %e" % (urand)
+print "cell Pe= %e" % (cellPe)
+print
 
-# reaction counts
-dt = 2.5e-8
-print "dt = %e" % dt
-print "fwd reactions per time = %e" % (ka*nR*nB*dV*dt)
-print "bwd reactions per time = %e" % (kd*nG*dV*dt)
+################################################################################
+# CFL numbers 
+################################################################################
 
-# cfl numbers
-print "D*dt/dx^2 = %e" % (max(DR,DG,DB,DW)*dt/dx**2)
-print "nu*dt/dx^2 = %e" % (nu*dt/dx**2)
-print "u*dt/dx = %e" % (uRand*dt/dx)
+advCFL = urand*dt/dx
+massCFL = max(DR,DG,DB)*dt/dx**2
+momCFL = (eta/rho0)*dt/dx**2
+
+print "dt= %e" % (dt)
+print "adv_CFL= %e" % (advCFL)
+print "mass_diff_CFL= %e" % (massCFL)
+print "mom_diff_CFL= %e" % (momCFL)
+print
+
+################################################################################
+# reaction occurrences 
+################################################################################
+
+print "forward reactions/cell/timestep= %e" % (kd*nG*dv*dt)
+print "backard raactions/cell/timestep= %e" % (ka*nR*nB*dv*dt)
+print
 
 ################################################################################
 # structure factor
 ################################################################################
 
-wR = rhoR/rho
-wG = rhoG/rho
-wB = rhoB/rho
-wW = rhoW/rho
+wR = rhoR/rho0
+wG = rhoG/rho0
+wB = rhoB/rho0
+wW = rhoW/rho0
 
 print "wR = %e, wG = %e, wB = %e, wW = %e" % (wR,wG,wB,wW)
 
@@ -152,6 +207,7 @@ one = np.ones(4)
 oneone = np.outer(one,one)
 
 tmp = np.linalg.inv(X-xxxx+oneone)
-Sw = mbar/rho*np.dot(np.dot(W-wwww,tmp),W-wwww)
+Sw = mbar/rho0*np.dot(np.dot(W-wwww,tmp),W-wwww)
 
-print rho*rho*Sw
+print rho0*rho0*Sw
+

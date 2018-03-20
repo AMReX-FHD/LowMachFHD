@@ -1,7 +1,7 @@
 #!/bin/bash
 
 RUNNAME=TEST
-NRUN=4
+NRUN=16
 
 if [ $NRUN == 1 ]
 then
@@ -22,14 +22,13 @@ fi
 # copy results to RUNNAME              #
 ########################################
 
+# python hist_N.py input_column norm_factor Nav Nmin Nmax show_plot(yes/no) save_plot(yes/no) 
 PYSCR1="../../analysis/hist/hist_N.py"
-PYSCR1OPTS="1 2.991559e-07 10 -2 30 no yes"
-#PYSCR1OPTS="2 5.683967e-07  5 -2 20 no yes"
+PYSCR1OPTS="2 5.684158e-10 10 -2 30 no yes"
 
+# python hist_N_near_zero.py input_column norm_factor nbin Nmin Nmax show_plot(yes/no) save_plot(yes/no)
 PYSCR2="../../analysis/hist/hist_N_near_zero.py"
-PYSCR2OPTS="1 2.991559e-07 101 -1 2 no yes"
-#PYSCR2OPTS="2 5.683967e-07 101 -1 2 no yes"
-#PYSCR2OPTS="3 2.991559e-07 101 -1e-11 1e-11 no yes"
+PYSCR2OPTS="2 5.684158e-10 101 -1 2 no yes"
 
 PYSCR3="../../analysis/hist/stat_plot.py"
 

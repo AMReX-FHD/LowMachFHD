@@ -3,31 +3,33 @@
 EXEC=../../main.Linux.gfortran.mpi.exe
 INPUTS=../inputs_sugar_solution
 RUNNAME=TEST
-NRUN=1
+NRUN=16
 
 ###########
 # OPTIONS #
 ###########
 
-# which algorithm (5=inertial midpoint, 2=overdamped, 0=inertial trapezoidal)
-OPT1="--algorithm_type 5"
-#OPT1="--algorithm_type 2"
-#OPT1="--algorithm_type 0"
+# which temporal integrator
+#OPT1="--algorithm_type 0"      # inertial trapezoidal
+#OPT1="--algorithm_type 2"      # overdamped
+#OPT1="--algorithm_type 5"      # inertial midpoint
+OPT1="--algorithm_type 6"       # Boussinesq
 
 # reaction on/off
 OPT2="--nreactions 2"
 #OPT2="--nreactions 0"
 
+# random advection on/off
+OPT3="--variance_coef_mom 1. --initial_variance_mom 1. --gmres_abs_tol 0. --mg_abs_tol 1.e-14"
+#OPT3="--variance_coef_mom 0. --initial_variance_mom 0. --gmres_abs_tol 1.e-10 --mg_abs_tol 1.e-10"
+
+# time step size
+OPT4="--fixed_dt 5.e-5"
+
 # task (check gmres solver | plot files | structure factor & histogram)
-#OPT3="--max_step 10      --plot int 0   --print_int 10  --hydro_grid_int 0 --n_steps_skip 0    --gmres_verbose 1"
-OPT3="--max_step 1000    --plot_int 100 --print_int 100 --hydro_grid_int 0 --n_steps_skip 0"
-#OPT3="--max_step 10000   --plot_int 0   --print_int 100 --hydro_grid_int 1 --n_steps_skip 1000 --histogram_unit 10"
-
-# dt, dz, rate_multiplier, avg_type
-OPT4="--fixed_dt 2.5e-8 --prob_hi_z 0.16 --rate_multiplier 1. --avg_type 1"
-
-# turn off gmres solver (velocity becomes exactly zero)
-OPT5="--variance_coef_mom 0. --initial_variance 0. --gmres_abs_tol 1.e-10 --mg_abs_tol 1.e-10"
+#OPT5="--max_step 10      --plot int 0   --print_int 10  --hydro_grid_int 0 --n_steps_skip 0    --gmres_verbose 1"
+#OPT5="--max_step 1000    --plot_int 100 --print_int 100 --hydro_grid_int 0 --n_steps_skip 0"
+OPT5="--max_step 10000   --plot_int 0   --print_int 100 --hydro_grid_int 1 --n_steps_skip 1000 --histogram_unit 10"
 
 # misc options
 OPTMISC=""
