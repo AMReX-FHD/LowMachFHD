@@ -24,12 +24,12 @@ OPT3="--variance_coef_mom 1. --initial_variance_mom 1. --gmres_abs_tol 0. --mg_a
 #OPT3="--variance_coef_mom 0. --initial_variance_mom 0. --gmres_abs_tol 1.e-10 --mg_abs_tol 1.e-10"
 
 # time step size
-OPT4="--fixed_dt 5.e-5"
+OPT4="--fixed_dt 1.e-5"
 
 # task (check gmres solver | plot files | structure factor & histogram)
 #OPT5="--max_step 10      --plot int 0   --print_int 10  --hydro_grid_int 0 --n_steps_skip 0    --gmres_verbose 1"
 #OPT5="--max_step 1000    --plot_int 100 --print_int 100 --hydro_grid_int 0 --n_steps_skip 0"
-OPT5="--max_step 10000   --plot_int 0   --print_int 100 --hydro_grid_int 1 --n_steps_skip 1000 --histogram_unit 10"
+OPT5="--max_step 100000   --plot_int 0   --print_int 1000 --hydro_grid_int 10 --n_steps_skip 10000 --histogram_unit 10"
 
 # misc options
 OPTMISC=""
