@@ -16,8 +16,6 @@ program main
 
   call bl_prof_initialize(on = .true.)
 
-  !call layout_set_verbosity(1)
-
   call main_driver()
 
   call print_and_reset_fab_byte_spread()
