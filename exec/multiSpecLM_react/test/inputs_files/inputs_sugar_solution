@@ -36,7 +36,7 @@
   grav(1:2) = 0. 0.                     ! gravity vector (negative is downwards)
   nspecies = 4
   ! molecular masses for nspecies (mass per molecule, *not* molar mass)
-  molmass(1:4) = 2.9917e-22 5.6842e-22 2.9917e-22 0.2992-22
+  molmass(1:4) = 2.9917e-22 5.6842e-22 2.9917e-22 0.2992e-22
   rhobar(1:4) = 1. 1. 1. 1.             ! pure component densities for all species (chosen from EOS)
   rho0 = 1.                             ! used in some Boussinesq algorithms
 

@@ -28,7 +28,7 @@ PYSCR1OPTS="2 5.684158e-10 10 -2 30 no yes"
 
 # python hist_N_near_zero.py input_column norm_factor nbin Nmin Nmax show_plot(yes/no) save_plot(yes/no)
 PYSCR2="../../analysis/hist/hist_N_near_zero.py"
-PYSCR2OPTS="2 5.684158e-10 101 -1 2 no yes"
+PYSCR2OPTS="2 5.684158e-10 31 -1 2 no yes"
 
 PYSCR3="../../analysis/hist/stat_plot.py"
 
