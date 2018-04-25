@@ -127,7 +127,7 @@
 
   ! Control for analyze_spectra.90 for calling HydroGrid
   !----------------------
-  hydro_grid_int = 100                  ! How often to call updateHydroGrid
+  hydro_grid_int = 10                   ! How often to call updateHydroGrid
                                         ! 0 if never
                                         ! negative for projectHydroGrid custom analysis
                                         ! positive for updateHydroGrid
@@ -144,7 +144,7 @@
                                         ! If positive, how often to compute mean and 
                                         ! standard deviation over reduced dimensions
   n_steps_save_stats = -1               ! How often to dump HydroGrid output files
-  n_steps_skip = 20000                  ! How many steps to skip
+  n_steps_skip = 10000                  ! How many steps to skip
   analyze_conserved = T                 ! Should we use conserved variables for the analysis
                                         ! (does not work well)
   center_snapshots = F                  ! Should we use cell-centered momenta for the analysis
@@ -189,7 +189,7 @@
 
   ! Initial and boundary conditions 
   !----------------------
-  T_init(1:2) = 1.e4 1.e4               ! initial values for temperature (bottom/top, inside/outside circle, etc.)
+  T_init(1:2) = 1.e3 1.e3               ! initial values for temperature (bottom/top, inside/outside circle, etc.)
   temp_type = 0                         ! for initializing temperature
 
   ! initial values for w
@@ -244,15 +244,11 @@
   ! for mole fraction based LMA
   use_mole_frac_LMA = T
 
-  !rate_const(1:2) = 1. 1.290564        ! N0=20
-  rate_const(1:2) = 1. 1.311528         ! N0=40
-  !rate_const(1:2) = 1. 1.318704        ! N0=60
+  rate_const(1:2) = 0.7755 1.           ! N0=40, K=0.7755
 
   include_discrete_LMA_correction = F
 
-  !rate_multiplier = 0.421875           ! N0=20, d = sqrt(10)*dx, k1 = 27*N0/1280
-  rate_multiplier = 0.84375             ! N0=40
-  !rate_multiplier = 1.265625           ! N0=60
+  rate_multiplier = 1.125               ! N0=40, d=sqrt(10)*dx, k2=9*N0/320
 
   ! if positive n, exclude species n (=solvent) when computing reaction rates
   ! in this case, the concentration of the solvent is assumed to be constant,

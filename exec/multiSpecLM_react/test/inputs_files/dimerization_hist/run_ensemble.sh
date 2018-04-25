@@ -11,24 +11,21 @@ NPROC=1
 ###########
 
 # number of atoms per cell
-#OPT1="--rho0 20. --rate_const_1 1. --rate_const_2 1.290564"    # N0=20
-OPT1="--rho0 40. --rate_const_1 1. --rate_const_2 1.311528"     # N0=40
-#OPT1="--rho0 60. --rate_const_1 1. --rate_const_2 1.318704"    # N0=60
+OPT1="--rho0 40. --rate_const_1 0.7755 --rate_const_2 1."       # N0=40, K=0.7755
 
 # reaction on/off
 #OPT2="--rate_multiplier 0."            # reaction off
-#OPT2="--rate_multiplier 0.421875"      # N0=20, d = sqrt(10)*dx, k1 = 27*N0/1280
-OPT2="--rate_multiplier 0.84375"        # N0=40
-#OPT2="--rate_multiplier 1.265625"      # N0=60
+OPT2="--rate_multiplier 1.125"          # N0=40, d=sqrt(10)*dx, k2=9*N0/320
 
-# advection type
-OPT3="--advection_type 0"
+# advection on/off
+OPT3="--variance_coef_mom 1. --initial_variance_mom 1. --advection_type 0"
+#OPT3="--variance_coef_mom 0. --initial_variance_mom 0. --gmres_abs_tol 1.e-10 --mg_abs_tol 1.e-10"
 
 # temperature
-OPT4="--T_init_1 1.e4 --T_init_2 1.e4"
+OPT4="--T_init_1 1.e3 --T_init_2 1.e3"
 
 # time step size
-OPT5="--fixed_dt 1.e-2 --max_step 100000 --plot_int 0 --print_int 1000 --hydro_grid_int 100 --n_steps_skip 20000 --histogram_unit 10"
+OPT5="--fixed_dt 1.e-2 --max_step 100000 --plot_int 0 --print_int 1000 --hydro_grid_int 10 --n_steps_skip 10000 --histogram_unit 10"
 
 # Stratonovich or Ito
 OPT6="--midpoint_stoch_mass_flux_type 1"
