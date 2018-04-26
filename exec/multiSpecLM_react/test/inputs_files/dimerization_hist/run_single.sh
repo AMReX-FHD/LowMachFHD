@@ -10,11 +10,11 @@ NPROC=4
 ###########
 
 # number of atoms per cell
-OPT1="--rho0 40. --rate_const_1 0.7755 --rate_const_2 1."       # N0=40, K=0.7755
+OPT1="--rho0 40. --rate_const_1 0.7755 --rate_const_2 1."               # N0=40, K=0.7755
 
 # reaction on/off
-#OPT2="--rate_multiplier 0."            # reaction off
-OPT2="--rate_multiplier 1.125"          # N0=40, d=sqrt(10)*dx, k2=9*N0/320
+OPT2="--rate_multiplier 1.125 --include_discrete_LMA_correction T"      # N0=40, d=sqrt(10)*dx, k2=9*N0/320
+#OPT2="--nreactions 0"                                                  # reaction off
 
 # advection on/off
 OPT3="--variance_coef_mom 1. --initial_variance_mom 1. --advection_type 0"
@@ -76,10 +76,6 @@ rm rho1 rho2 rhotot
 
 if [ -f fort.10 ]
 then
-  echo "try: (N0=20) cd $RUNNAME; python ../../../analysis/hist/hist_N.py 2 2. 5 0 10 yes yes"
-  echo "     gnuplot> set log y; plot \"../res.hist_CME_20\" u ((20-\$1)/2):2 w l,\"res.hist\" w l"
-  echo "     (N0=40) cd $RUNNAME; python ../../../analysis/hist/hist_N.py 2 2. 10 0 20 yes yes"
-  echo "     gnuplot> set log y; plot \"../res.hist_CME_40\" u ((40-\$1)/2):2 w l,\"res.hist\" w l"
-  echo "     (N0=60) cd $RUNNAME; python ../../../analysis/hist/hist_N.py 2 2. 15 0 30 yes yes"
-  echo "     gnuplot> set log y; plot \"../res.hist_CME_60\" u ((60-\$1)/2):2 w l,\"res.hist\" w l"
+  echo "try: (N0=40) cd $RUNNAME; python ../../../analysis/hist/hist_N.py 2 2. 10 0 20 yes yes"
+  echo "     gnuplot> set log y; plot \"../theo_eq_dist/res.hist_DetBal\" w lp,\"res.hist\" w lp"
 fi

@@ -246,7 +246,7 @@
 
   rate_const(1:2) = 0.7755 1.           ! N0=40, K=0.7755
 
-  include_discrete_LMA_correction = F
+  include_discrete_LMA_correction = T
 
   rate_multiplier = 1.125               ! N0=40, d=sqrt(10)*dx, k2=9*N0/320
 
