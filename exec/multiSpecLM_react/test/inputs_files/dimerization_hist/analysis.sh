@@ -94,9 +94,6 @@ eval paste $cmd_awk | awk '{sum1=0;sum2=0;for(i=1;i<=NF;i++){sum1+=$i;sum2+=$i*$
 paste <(awk '{print $1}' res.N_stat1) <(awk '{print $0}' $TMP) > res.N_stat_stat
 rm $TMP
 
-echo "try: cd $RUNNAME; gnuplot"
-echo "     gnuplot> set log y; plot \"../res.hist_CME_40\" u ((40-\$1)/2):2 w l,\"res.hist_stat\" u 1:2:(\$3*2) w e"
-
 ## Sk vtk
 
 cmd_awk=""
