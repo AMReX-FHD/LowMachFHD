@@ -24,10 +24,34 @@ contains
     integer :: reaction, species
 
     real(kind=dp_t) :: n_nonneg(nspecies)
+    real(kind=dp_t) :: n_sum
 
     n_nonneg(1:nspecies) = max(0.d0,n_in(1:nspecies))
 
-    if ((.not. include_discrete_LMA_correction) .and. (exclude_solvent_comput_rates .eq. 0)) then
+    if (use_mole_frac_LMA .and. include_discrete_LMA_correction) then
+    ! this is exclusively for the dimerization histogram example
+      do reaction=1, nreactions
+        reaction_rates(reaction) = rate_multiplier*rate_const(reaction)
+        n_sum = sum(n_nonneg(1:nspecies))
+
+        do species=1, nspecies
+          select case(stoichiometric_factors(species,1,reaction))
+          case(0)
+            ! Species does not participate in reaction
+          case(1)
+            ! rate ~ N/N_sum
+            reaction_rates(reaction) = reaction_rates(reaction)*n_nonneg(species)/n_sum
+          case(2)
+            ! rate ~ (N/N_sum)*((N-1)/(N_sum-1))
+            reaction_rates(reaction) = reaction_rates(reaction)*n_nonneg(species)/n_sum &
+              *(n_nonneg(species)-1.0d0/dv)/(n_sum-1.0d0/dv)
+          case default
+            ! This is essentially impossible in practice and won't happen
+            call bl_error("For use_mole_frac_LMA, include_discrete_LMA_correction is only for dimerization")
+          end select
+        end do
+      end do
+    else if ((.not. include_discrete_LMA_correction) .and. (exclude_solvent_comput_rates .eq. 0)) then
        ! if mole fraction based LMA is used, convert number densities into mole fractions
        if (use_mole_frac_LMA) then
           n_nonneg(1:nspecies) = n_nonneg(1:nspecies)/sum(n_nonneg(1:nspecies))

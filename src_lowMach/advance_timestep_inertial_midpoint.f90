@@ -152,10 +152,7 @@ contains
 
        if (use_mole_frac_LMA) then
           if (.not. is_ideal_mixture) then
-             call bl_error('Error: use_mole_frac_LMA should be used with is_ideal_mixture = T')
-          end if
-          if (include_discrete_LMA_correction) then
-             call bl_error('Error: currently use_mole_frac_LMA can be used only with include_discrete_LMA_correction=F')
+             call bl_error('Error: currently use_mole_frac_LMA can be used only with is_ideal_mixture = T')
           end if
           if (exclude_solvent_comput_rates .ne. 0) then
              call bl_error('Error: currently use_mole_frac_LMA can be used only with exclude_solvent_comput_rates=0')
