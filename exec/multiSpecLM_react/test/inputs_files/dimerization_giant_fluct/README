@@ -1,0 +1,13 @@
+slurm.sh and slurm_submit.sh are for running on a nersc machine
+
+1. go to the working directory: cd $SCRATCH
+
+2. create a project directory under the working directory
+
+3. copy the executable and slurm.sh on the project directory
+
+4. create a run directory under the project directory
+
+5. copy inputs_dimerization_giant_fluct and slurm_submit.sh on the run directory
+
+6. submit a job: ./slurm_submit.sh
