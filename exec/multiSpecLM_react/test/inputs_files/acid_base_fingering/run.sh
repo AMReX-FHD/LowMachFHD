@@ -1,23 +1,19 @@
 #!/bin/bash
 
 EXEC=../../main.Linux.gfortran.mpi.exe
-INPUTS=../inputs_asymm_convect_fingers
+INPUTS=../inputs_acid_base_fingering
 RUNNAME=TEST
-NPROC=8
+NPROC=4
 
 # domain size
-#OPT1="--prob_hi_x 0.8 --n_cells_x 128 --max_grid_size_x 64 --prob_hi_y 1.6 --n_cells_y 256 --max_grid_size_y 64"
-OPT1="--prob_hi_x 0.4 --n_cells_x 64  --max_grid_size_x 32 --prob_hi_y 0.8 --n_cells_y 128 --max_grid_size_y 32"
+OPT1="--prob_hi_x 0.4 --n_cells_x 64  --max_grid_size_x 32 --prob_hi_y 0.8 --n_cells_y 128 --max_grid_size_y 64"
 
 # time step
-OPT2="--fixed_dt 0.05 --max_step 400 --print_int 10 --plot_int 10"
-#OPT2="--fixed_dt 0.1  --max_step 200 --print_int 5  --plot_int 5"
-#OPT2="--fixed_dt 0.15 --max_step 150 --print_int 3  --plot_int 3"
+OPT2="--fixed_dt 0.01 --max_step 400 --print_int 10 --plot_int 10"
 
 # reaction
-OPT3="--nreactions 1 --use_Poisson_rng -1"     # det reactions
-#OPT3="--nreactions 1 --use_Poisson_rng 0"      # cle reactions
-#OPT3="--nreactions 1 --use_Poisson_rng 1"      # poisson reactions
+#OPT3="--nreactions 1 --use_Poisson_rng -1"     # det reactions
+OPT3="--nreactions 1 --use_Poisson_rng 0"       # cle reactions
 #OPT3="--nreactions 0"                          # no reaction
 
 # rate multiplier
