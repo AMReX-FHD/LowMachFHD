@@ -221,8 +221,7 @@ contains
     real(dp_t), intent(in)    :: rho_tot, variance
 
     ! local variables
-    real(dp_t) :: L(nspecies,nspecies)
-    real(dp_t) :: z(nspecies)
+    real(dp_t) :: z(nspecies), dc(nspecies)
     real(dp_t) :: factor
 
     real(dp_t) :: tmp
@@ -230,39 +229,25 @@ contains
 
     factor = sqrt(variance/product(dx(1:MAX_SPACEDIM)))
 
-    ! construct chelesky decomposition matrix L (S_w = L*L^T)
-    ! for ideal mixture, L = 1/sqrt(rho)*(I-w*1^T)*sqrt(W)*sqrt(M)
-    do j=1,nspecies
-       tmp = sqrt(c(j)*molmass(j)/rho_tot)
-       do i=1,nspecies
-          if (i.eq.j) then
-             L(i,j) = tmp*(1.d0-c(i))
-          else
-             L(i,j) = -tmp*c(i)
-          end if
-       end do
-    end do
-
     ! construct random vector z having nspecies N(0,1) random variables
     if (use_bl_rng) then
        call NormalRNGs(z, nspecies, engine=rng_eng_init_mass%p)
     else
        call NormalRNGs(z, nspecies)
     end if
+    
+    ! for ideal mixture, dw = 1/sqrt(rho)*(I-w*1^T)*sqrt(W)*sqrt(M)*N(0,1)
+    dc = factor*sqrt(c*molmass(1:nspecies)/rho_tot)*z
+    dc = dc - sum(dc)*c ! Make it sum to zero
 
-    ! add fluctuations
-    ! dw = L*z gives S_w = <dw*dw^T> = L*L^T = S_w
-    do i=1,nspecies
-       tmp = 0.d0
-       do j=1,nspecies
-          tmp = tmp + L(i,j)*z(j)
-       end do
-       c(i) = c(i) + factor*tmp
-    end do
-
+    c = c + dc ! add fluctuations
+    
     ! replace negative values by zero and normalize
-    c(1:nspecies) = max(c(1:nspecies),0.d0)
-    c(1:nspecies) = c(1:nspecies)/sum(c(1:nspecies))
+    c = max(c,0.d0)
+    c = c/sum(c)
+    
+    ! Now project onto electroneutral constraint if necessary:
+    
 
   end subroutine add_mass_fluctuations
 

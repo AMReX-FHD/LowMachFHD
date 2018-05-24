@@ -762,6 +762,8 @@ contains
 
        end do
     end do
+    
+    stop "DONEV DEBUG"
 
   end subroutine init_rho_and_umac_2d
 
