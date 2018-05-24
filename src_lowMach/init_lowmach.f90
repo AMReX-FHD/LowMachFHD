@@ -763,8 +763,6 @@ contains
        end do
     end do
     
-    stop "DONEV DEBUG"
-
   end subroutine init_rho_and_umac_2d
 
   subroutine init_rho_and_umac_3d(c,ng_c,rho,ng_r,u,v,w,ng_u,lo,hi,dx,time)
