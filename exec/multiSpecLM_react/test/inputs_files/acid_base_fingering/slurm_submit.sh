@@ -15,7 +15,7 @@ SLURMSCR=../slurm.sh
 ############
 
 EXEC=../main.Linux.gfortran.mpi.exe
-INPUTSFILE=inputs_asymm_convect_fingers
+INPUTSFILE=inputs_acid_base_fingering
 
 OPTS=
 

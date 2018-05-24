@@ -2,7 +2,7 @@
 
 EXEC=../../main.Linux.gfortran.mpi.exe
 INPUTS=inputs_3spec_giant_fluct_2d
-RUNNAME=nu1e3_alg6_64x32_short
+RUNNAME=TEST
 NPROC=4
 
 # visc_coef

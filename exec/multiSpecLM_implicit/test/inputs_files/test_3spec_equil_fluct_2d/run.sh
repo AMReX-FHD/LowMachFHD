@@ -2,11 +2,11 @@
 
 EXEC=../../main.Linux.gfortran.mpi.exe
 INPUTS=inputs_3spec_equil_fluct_2d
-RUNNAME=alg6_short
+RUNNAME=TEST
 NPROC=4
 
 # algorithm type
-OPT1="--algorithm_type 6"              # boussinesq
+OPT1="--algorithm_type 6"               # boussinesq
 #OPT1="--algorithm_type 0"              # inertial trapezoidal
 #OPT1="--algorithm_type 2"              # overdamped
 #OPT1="--algorithm_type 5"              # inertial midpoint

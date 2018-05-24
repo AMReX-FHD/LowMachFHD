@@ -46,7 +46,7 @@
 
   ! Algorithm control / selection
   !----------------------
-  algorithm_type = 0                    ! 0 = Inertial algorithm (trapezoidal)
+  algorithm_type = 6                    ! 0 = Inertial algorithm (trapezoidal)
                                         ! 2 = Overdamped with 2 RNGs
                                         ! 3 = iterative
                                         ! 4 = imp_bousq
