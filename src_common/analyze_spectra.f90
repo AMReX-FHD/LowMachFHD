@@ -432,14 +432,9 @@ contains
        else
           call copy(s_hydro,comp+1,rho(1),1,nspecies_analysis) ! copy rho_1,...,rho_n
           ! Compute total density as a sum of densities rho=\sum_{i=1}^{n} rho_i
-          ! potentially with some weighting to allow to compute things like index of refraction or such
           call setval(s_hydro, 0.0d0, comp) ! rho=0
           do species=1, nspecies_analysis
-             if(sum(abs(density_weights))>0.0d0) then
-                call multifab_saxpy_3_cc(s_hydro,comp,density_weights(species),s_hydro,species+comp,1)
-             else   
-                call multifab_plus_plus_c(s_hydro,comp,s_hydro,species+comp,1)
-             end if   
+             call multifab_plus_plus_c(s_hydro,comp,s_hydro,species+comp,1)
           end do
        end if
        
@@ -449,6 +444,19 @@ contains
              call multifab_div_div_c(s_hydro,species+comp,s_hydro,comp,1)
           end do
        end if
+       
+       ! For purposes of analyzing spectra compute "density" rho as a weighted sum of densities:
+       ! rho <- w_0 + \sum_{i=1}^{n} w_i*rho_i if analyze_conserved=T
+       ! rho <- w_0 + \sum_{i=1}^{n} w_i*(rho_i/rho) if analyze_conserved=T
+       ! the weighting allows us to compute things like index of refraction for shadowgraph experiments,
+       ! or a linearized rho_eos for Boussinesq models, or total charge density for electrohydrodynamics
+       if((nspecies_analysis>0).and.(.not.exclude_last_species).and.&
+          (sum(abs(density_weights(1:nspecies_analysis)))>0.0d0)) then
+          call setval(s_hydro, density_weights(0), comp) ! rho=0
+          do species=1, nspecies_analysis
+             call multifab_saxpy_3_cc(s_hydro,comp,density_weights(species),s_hydro,species+comp,1)
+          end do
+       end if       
 
        if (present(variable_names)) then
           variable_names(comp)="rho"

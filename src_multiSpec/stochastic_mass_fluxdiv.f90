@@ -23,7 +23,7 @@ module stochastic_mass_fluxdiv_module
 
   private
 
-  public :: init_mass_stochastic, destroy_mass_stochastic, add_mass_fluctuations, &
+  public :: init_mass_stochastic, destroy_mass_stochastic, &
             stochastic_mass_fluxdiv, fill_mass_stochastic
             
 
@@ -212,45 +212,6 @@ contains
     call destroy(bpt)
 
   end subroutine fill_mass_stochastic
-
-  ! Add local natural random fluctuations to the mass fractions assuming an ideal mixture
-  ! This routine does not require singling out a solvent but only works for ideal mixtures
-  subroutine add_mass_fluctuations(c,dx,variance,rho_tot)
-    real(dp_t), intent(inout) :: c(nspecies) ! Mass fractions
-    real(dp_t), intent(in)    :: dx(:)
-    real(dp_t), intent(in)    :: rho_tot, variance
-
-    ! local variables
-    real(dp_t) :: z(nspecies), dc(nspecies)
-    real(dp_t) :: factor
-
-    real(dp_t) :: tmp
-    integer    :: i,j
-
-    factor = sqrt(variance/product(dx(1:MAX_SPACEDIM)))
-
-    ! construct random vector z having nspecies N(0,1) random variables
-    if (use_bl_rng) then
-       call NormalRNGs(z, nspecies, engine=rng_eng_init_mass%p)
-    else
-       call NormalRNGs(z, nspecies)
-    end if
-    
-    ! for ideal mixture, dw = 1/sqrt(rho)*(I-w*1^T)*sqrt(W)*sqrt(M)*N(0,1)
-    dc = factor*sqrt(c*molmass(1:nspecies)/rho_tot)*z
-    dc = dc - sum(dc)*c ! Make it sum to zero
-
-    c = c + dc ! add fluctuations
-    
-    ! replace negative values by zero and normalize
-    c = max(c,0.d0)
-    c = c/sum(c)
-    
-    ! Now project onto electroneutral constraint if necessary:
-    
-
-  end subroutine add_mass_fluctuations
-
 
   subroutine stoch_mass_bc(mla,the_bc_level)
     

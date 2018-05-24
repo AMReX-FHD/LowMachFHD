@@ -16,8 +16,7 @@ module init_lowmach_module
                                   use_bl_rng, nspecies, algorithm_type, initial_variance_mass
   use probin_multispecies_module, only: alpha1, beta, delta, sigma, Dbar, Dtherm, &
                                         c_init, T_init, temp_type, sigma, is_ideal_mixture
-  use probin_charged_module, only: charge_per_mass
-  use stochastic_mass_fluxdiv_module, only: add_mass_fluctuations
+  use probin_charged_module, only: charge_per_mass, use_charged_fluid, electroneutral
  
   implicit none
 
@@ -1194,6 +1193,49 @@ contains
     end do
 
   end subroutine init_rho_and_umac_3d
+
+  ! Add local natural random fluctuations to the mass fractions assuming an ideal mixture
+  ! This routine does not require singling out a solvent but only works for ideal mixtures
+  subroutine add_mass_fluctuations(c,dx,variance,rho_tot)
+    real(dp_t), intent(inout) :: c(nspecies) ! Mass fractions
+    real(dp_t), intent(in)    :: dx(:)
+    real(dp_t), intent(in)    :: rho_tot, variance
+
+    ! local variables
+    real(dp_t) :: z(nspecies), dc(nspecies)
+    real(dp_t) :: factor
+
+    real(dp_t) :: tmp
+    integer    :: i,j
+
+    factor = sqrt(variance/product(dx(1:MAX_SPACEDIM)))
+
+    ! construct random vector z having nspecies N(0,1) random variables
+    if (use_bl_rng) then
+       call NormalRNGs(z, nspecies, engine=rng_eng_init_mass%p)
+    else
+       call NormalRNGs(z, nspecies)
+    end if
+    
+    ! for ideal mixture, dw = 1/sqrt(rho)*(I-w*1^T)*P*sqrt(W)*sqrt(M)*N(0,1)
+    ! Here P is a projection onto charge-neutrality, if this is necessary
+    ! P=(I-W*M*z*z^T / (z^T*W*M*z))
+    dc = factor*sqrt(c*molmass(1:nspecies)/rho_tot)*z ! Unprojected mass fluctuations
+    
+    if(use_charged_fluid .and. electroneutral) then
+       
+    end if
+    
+    ! Project onto 1^T*w=1
+    dc = dc - sum(dc)*c ! Make it sum to zero
+
+    c = c + dc ! add fluctuations
+    
+    ! replace negative values by zero and normalize
+    c = max(c,0.d0)
+    c = c/sum(c)        
+
+  end subroutine add_mass_fluctuations
 
   subroutine init_Temp(Temp,dx,time,the_bc_level)
 

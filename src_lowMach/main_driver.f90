@@ -41,7 +41,8 @@ subroutine main_driver()
                                   probin_common_init, print_int, nspecies, &
                                   advection_type, fixed_dt, max_step, cfl, &
                                   algorithm_type, variance_coef_mom, initial_variance_mom, &
-                                  variance_coef_mass, barodiffusion_type, use_bl_rng
+                                  variance_coef_mass, barodiffusion_type, use_bl_rng, &
+                                  density_weights, rhobar, rho0, analyze_conserved
   use probin_multispecies_module, only: Dbar, start_time, probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
   use probin_charged_module, only: probin_charged_init, use_charged_fluid, dielectric_const, &
@@ -586,6 +587,19 @@ subroutine main_driver()
                                       analyze_temperature=.true.) 
            
            close(unit=un)
+           
+           if ((algorithm_type .eq. 6) .and. all(density_weights(0:nspecies)==0.0d0)) then
+              ! Make rho be rho_eos for HydroGrid analysis purposes
+              ! This can be overwridden by specifying density_weights in the input file             
+              density_weights(0) = rho0 
+              density_weights(1:nspecies) = - rho0 / rhobar(1:nspecies)
+              if(.not.analyze_conserved) density_weights(1:nspecies) = rho0*density_weights(1:nspecies)
+           end if
+           
+        else
+        
+           call bl_error('HydroGrid initialization requires a namelist in an input file')
+           
         end if
      end if
   end if

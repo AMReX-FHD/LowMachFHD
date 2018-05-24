@@ -34,7 +34,7 @@ module probin_common_module
   integer,save    :: barodiffusion_type
   real(dp_t),save :: molmass(MAX_SPECIES)
   real(dp_t),save :: rhobar(MAX_SPECIES), rho0
-  real(dp_t),save :: density_weights(MAX_SPECIES)
+  real(dp_t),save :: density_weights(0:MAX_SPECIES)
   integer,save    :: shift_cc_to_boundary(MAX_SPACEDIM,2)
 
   integer(kind=ll_t)      :: n_cells_long(MAX_SPACEDIM)
@@ -202,7 +202,8 @@ module probin_common_module
   
   ! These are mostly used for reaction-diffusion:             
   namelist /probin_common/ histogram_unit      ! If positive, write the values of the densities to a file for histogramming
-  namelist /probin_common/ density_weights     ! if nonzero, compute rho <- \sum w_i * rho_i for HydroGrid analysis
+  namelist /probin_common/ density_weights     ! if nonzero, compute rho <- w_0 + \sum w_i * rho_i for HydroGrid analysis if analyze_conserved=T
+                                               ! or rho <- w_0 + \sum_{i=1}^{n} w_i*(rho_i/rho) if analyze_conserved=F
 
   namelist /probin_common/ shift_cc_to_boundary ! use special routine to shift a cell-centered value to a physical boundary
                                                 ! face instead of using the physical boundary conditions
