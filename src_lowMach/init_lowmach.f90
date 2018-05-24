@@ -1202,13 +1202,15 @@ contains
     real(dp_t), intent(in)    :: rho_tot, variance
 
     ! local variables
-    real(dp_t) :: z(nspecies), dc(nspecies)
+    real(dp_t), dimension(nspecies) :: z, dc, c0
     real(dp_t) :: factor
 
     real(dp_t) :: tmp
     integer    :: i,j
 
     factor = sqrt(variance/product(dx(1:MAX_SPACEDIM)))
+
+    c0 = c ! Store this  
 
     ! construct random vector z having nspecies N(0,1) random variables
     if (use_bl_rng) then
@@ -1220,20 +1222,23 @@ contains
     ! for ideal mixture, dw = 1/sqrt(rho)*(I-w*1^T)*P*sqrt(W)*sqrt(M)*N(0,1)
     ! Here P is a projection onto charge-neutrality, if this is necessary
     ! P=(I-W*M*z*z^T / (z^T*W*M*z))
-    dc = factor*sqrt(c*molmass(1:nspecies)/rho_tot)*z ! Unprojected mass fluctuations
-    
-    if(use_charged_fluid .and. electroneutral) then
-       
-    end if
-    
+    dc = factor*sqrt(c0*molmass(1:nspecies)/rho_tot)*z ! Unprojected mass fluctuations
+        
     ! Project onto 1^T*w=1
-    dc = dc - sum(dc)*c ! Make it sum to zero
+    dc = dc - sum(dc)*c0 ! Make it sum to zero
 
     c = c + dc ! add fluctuations
-    
+
     ! replace negative values by zero and normalize
     c = max(c,0.d0)
-    c = c/sum(c)        
+    c = c/sum(c)  
+    dc = c-c0      
+
+    if(use_charged_fluid .and. electroneutral) then
+       factor = sum(molmass(1:nspecies)*c0*(charge_per_mass(1:nspecies)**2)) ! Related to Debye length
+       dc = dc - sum(dc*charge_per_mass(1:nspecies))/factor * molmass(1:nspecies)*c0*charge_per_mass(1:nspecies)
+    end if
+    c = c0 + dc ! Note that this can be negative!    
 
   end subroutine add_mass_fluctuations
 

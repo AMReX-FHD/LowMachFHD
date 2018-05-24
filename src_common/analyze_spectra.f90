@@ -446,16 +446,20 @@ contains
        end if
        
        ! For purposes of analyzing spectra compute "density" rho as a weighted sum of densities:
-       ! rho <- w_0 + \sum_{i=1}^{n} w_i*rho_i if analyze_conserved=T
-       ! rho <- w_0 + \sum_{i=1}^{n} w_i*(rho_i/rho) if analyze_conserved=T
+       ! rho <- \sum_{i=1}^{n} w_i*rho_i if analyze_conserved=T
+       ! rho <- \sum_{i=1}^{n} w_i*(rho_i/rho) if analyze_conserved=T
        ! the weighting allows us to compute things like index of refraction for shadowgraph experiments,
        ! or a linearized rho_eos for Boussinesq models, or total charge density for electrohydrodynamics
        if((nspecies_analysis>0).and.(.not.exclude_last_species).and.&
           (sum(abs(density_weights(1:nspecies_analysis)))>0.0d0)) then
-          call setval(s_hydro, density_weights(0), comp) ! rho=0
+          call setval(s_hydro, 0.0d0, comp) ! rho=0
           do species=1, nspecies_analysis
              call multifab_saxpy_3_cc(s_hydro,comp,density_weights(species),s_hydro,species+comp,1)
           end do
+          if(abs(density_weights(0))>0.0d0) then ! Compute some power of the sum (as in rho_eos for low Mach models)
+            ! Compute here rho <- rho**density_weights(0)
+            ! Or, if no multifab_pow routine, just compute rho <- density_weights(0) / rho
+          end if
        end if       
 
        if (present(variable_names)) then
