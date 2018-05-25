@@ -14,12 +14,12 @@
   cfl = 0.1                             ! cfl number (used if fixed_dt<0) to determine time step
 
   max_step = 50000                      ! maximum number of time steps
-  plot_int = 1000                       ! Interval for writing a plotfile (for visit/amrvis)
+  plot_int = 1                          ! Interval for writing a plotfile (for visit/amrvis)
   plot_base_name = "plt"                ! prefix for plotfile name
   chk_int = -1                          ! Interval for writing a checkpoint
   check_base_name = "chk"               ! prefix for checkpoint name
   restart = -1                          ! checkpoint restart number
-  print_int = 1000                      ! how often to output EOS drift and sum of conserved quantities
+  print_int = 1                         ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 10                  ! how often to call project_onto_eos
 
   ! Physical properties
@@ -27,8 +27,7 @@
   grav(1:3) = 0. -981. 0.               ! gravity vector (negative is downwards)
   nspecies = 5                          ! number of species Na+ Cl- H+ OH- H2O 
 
-  molmass(1:5) = 3.81754087e-23 5.88710902e-23 1.67372371e-24 2.82424478e-23 2.99161715E-023
-
+  molmass(1:5) = 3.817540868231760d-23 5.887109017990600d-23 1.673723708457240d-24 2.824244779792520d-23 2.991617150638240d-23
   rhobar(1:5) = 3.349d0 3.349d0 0.1278330278 -1.561089817 1.d0
   rho0 = 1.                             ! reference density
   
@@ -90,9 +89,9 @@
   ! between 0 and -1 is random perturbation where rand = abs(smoothing_width)*rand() and then
   !  c = rand*c_init(1,:) + (1-rand)*c_init(2,:)
   ! -2 is sinusoidal
-  smoothing_width = 0.                  ! scale factor for smoothing initial profile
+  smoothing_width = -2                  ! scale factor for smoothing initial profile
 
-  initial_variance_mom = 1.             ! multiplicative factor for initial momentum fluctuations
+  initial_variance_mom = 0.             ! multiplicative factor for initial momentum fluctuations
                                         ! (if negative, total momentum is set to zero -- relevant for periodic)
   initial_variance_mass = 0.            ! multiplicative factor for initial mass fluctuations
 
@@ -185,15 +184,15 @@
   ! initial values for c
   ! The last value for water will be overwritten to enforce the EOS
   ! These are MASS FRACTIONS (concentrations), not partial densities
-  c_init(1,1:5) = 0.d0 0.034856032d0 0.000990968d0 0.d0 0.964153d0
-  c_init(2,1:5) = 0.0090452544d0 0.d0 0.d0 0.0066917456d0 0.984263d0
+  c_init(1,1:5) = 0.d0 3.485603198930140d-2 9.909680106985710d-4 0.d0 0.964153d0
+  c_init(2,1:5) = 9.045254367887370d-3 0.d0 0.d0 6.691745632112630d-3 0.d0
 
   ! c_i boundary conditions (dir,lohi,species)
   ! These are MASS FRACTIONS (concentrations), not partial densities
 
   ! use this set for reservoir (Dirichlet Values)
-  c_bc(2,1,1:5) = 0.d0 0.034856032d0 0.000990968d0 0.d0 0.964153d0
-  c_bc(2,2,1:5) = 0.0090452544d0 0.d0 0.d0 0.0066917456d0 0.984263d0
+  c_bc(2,1,1:5) = 0.d0 3.485603198930140d-2 9.909680106985710d-4 0.d0 0.964153d0
+  c_bc(2,2,1:5) = 9.045254367887370d-3 0.d0 0.d0 6.691745632112630d-3 0.d0
 
   ! use this set for walls (Neumann Values)
   !c_bc(2,1,1:4) = 0. 0. 0. 0.
@@ -213,7 +212,7 @@
   dielectric_type    = 0      ! 0 = assumes constant epsilon
                               ! 1 = (1+c1)*dielectric_const
                               ! see fluid_charge.f90:compute_permittivity()
-  charge_per_mass(1:5) = 4.196881383d3	-2.721499831d3	9.572527484d4	-5.672938236d3 0.d0
+  charge_per_mass(1:5) = 4.196881383334370d3 -2.721499831417860d3 9.572527484101990d4 -5.672938236315710d3 0.d0
 
   ! 1 = Dirichlet (fixed potential)
   ! 2 = Neumann (fixed charge density)

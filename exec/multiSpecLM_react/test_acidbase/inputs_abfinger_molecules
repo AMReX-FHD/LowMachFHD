@@ -19,14 +19,14 @@
   chk_int = -1                          ! Interval for writing a checkpoint
   check_base_name = "chk"               ! prefix for checkpoint name
   restart = -1                          ! checkpoint restart number
-  print_int = 1000                      ! how often to output EOS drift and sum of conserved quantities
+  print_int = 1                         ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 10                  ! how often to call project_onto_eos
 
   ! Physical properties
   !----------------------
   grav(1:3) = 0. -981. 0.               ! gravity vector (negative is downwards)
   nspecies = 4                          ! number of species (HCl, NaOH, NaCl, H2O) 
-  molmass(1:4) = 6.05448139d-23 6.64178565d-23 9.70464989d-23 2.99161715E-023
+  molmass(1:4) = 6.054481388836320d-23	6.641785648024280d-23 9.704649886222360d-23 2.991617150638240d-23
                                         ! molecular masses for nspecies
   rhobar(1:4) = 1.97396 -9.92571 3.349 1.               ! rhobar for nspecies
   rho0 = 1.                             ! reference density
@@ -89,9 +89,9 @@
   ! between 0 and -1 is random perturbation where rand = abs(smoothing_width)*rand() and then
   !  c = rand*c_init(1,:) + (1-rand)*c_init(2,:)
   ! -2 is sinusoidal
-  smoothing_width = 0.                  ! scale factor for smoothing initial profile
+  smoothing_width = -2                  ! scale factor for smoothing initial profile
 
-  initial_variance_mom = 1.             ! multiplicative factor for initial momentum fluctuations
+  initial_variance_mom = 0.             ! multiplicative factor for initial momentum fluctuations
                                         ! (if negative, total momentum is set to zero -- relevant for periodic)
   initial_variance_mass = 0.            ! multiplicative factor for initial mass fluctuations
 
@@ -185,7 +185,6 @@
   ! The last value for water will be overwritten to enforce the EOS
   ! These are MASS FRACTIONS (concentrations), not partial densities
   c_init(1,1:4) = 0.035847 0. 0. 0.964153
-  !c_init(2,1:4) = 0. 0.019592 0. 0.980408      ! Rayleigh-Taylor 
   c_init(2,1:4) = 0. 0.015737 0. 0.984263       ! Double diffusion
 
   ! c_i boundary conditions (dir,lohi,species)
@@ -193,7 +192,6 @@
 
   ! use this set for reservoir (Dirichlet Values)
   c_bc(2,1,1:4) = 0.035847 0. 0. 0.964153 
-  !c_bc(2,2,1:4) = 0. 0.019592 0. 0.980408      ! Rayleigh-Taylor
   c_bc(2,2,1:4) = 0. 0.015737 0. 0.984263       ! Double diffusion
 
   ! use this set for walls (Neumann Values)

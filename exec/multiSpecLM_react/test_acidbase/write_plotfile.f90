@@ -230,10 +230,10 @@ contains
        do n=1,nlevs
           call multifab_setval_c(plotdata(n),0.d0,counter,1,all=.true.)
           ! from NaOH
-          x = 3.81754087d-23 / (3.81754087d-23 + 2.82424478e-23)
+          x = 3.817540868231760d-23 / (3.817540868231760d-23 + 2.824244779792520d-23)
           call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),2,1)
           ! from NaCl
-          x = 3.81754087d-23 / (3.81754087d-23 + 5.88710902e-23)
+          x = 3.817540868231760d-23 / (3.817540868231760d-23 + 5.887109017990600d-23)
           call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),3,1)
        end do
        counter = counter+1
@@ -242,10 +242,10 @@ contains
        do n=1,nlevs
           call multifab_setval_c(plotdata(n),0.d0,counter,1,all=.true.)
           ! from HCl
-          x = 5.88710902e-23 / (1.67372371e-24 + 5.88710902e-23)
+          x = 5.887109017990600d-23 / (1.673723708457240d-24 + 5.887109017990600d-23)
           call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),1,1)
           ! from NaCl
-          x = 5.88710902e-23 / (3.81754087d-23 + 5.88710902e-23)
+          x = 5.887109017990600d-23 / (3.817540868231760d-23 + 5.887109017990600d-23)
           call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),3,1)
        end do
        counter = counter+1
@@ -254,7 +254,7 @@ contains
        do n=1,nlevs
           call multifab_setval_c(plotdata(n),0.d0,counter,1,all=.true.)
           ! from HCl
-          x = 1.67372371e-24 / (1.67372371e-24 + 5.88710902e-23)
+          x = 1.673723708457240d-24 / (1.673723708457240d-24 + 5.887109017990600d-23)
           call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),1,1)
        end do
        counter = counter+1
@@ -263,7 +263,7 @@ contains
        do n=1,nlevs
           call multifab_setval_c(plotdata(n),0.d0,counter,1,all=.true.)
           ! from NaOH
-          x = 2.82424478e-23 / (3.81754087d-23 + 2.82424478e-23)
+          x = 2.824244779792520d-23 / (3.817540868231760d-23 + 2.824244779792520d-23)
           call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),2,1)
        end do
        counter = counter+1
