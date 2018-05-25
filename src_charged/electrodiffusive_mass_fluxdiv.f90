@@ -15,7 +15,8 @@ module electrodiffusive_mass_fluxdiv_module
   use probin_common_module, only: nspecies, variance_coef_mass, shift_cc_to_boundary
   use probin_gmres_module, only: mg_verbose, mg_abs_tol
   use probin_charged_module, only: Epot_wall_bc_type, Epot_wall, E_ext_type, electroneutral, &
-                                   zero_eps_on_wall_type
+                                   zero_eps_on_wall_type, epot_mg_verbose, epot_mg_abs_tol, &
+                                   epot_mg_rel_tol
   
   use fabio_module
 
@@ -303,7 +304,10 @@ contains
 
     ! solve (alpha - del dot beta grad) Epot = charge
     call ml_cc_solve(mla,rhs,Epot,fine_flx,alpha,beta,dx(:,1:dm),the_bc_tower,Epot_bc_comp, &
-                     abs_eps=mg_abs_tol,verbose=mg_verbose,ok_to_fix_singular=.false.)
+                     eps=epot_mg_rel_tol, &
+                     abs_eps=epot_mg_abs_tol, &
+                     verbose=epot_mg_verbose, &
+                     ok_to_fix_singular=.false.)
 
     ! for periodic problems subtract off the average of Epot
     ! we can generalize this later for walls

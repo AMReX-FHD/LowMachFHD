@@ -20,6 +20,8 @@ module probin_charged_module
   logical            :: electroneutral
   integer            :: zero_eps_on_wall_type
   integer            :: zero_charge_on_wall_type
+  integer            :: epot_mg_verbose
+  real(kind=dp_t)    :: epot_mg_abs_tol, epot_mg_rel_tol
 
   ! for charged fluid
   namelist /probin_charged/ use_charged_fluid
@@ -43,6 +45,10 @@ module probin_charged_module
   namelist /probin_charged/ zero_charge_on_wall_type ! set sigma=0 on certain Neumann walls
                                                      ! if we want homogeneous Neumann bc's on 
                                                      ! phi for part of a Dirichlet wall
+  namelist /probin_charged/ epot_mg_verbose    ! verbosity for poisson solve
+  namelist /probin_charged/ epot_mg_abs_tol    ! absolute tolerance for poisson solve
+  namelist /probin_charged/ epot_mg_rel_tol    ! relative tolerance for poisson solve
+
 
 contains
 
@@ -77,6 +83,9 @@ contains
     dpdt_factor            = 0.d0
     E_ext_type             = 0
     E_ext_value(:)         = 0.d0
+    epot_mg_verbose        = 0
+    epot_mg_abs_tol        = 1.d-14
+    epot_mg_rel_tol        = 1.d-9
 
     electroneutral = .false.
     zero_eps_on_wall_type = 0
@@ -137,6 +146,21 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) E_ext_type
+
+       case ('--epot_mg_verbose')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) epot_mg_verbose
+
+       case ('--epot_mg_abs_tol')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) epot_mg_abs_tol
+
+       case ('--epot_mg_rel_tol')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) epot_mg_rel_tol
 
        case ('--electroneutral')
           farg = farg + 1
