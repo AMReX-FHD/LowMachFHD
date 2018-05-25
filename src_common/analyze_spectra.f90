@@ -14,6 +14,7 @@ module analyze_spectra_module
   use convert_stag_module
   use HydroGridModule
   use HydroGridCInterface 
+  use utility_module
   use probin_common_module, only: n_cells, prob_lo, prob_hi, &
        hydro_grid_int, project_dir, max_grid_projection, stats_int, n_steps_save_stats, &
        center_snapshots, analyze_conserved, histogram_unit, density_weights
@@ -456,11 +457,10 @@ contains
           do species=1, nspecies_analysis
              call multifab_saxpy_3_cc(s_hydro,comp,density_weights(species),s_hydro,species+comp,1)
           end do
-          if(abs(density_weights(0))>0.0d0) then ! Compute some power of the sum (as in rho_eos for low Mach models)
-            ! Compute here rho <- rho**density_weights(0)
-            ! Or, if no multifab_pow routine, just compute rho <- density_weights(0) / rho
+          if(abs(density_weights(0))>0.0d0) then ! Compute rho <- density_weights(0) / rho (as in rho_eos for low Mach models)
+            call invert_multifab(la_serial,s_hydro,comp,ncomp=1,nghost=0,numerator=density_weights(0))
           end if
-       end if       
+       end if    
 
        if (present(variable_names)) then
           variable_names(comp)="rho"

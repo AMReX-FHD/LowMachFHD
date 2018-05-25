@@ -591,9 +591,12 @@ subroutine main_driver()
            if ((algorithm_type .eq. 6) .and. all(density_weights(0:nspecies)==0.0d0)) then
               ! Make rho be rho_eos for HydroGrid analysis purposes
               ! This can be overwridden by specifying density_weights in the input file             
-              density_weights(0) = rho0 
-              density_weights(1:nspecies) = - rho0 / rhobar(1:nspecies)
-              if(.not.analyze_conserved) density_weights(1:nspecies) = rho0*density_weights(1:nspecies)
+              density_weights(1:nspecies) = 1.0d0 / rhobar(1:nspecies)
+              if(analyze_conserved) then
+                 density_weights(0) = rho0
+              else
+                 density_weights(0) = 1.0
+              end if
            end if
            
         else

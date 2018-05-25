@@ -202,8 +202,9 @@ module probin_common_module
   
   ! These are mostly used for reaction-diffusion:             
   namelist /probin_common/ histogram_unit      ! If positive, write the values of the densities to a file for histogramming
-  namelist /probin_common/ density_weights     ! if nonzero, compute rho <- w_0 + \sum w_i * rho_i for HydroGrid analysis if analyze_conserved=T
-                                               ! or rho <- w_0 + \sum_{i=1}^{n} w_i*(rho_i/rho) if analyze_conserved=F
+  namelist /probin_common/ density_weights     ! if nonzero, compute rho <- \sum w_i * rho_i for HydroGrid analysis if analyze_conserved=T
+                                               ! or rho <- \sum_{i=1}^{n} w_i*(rho_i/rho) if analyze_conserved=F
+                                               ! If w_0 is nonzero then do rho <- w_0 / rho at the end
 
   namelist /probin_common/ shift_cc_to_boundary ! use special routine to shift a cell-centered value to a physical boundary
                                                 ! face instead of using the physical boundary conditions
