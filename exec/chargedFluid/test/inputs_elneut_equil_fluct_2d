@@ -14,7 +14,7 @@
   prob_type = 2                         ! const conc grad along y (see src_lowMach/init_lowmach.f90) 
   prob_lo(1:3) = 0.  0.  0.             ! physical lo coordinate
   prob_hi(1:3) = 32.0 32.0 1e4 ! 128.0 4.0 1.e4           ! physical hi coordinate
-  n_cells(1:3) = 32 32 1 ! 128  4  1              ! number of cells in domain
+  n_cells(1:3) = 32 32 1 ! 128  4  1            ! number of cells in domain
   max_grid_size(1:3) = 256 256 1          ! max number of cells in a box
 
   ! Time-step control
@@ -24,7 +24,7 @@
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 1000                      ! maximum number of time steps
+  max_step = 15000                      ! maximum number of time steps
   plot_int = 0                          ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = -1                          ! Interval for writing a checkpoint
   restart = -1                          ! checkpoint restart number
@@ -100,7 +100,7 @@
 
   initial_variance_mom = 0.                ! multiplicative factor for initial fluctuations
                                         ! (if negative, total momentum is set to zero)
-  initial_variance_mass = 1.            ! multiplicative factor for initial mass fluctuations
+  initial_variance_mass = 0.            ! multiplicative factor for initial mass fluctuations
 
   ! Boundary conditions
   !----------------------
@@ -143,12 +143,12 @@
   ! -dim=analyze full grid using HydroGrid and then project along dim so we also analyze projections
   ! It is better to use the conserved variables but it does not quite work for staggered
 
-  max_grid_projection(1:1) = 32         ! parallelization parameters
+  max_grid_projection(1:1) = 256         ! parallelization parameters
   stats_int = 0                         ! Project grid for analysis (writes hstat and vstat files)
                                         ! If positive, how often to compute mean and 
                                         ! standard deviation over reduced dimensions
   n_steps_save_stats = -1               ! How often to dump HydroGrid output files
-  n_steps_skip = 0                      ! How many steps to skip > L^2/(chi*dt) or zero if initial_variance=1
+  n_steps_skip = 5000                      ! How many steps to skip > L^2/(chi*dt) or zero if initial_variance=1
   analyze_conserved = F                 ! Should we use conserved variables for the analysis
                                         ! (does not work well)
   center_snapshots = F                  ! Should we use cell-centered momenta for the analysis
@@ -164,7 +164,7 @@
 
   ! Physical properties:
   !----------------------
-  is_ideal_mixture = T                  ! If T assume Gamma=I (H=0) and simplify
+  is_ideal_mixture = F                  ! If T assume Gamma=I (H=0) and simplify
   is_nonisothermal = F                  ! If T Soret effect will be included
   
   ! Thermodynamic and transport properties:
@@ -175,11 +175,11 @@
   ! The values are red row by row starting from top going down (this allows easy addition/deletion of new species/rows)
   ! So D_12; D_13, D_23; D_14, D_24, D_34; ...
   Dbar(1:3) = 0.5 1. 1.5                ! Maxwell-Stefan diffusion constant  
-  !H_offdiag(1:3) = 1.5 2.5 0.5          ! Off diagonal elements of H=d^2F/dx^2  
+  H_offdiag(1:3) = 1.5 2.5 0.5          ! Off diagonal elements of H=d^2F/dx^2  
 
   ! These are vectors of length nspecies
-  !Dtherm(1:3) = 1. 1. -2.               ! thermo-diffusion coefficients, only differences among elements matter
-  !H_diag(1:3) = 4. 3. 2.                ! Diagonal of H=d^2F/dx^2  
+  Dtherm(1:3) = 1. 1. -2.               ! thermo-diffusion coefficients, only differences among elements matter
+  H_diag(1:3) = 4. 3. 2.                ! Diagonal of H=d^2F/dx^2  
  
   ! Algorithmic options:
   !----------------------
