@@ -3,37 +3,37 @@
   ! Problem specification
   !----------------------
   dim_in = 3                            ! 2D or 3D
-  prob_type =  3                        ! see src_lowMach/init_lowmach.f90
+  prob_type = 3                         ! see src_lowMach/init_lowmach.f90
 
   prob_lo(1:3) = 0. 0. 0.               ! physical lo coordinate
-  prob_hi(1:3) = 0.8 0.8 0.05           ! physical hi coordinate
-  n_cells(1:3) = 128 128 8              ! number of cells in domain
-  max_grid_size(1:3) = 64 64 8          ! max number of cells in a box
+  prob_hi(1:3) = 1.6 1.6 0.05           ! physical hi coordinate
+  n_cells(1:3) = 256 256 8              ! number of cells in domain
+  max_grid_size(1:3) = 32 32 8          ! max number of cells in a box
 
-  fixed_dt = 0.05                       ! time step
+  fixed_dt = 0.001                      ! time step
   cfl = 0.1                             ! cfl number (used if fixed_dt<0) to determine time step
 
-  max_step = 200                        ! maximum number of time steps
-  plot_int = 1                          ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 50000                      ! maximum number of time steps
+  plot_int = 1000                       ! Interval for writing a plotfile (for visit/amrvis)
   plot_base_name = "plt"                ! prefix for plotfile name
   chk_int = -1                          ! Interval for writing a checkpoint
   check_base_name = "chk"               ! prefix for checkpoint name
   restart = -1                          ! checkpoint restart number
-  print_int = 1                         ! how often to output EOS drift and sum of conserved quantities
+  print_int = 1000                      ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 10                  ! how often to call project_onto_eos
 
   ! Physical properties
   !----------------------
   grav(1:3) = 0. -981. 0.               ! gravity vector (negative is downwards)
-  nspecies = 5                          ! number of species Na+ Cl- H+ OH- H2O 
-
-  molmass(1:5) = 3.8175407e-23 5.8871086e-23 1.6737236e-24 2.82406856e-23 2.99144092e-23
-  rhobar(1:5) = 3.349d0 3.349d0 0.1278330278 -1.561089817 1.d0
+  nspecies = 4                          ! number of species (HCl, NaOH, NaCl, H2O) 
+  molmass(1:4) = 6.05448139d-23 6.64178565d-23 9.70464989d-23 2.99161715E-023
+                                        ! molecular masses for nspecies
+  rhobar(1:4) = 1.97396 -9.92571 3.349 1.               ! rhobar for nspecies
   rho0 = 1.                             ! reference density
   
   ! stochastic properties
-  variance_coef_mom = 0.                ! global scaling epsilon for stochastic momentum forcing
-  variance_coef_mass = 0.               ! global scaling epsilon for stochastic mass forcing
+  variance_coef_mom = 1.                ! global scaling epsilon for stochastic momentum forcing
+  variance_coef_mass = 1.               ! global scaling epsilon for stochastic mass forcing
   k_B = 1.3806488e-16                   ! Boltzmann's constant
   Runiv = 8.314462175e7                 ! Universal gas constant (not used)
   
@@ -42,7 +42,7 @@
   algorithm_type = 6                    ! 6 = Boussinesq
   barodiffusion_type = 0                ! 0 = no barodiffusion type
 
-  use_bl_rng = F                        ! if false, use HydroGrid RNGs
+  use_bl_rng = T                        ! if false, use HydroGrid RNGs
                                         ! if true, use F_BaseLib/bl_random RNGs
 
   ! random number seed (for HydroGrid RNGs)
@@ -57,8 +57,8 @@
   seed_momentum = 0 
   seed_diffusion = 0
   seed_reaction = 0
-  seed_init_mass = 0
-  seed_init_momentum = 0
+  seed_init_mass = 0 
+  seed_init_momentum = 0 
 
   ! Viscous friction L phi operator
   ! if abs(visc_type) = 1, L = div beta grad
@@ -89,10 +89,11 @@
   ! between 0 and -1 is random perturbation where rand = abs(smoothing_width)*rand() and then
   !  c = rand*c_init(1,:) + (1-rand)*c_init(2,:)
   ! -2 is sinusoidal
-  smoothing_width = -2.d0               ! scale factor for smoothing initial profile
+  smoothing_width = 0.                  ! scale factor for smoothing initial profile
 
-  initial_variance_mom = 1.                 ! multiplicative factor for initial fluctuations
+  initial_variance_mom = 1.             ! multiplicative factor for initial momentum fluctuations
                                         ! (if negative, total momentum is set to zero -- relevant for periodic)
+  initial_variance_mass = 0.            ! multiplicative factor for initial mass fluctuations
 
   ! Boundary conditions
   !----------------------
@@ -115,7 +116,7 @@
   ! Control for analyze_spectra.90
   !----------------------
 
-  hydro_grid_int = 0                    ! How often to call updateHydroGrid
+  hydro_grid_int = 1                    ! How often to call updateHydroGrid
                                         ! 0 if never
                                         ! negative for projectHydroGrid custom analysis
                                         ! positive for updateHydroGrid
@@ -128,10 +129,10 @@
   ! It is better to use the conserved variables but it does not quite work for staggered
 
   max_grid_projection(1:2) = 32 32      ! parallelization parameters
-  stats_int = 200                       ! Project grid for analysis
+  stats_int = 1000                      ! Project grid for analysis
                                         ! If positive, how often to compute mean and 
                                         ! standard deviation over reduced dimensions
-  n_steps_save_stats = 200              ! How often to dump HydroGrid output files
+  n_steps_save_stats = 1000             ! How often to dump HydroGrid output files
   n_steps_skip = 0                      ! How many steps to skip
   analyze_conserved = F                 ! Should we use conserved variables for the analysis
                                         ! (does not work well)
@@ -166,8 +167,8 @@
   ! These are lower-triangules of symmetric matrices represented as vectors
   ! Number of elements is (nspecies*(nspecies-1)/2)
   ! The values are red row by row starting from top going down (this allows easy addition/deletion of new species/rows)
-  ! So D_12; D_13, D_23; D_14, D_24, D_34; D_15, D_25, D_35, D_45
-  Dbar(1:10) = 0.1173869565e-4, 0.5408879652e-4, 0.8255658417e-4, 0.3083589699e-4, 0.4706531648e-4, 0.2168644968e-3, 0.133e-4, 0.203e-4, 0.9353701657e-4, 0.5332523540e-4
+  ! So D_12; D_13, D_23; D_14, D_24, D_34; ...
+  Dbar(1:6) = 3.087976e-05 2.336650e-05 1.491226e-05 3.336000e-05 2.129000e-05 1.611000e-05
                                         ! Maxwell-Stefan diffusion constant  
   H_offdiag(1:1) = 0.                   ! Off diagonal elements of H=d^2F/dx^2  
 
@@ -183,15 +184,17 @@
   ! initial values for c
   ! The last value for water will be overwritten to enforce the EOS
   ! These are MASS FRACTIONS (concentrations), not partial densities
-  c_init(1,1:5) = 0.d0 0.034856031983326d0 9.909680168437820d-4 0.d0 0.964153d0
-  c_init(2,1:5) = 0.011261315513524d0 0.d0 0.d0 8.330684486608250d-3 0.980408d0
+  c_init(1,1:4) = 0.035847 0. 0. 0.964153
+  !c_init(2,1:4) = 0. 0.019592 0. 0.980408      ! Rayleigh-Taylor 
+  c_init(2,1:4) = 0. 0.015737 0. 0.984263       ! Double diffusion
 
   ! c_i boundary conditions (dir,lohi,species)
   ! These are MASS FRACTIONS (concentrations), not partial densities
 
   ! use this set for reservoir (Dirichlet Values)
-  c_bc(2,1,1:5) = 0.d0 0.034856031983326d0 9.909680168437820d-4 0.d0 0.964153d0
-  c_bc(2,2,1:5) = 0.011261315513524d0 0.d0 0.d0 8.330684486608250d-3 0.980408d0
+  c_bc(2,1,1:4) = 0.035847 0. 0. 0.964153 
+  !c_bc(2,2,1:4) = 0. 0.019592 0. 0.980408      ! Rayleigh-Taylor
+  c_bc(2,2,1:4) = 0. 0.015737 0. 0.984263       ! Double diffusion
 
   ! use this set for walls (Neumann Values)
   !c_bc(2,1,1:4) = 0. 0. 0. 0.
@@ -206,46 +209,26 @@
 /
 
 &probin_charged
-  use_charged_fluid  = T
-  dielectric_const   = 6.91d-19    ! relative permitivity ~ 78, vacuum permitivity ~ 8.854d-21
-  dielectric_type    = 0      ! 0 = assumes constant epsilon
-                              ! 1 = (1+c1)*dielectric_const
-                              ! see fluid_charge.f90:compute_permittivity()
-  charge_per_mass(1:5) = 4196.881568d0 -2721.500025d0 95725.28104d0 -5673.292223d0 0.d0
 
-  ! 1 = Dirichlet (fixed potential)
-  ! 2 = Neumann (fixed charge density)
-  Epot_wall_bc_type(1,2) = 2
-  Epot_wall_bc_type(2,2) = 2
-  Epot_wall_bc_type(1,3) = 2
-  Epot_wall_bc_type(2,3) = 2
-
-  ! Dirichlet or Neumann condition
-  Epot_wall(1,2)         = 0.d0
-  Epot_wall(2,2)         = 0.d0
-  Epot_wall(1,3)         = 0.d0
-  Epot_wall(2,3)         = 0.d0
-
-  electroneutral = T
 /
 
 &probin_chemistry
 
-  nreactions = 1                      ! number of reactions
+  nreactions = 1                        ! number of reactions
 
   ! stoichiometric factors for each reaction (species,LHS(1)/RHS(2),reaction)
   ! Example: For N1 + 2*N2 -> N3 use
   ! stoichiometric_factors(1:3,1,1) = 1 2 0
   ! stoichiometric_factors(1:3,2,1) = 0 0 1
   ! NaOH + HCl -> NaCl + H20 
-  stoichiometric_factors(1:5,1,1) = 0 0 1 1 0
-  stoichiometric_factors(1:5,2,1) = 0 0 0 0 1
+  stoichiometric_factors(1:4,1,1) = 1 1 0 0 
+  stoichiometric_factors(1:4,2,1) = 0 0 1 1
 
   ! reaction rate constant for each reaction (assuming Law of Mass Action holds)
   ! using rate_multiplier, reaction rates can be changed by the same factor
   ! if include_discrete_LMA_correction, n^2 and n^3 in rate expressions become
-  ! n*(n-1/dv) and n*(n-/dv)*(n-2/dv).
-  rate_const(1:1) = 1.d-20
+  ! n*(n-1/dv) and n*(n-1/dv)*(n-2/dv).
+  rate_const(1:1) = 1e-18
   rate_multiplier = 1.
   include_discrete_LMA_correction = T
 
@@ -258,7 +241,7 @@
   exclude_solvent_comput_rates = 0
 
   ! how to sample chemical production rates
-  use_Poisson_rng = -1                  ! 2=SSA
+  use_Poisson_rng = 0                   ! 2=SSA
                                         ! 1=do tau leaping (Poisson increments)
                                         ! 0= do CLE (Gaussian increments)
                                         ! -1=do deterministic chemistry
@@ -318,10 +301,10 @@
 
   ! GMRES solver parameters
   gmres_rel_tol = 1.e-9                 ! relative tolerance stopping criteria
-  gmres_abs_tol = 0.                    ! absolute tolerance stopping criteria
+  gmres_abs_tol = 1.e-9                 ! absolute tolerance stopping criteria
   gmres_verbose = 0                     ! gmres verbosity; if greater than 1, more residuals will be printed out
-  gmres_max_outer = 20                  ! max number of outer iterations
-  gmres_max_inner = 5                   ! max number of inner iterations, or restart number
+  gmres_max_outer = 10                  ! max number of outer iterations
+  gmres_max_inner = 10                  ! max number of inner iterations, or restart number
   gmres_max_iter = 100                  ! max number of gmres iterations
   gmres_min_iter = 1                    ! min number of gmres iterations
 
@@ -363,7 +346,7 @@
    nWavenumbers=0
    ! Shape (2,nWavenumbers):
    selectedWavenumbers=""
-   nSavedSnapshots=100
+   nSavedSnapshots=1000
       
    outputFolder = "."
    filePrefix = "conv_fing_full"
@@ -403,11 +386,11 @@
    nWavenumbers=0
    ! Shape (2,nWavenumbers):
    selectedWavenumbers=""
-   nSavedSnapshots=100
+   nSavedSnapshots=1000
       
    outputFolder = "."
    filePrefix = "conv_fing_vstat"
-   axisToPrint = 3                      ! 1=x, 2=y, 3=z axis
+   axisToPrint = 2                      ! 1=x, 2=y, 3=z axis
    periodic = F                         ! Is the system fully periodic?
 /
 
@@ -434,7 +417,7 @@
    subtractMeanFT = F                   ! The means are trivial here so no need to estimate them
    writeAbsValue = T                    ! Only write absolute values of complex values to VTK file?
    writeTheory = -1                     ! Write the theoretical prediction (-1=none, 0==continuum or 1=MAC)
-   nStructureFactors = 1
+   nStructureFactors = 0 
    ! numbering: 1=rho-rho
    structureFactorPairs = "0 1 0 1"
 
@@ -442,7 +425,7 @@
    nWavenumbers=0
    ! Shape (2,nWavenumbers):
    selectedWavenumbers=""
-   nSavedSnapshots=100
+   nSavedSnapshots=1000
       
    outputFolder = "."
    filePrefix = "conv_fing_hstat"
