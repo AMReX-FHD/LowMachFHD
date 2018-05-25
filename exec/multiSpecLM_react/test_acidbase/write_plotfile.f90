@@ -1,3 +1,8 @@
+! this is a custom version of write plotfile for problems with the 4 species, in order:
+! HCl NaOH NaCl H2O
+! and writes out the the plotfile the ionic concentraions (for rho_i and c_i), in order:
+! Na+ Cl- H+ OH- H2O 
+
 module write_plotfile_module
 
   use ml_layout_module
@@ -225,10 +230,10 @@ contains
        do n=1,nlevs
           call multifab_setval_c(plotdata(n),0.d0,counter,1,all=.true.)
           ! from NaOH
-          x = 3.8175407d-23 / (3.8175407d-23 + 2.82406856d-23)
+          x = 3.81754087d-23 / (3.81754087d-23 + 2.82424478e-23)
           call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),2,1)
           ! from NaCl
-          x = 3.8175407d-23 / (3.8175407d-23 + 5.8871086d-23)
+          x = 3.81754087d-23 / (3.81754087d-23 + 5.88710902e-23)
           call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),3,1)
        end do
        counter = counter+1
@@ -237,10 +242,10 @@ contains
        do n=1,nlevs
           call multifab_setval_c(plotdata(n),0.d0,counter,1,all=.true.)
           ! from HCl
-          x = 5.8871086d-23 / (1.6737236d-24 + 5.8871086d-23)
+          x = 5.88710902e-23 / (1.67372371e-24 + 5.88710902e-23)
           call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),1,1)
           ! from NaCl
-          x = 5.8871086d-23 / (3.8175407d-23 + 5.8871086d-23)
+          x = 5.88710902e-23 / (3.81754087d-23 + 5.88710902e-23)
           call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),3,1)
        end do
        counter = counter+1
@@ -249,7 +254,7 @@ contains
        do n=1,nlevs
           call multifab_setval_c(plotdata(n),0.d0,counter,1,all=.true.)
           ! from HCl
-          x = 1.6737236d-24 / (1.6737236d-24 + 5.8871086d-23)
+          x = 1.67372371e-24 / (1.67372371e-24 + 5.88710902e-23)
           call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),1,1)
        end do
        counter = counter+1
@@ -258,7 +263,7 @@ contains
        do n=1,nlevs
           call multifab_setval_c(plotdata(n),0.d0,counter,1,all=.true.)
           ! from NaOH
-          x = 2.82406856d-23 / (3.8175407d-23 + 2.82406856d-23)
+          x = 2.82424478e-23 / (3.81754087d-23 + 2.82424478e-23)
           call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),2,1)
        end do
        counter = counter+1
