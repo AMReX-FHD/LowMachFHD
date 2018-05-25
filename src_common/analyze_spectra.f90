@@ -381,8 +381,9 @@ contains
   ! This routines collects a bunch of different variables into a single multifab for easier analysis
   ! The components are ordered as, whenever present:
   ! umac, rho, rho_k (analyze_conserved=T) or c_k=rho_k/rho, T, scalars
-  subroutine gather_hydro_grid(mla,s_hydro,umac,rho,temperature,scalars, variable_names)
-    type(ml_layout), intent(in   ) :: mla
+  subroutine gather_hydro_grid(mla,la_s,s_hydro,umac,rho,temperature,scalars, variable_names)
+    type(ml_layout), intent(in   ) :: mla ! Layout of hydrodynamic arrays
+    type(layout)   , intent(in   ) :: la_s ! Layout of s_hydro (changes depending on context)
     type(multifab) , intent(inout) :: s_hydro ! Output: collected grid data for analysis
     type(multifab) , intent(in), optional :: umac(:,:)
     type(multifab) , intent(in), dimension(:), optional :: rho, temperature, scalars
@@ -458,7 +459,7 @@ contains
              call multifab_saxpy_3_cc(s_hydro,comp,density_weights(species),s_hydro,species+comp,1)
           end do
           if(abs(density_weights(0))>0.0d0) then ! Compute rho <- density_weights(0) / rho (as in rho_eos for low Mach models)
-            call invert_multifab(la_serial,s_hydro,comp,ncomp=1,nghost=0,numerator=density_weights(0))
+            call invert_multifab(la_s,s_hydro,comp,ncomp=1,nghost=0,numerator=density_weights(0))
           end if
        end if    
 
@@ -586,7 +587,7 @@ contains
     pdim=abs(project_dir)
 
     ! Gather all the hydro data into a single multifab
-    call gather_hydro_grid(mla,s_serial,umac,rho,temperature,scalars)
+    call gather_hydro_grid(mla,la_serial,s_serial,umac,rho,temperature,scalars)
     
     if(parallel_IOProcessor()) then  
        !write(*,*) "Calling updateHydroAnalysis on 3D+2D+1D grids (serial)"
@@ -695,7 +696,7 @@ contains
     ! Re-distribute the full grid into a grid of "tall skinny boxes"
     ! These boxes are not distributed along project_dim so we can do local analysis easily
     ! -------------------------
-    call gather_hydro_grid(mla,s_dir,umac,rho,temperature,scalars)
+    call gather_hydro_grid(mla,la_dir,s_dir,umac,rho,temperature,scalars)
     
     ! Compute s_projected as the average along project_dim
     ! -------------------------
@@ -863,7 +864,7 @@ contains
     ! Re-distribute the full grid into a grid of "tall skinny boxes"
     ! These boxes are not distributed along project_dim so we can do local analysis easily
     ! -------------------------
-    call gather_hydro_grid(mla,s_dir,umac,rho,temperature,scalars, variable_names(1:nvar))
+    call gather_hydro_grid(mla,la_dir,s_dir,umac,rho,temperature,scalars, variable_names(1:nvar))
 
     ! Compute s_projected (average) and s_var (variance)
     ! -------------------------
