@@ -228,6 +228,11 @@
   Epot_wall(2,3)         = 0.d0
 
   electroneutral = T
+
+  epot_mg_verbose = 2
+  epot_mg_abs_tol = 1.d-14
+  epot_mg_rel_tol = 1.d-9
+
 /
 
 &probin_chemistry
