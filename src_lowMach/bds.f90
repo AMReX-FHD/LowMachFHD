@@ -248,8 +248,7 @@ contains
 
     end do ! end loop over components
 
-
-    ! do L2 projection and increment s_update
+    ! "project" edge states to satisfy some problem-dependent criteria
     !$omp parallel private(mfi,n,i,xnodalbox,xlo,xhi) &
     !$omp private(ynodalbox,ylo,yhi,znodalbox,zlo,zhi,sxp,syp,szp) &
     !$omp private(uadvp,vadvp,wadvp,lo,hi)
@@ -276,14 +275,14 @@ contains
           hi =  upb(get_box(s_update(n), i))
           select case (dm)
           case (2)
-             call bdsupdate_2d(lo, hi, &
+             call bdsproj_2d(lo, hi, &
                                uadvp(:,:,1,1), vadvp(:,:,1,1), ng_v, &
                                sxp(:,:,1,:), syp(:,:,1,:), ng_e, &
                                dx(n,:), ncomp, proj_type,xlo,xhi,ylo,yhi)
           case (3)
              wadvp  => dataptr(umac(n,3), i)
              szp => dataptr(sedge(n,3), i)
-             call bdsupdate_3d(lo, hi, &
+             call bdsproj_3d(lo, hi, &
                                uadvp(:,:,:,1), vadvp(:,:,:,1), wadvp(:,:,:,1), ng_v, &
                                sxp(:,:,:,:), syp(:,:,:,:), szp(:,:,:,:), ng_e, &
                                dx(n,:), ncomp, proj_type,xlo,xhi,ylo,yhi,zlo,zhi)
@@ -292,6 +291,7 @@ contains
     end do ! end loop over levels
     !$omp end parallel
 
+    ! increment s_update
     !$omp parallel private(mfi,n,i,tilebox,tlo,thi) &
     !$omp private(sup,sxp,syp,szp) &
     !$omp private(uadvp,vadvp,wadvp,lo,hi)
@@ -1182,7 +1182,7 @@ contains
 
   end subroutine bdsconc_2d
 
-  subroutine bdsupdate_2d(lo,hi,uadv,vadv,ng_v, &
+  subroutine bdsproj_2d(lo,hi,uadv,vadv,ng_v, &
                           sedgex,sedgey,ng_e,dx,ncomp,proj_type,xlo,xhi,ylo,yhi)
 
     integer        ,intent(in   ) :: lo(:),hi(:),ng_v,ng_e,ncomp,proj_type
@@ -1198,97 +1198,21 @@ contains
 
     real(kind=dp_t) :: w(ncomp), rhobar_sq, delta_eos, temp
 
-    if (proj_type .eq. 2) then
+    ! x-faces
+    do j = xlo(2),xhi(2) 
+    do i = xlo(1),xhi(1) 
+       call bdsproj_local(sedgex(i,j,:), ncomp, proj_type)
+    enddo
+    enddo
 
-       ! L2 projection: x-faces
-       do j = xlo(2),xhi(2) 
-       do i = xlo(1),xhi(1) 
-          
-          ! compute mass fractions, w_i = rho_i / rho
-          temp = 0.d0
-          do comp=1,ncomp
-             temp = temp + sedgex(i,j,comp)
-          end do
-          do comp=1,ncomp
-             w(comp) = sedgex(i,j,comp)/temp
-          end do
+    ! y-faces
+    do j = ylo(2),yhi(2) 
+    do i = ylo(1),yhi(1) 
+       call bdsproj_local(sedgey(i,j,:), ncomp, proj_type)
+    enddo
+    enddo
 
-          ! rhobar_sq = (sum_i (w_i/rhobar_i^2))^-1
-          rhobar_sq = 0.d0
-          do comp=1,ncomp
-             rhobar_sq = rhobar_sq + w(comp)/rhobar(comp)**2
-          end do
-          rhobar_sq = 1.d0/rhobar_sq
-
-          ! delta_eos = sum_l (rho_l/rhobar_l) - 1
-          delta_eos = -1.d0
-          do comp=1,ncomp
-             delta_eos = delta_eos + sedgex(i,j,comp)/rhobar(comp)
-          end do
-
-          do comp=1,ncomp
-             sedgex(i,j,comp) = sedgex(i,j,comp) - w(comp)*(rhobar_sq/rhobar(comp))*delta_eos
-          end do
-
-       enddo
-       enddo
-
-       ! L2 projection: y-faces
-       do j = ylo(2),yhi(2) 
-       do i = ylo(1),yhi(1) 
-          
-          ! compute mass fractions, w_i = rho_i / rho
-          temp = 0.d0
-          do comp=1,ncomp
-             temp = temp + sedgey(i,j,comp)
-          end do
-          do comp=1,ncomp
-             w(comp) = sedgey(i,j,comp)/temp
-          end do
-
-          ! rhobar_sq = (sum_i (w_i/rhobar_i^2))^-1
-          rhobar_sq = 0.d0
-          do comp=1,ncomp
-             rhobar_sq = rhobar_sq + w(comp)/rhobar(comp)**2
-          end do
-          rhobar_sq = 1.d0/rhobar_sq
-
-          ! delta_eos = sum_l (rho_l/rhobar_l) - 1
-          delta_eos = -1.d0
-          do comp=1,ncomp
-             delta_eos = delta_eos + sedgey(i,j,comp)/rhobar(comp)
-          end do
-
-          do comp=1,ncomp
-             sedgey(i,j,comp) = sedgey(i,j,comp) - w(comp)*(rhobar_sq/rhobar(comp))*delta_eos
-          end do
-
-       enddo
-       enddo
-
-    else if (proj_type .eq. 3) then
-
-       ! boussinesq
-
-       ! x-faces
-       do j = xlo(2),xhi(2) 
-       do i = xlo(1),xhi(1) 
-          sedgex(i,j,ncomp) = rho0 - sum(sedgex(i,j,1:ncomp-1))
-       enddo
-       enddo
-
-       ! y-faces
-       do j = ylo(2),yhi(2) 
-       do i = ylo(1),yhi(1) 
-          sedgey(i,j,ncomp) = rho0 - sum(sedgey(i,j,1:ncomp-1))
-       enddo
-       enddo
-
-    else
-       call bl_error("bds.f90: invalid proj_type")
-    end if
-
-  end subroutine bdsupdate_2d
+  end subroutine bdsproj_2d
 
   subroutine bdsfluxdiv_2d(lo,hi,s_update,ng_u,uadv,vadv,ng_v, &
                           sedgex,sedgey,ng_e,dx,ncomp,tlo,thi)
@@ -3989,7 +3913,7 @@ contains
 
   end subroutine bdsconc_3d
 
-  subroutine bdsupdate_3d(lo,hi,uadv,vadv,wadv,ng_v, &
+  subroutine bdsproj_3d(lo,hi,uadv,vadv,wadv,ng_v, &
                           sedgex,sedgey,sedgez,ng_e,dx,ncomp,proj_type, &
                           xlo,xhi,ylo,yhi,zlo,zhi)
 
@@ -4008,149 +3932,87 @@ contains
 
     real(kind=dp_t) :: w(ncomp), rhobar_sq, delta_eos, temp
 
+    !  x-faces
+    do k = xlo(3),xhi(3)
+    do j = xlo(2),xhi(2) 
+    do i = xlo(1),xhi(1) 
+       call bdsproj_local(sedgex(i,j,k,:), ncomp, proj_type)
+    enddo
+    enddo
+    enddo
+
+    ! y-faces
+    do k = ylo(3),yhi(3)
+    do j = ylo(2),yhi(2) 
+    do i = ylo(1),yhi(1) 
+       call bdsproj_local(sedgey(i,j,k,:), ncomp, proj_type)
+    enddo
+    enddo
+    enddo
+
+    ! z-faces
+    do k = zlo(3),zhi(3)
+    do j = zlo(2),zhi(2) 
+    do i = zlo(1),zhi(1) 
+       call bdsproj_local(sedgez(i,j,k,:), ncomp, proj_type)
+    enddo
+    enddo
+    enddo
+
+  end subroutine bdsproj_3d
+
+  subroutine bdsproj_local(sedge,ncomp,proj_type)
+
+    real(kind=dp_t), intent(inout) :: sedge(1:ncomp)
+    integer        , intent(in   ) :: ncomp, proj_type
+
+    ! local
+    integer :: comp
+    real(kind=dp_t) :: w(ncomp), rhobar_sq, delta_eos, temp
+    
+
     if (proj_type .eq. 2) then
-
-       ! L2 projection: x-faces
-       do k = xlo(3),xhi(3)
-       do j = xlo(2),xhi(2) 
-       do i = xlo(1),xhi(1) 
           
-          ! compute mass fractions, w_i = rho_i / rho
-          temp = 0.d0
-          do comp=1,ncomp
-             temp = temp + sedgex(i,j,k,comp)
-          end do
-          do comp=1,ncomp
-             w(comp) = sedgex(i,j,k,comp)/temp
-          end do
+       ! compute mass fractions, w_i = rho_i / rho
+       temp = 0.d0
+       do comp=1,ncomp
+          temp = temp + sedge(comp)
+       end do
+       do comp=1,ncomp
+          w(comp) = sedge(comp)/temp
+       end do
 
-          ! rhobar_sq = (sum_i (w_i/rhobar_i^2))^-1
-          rhobar_sq = 0.d0
-          do comp=1,ncomp
-             rhobar_sq = rhobar_sq + w(comp)/rhobar(comp)**2
-          end do
-          rhobar_sq = 1.d0/rhobar_sq
+       ! rhobar_sq = (sum_i (w_i/rhobar_i^2))^-1
+       rhobar_sq = 0.d0
+       do comp=1,ncomp
+          rhobar_sq = rhobar_sq + w(comp)/rhobar(comp)**2
+       end do
+       rhobar_sq = 1.d0/rhobar_sq
 
-          ! delta_eos = sum_l (rho_l/rhobar_l) - 1
-          delta_eos = -1.d0
-          do comp=1,ncomp
-             delta_eos = delta_eos + sedgex(i,j,k,comp)/rhobar(comp)
-          end do
+       ! delta_eos = sum_l (rho_l/rhobar_l) - 1
+       delta_eos = -1.d0
+       do comp=1,ncomp
+          delta_eos = delta_eos + sedge(comp)/rhobar(comp)
+       end do
 
-          do comp=1,ncomp
-             sedgex(i,j,k,comp) = sedgex(i,j,k,comp) - w(comp)*(rhobar_sq/rhobar(comp))*delta_eos
-          end do
-
-       enddo
-       enddo
-       enddo
-
-       ! L2 projection: y-faces
-       do k = ylo(3),yhi(3)
-       do j = ylo(2),yhi(2) 
-       do i = ylo(1),yhi(1) 
-          
-          ! compute mass fractions, w_i = rho_i / rho
-          temp = 0.d0
-          do comp=1,ncomp
-             temp = temp + sedgey(i,j,k,comp)
-          end do
-          do comp=1,ncomp
-             w(comp) = sedgey(i,j,k,comp)/temp
-          end do
-
-          ! rhobar_sq = (sum_i (w_i/rhobar_i^2))^-1
-          rhobar_sq = 0.d0
-          do comp=1,ncomp
-             rhobar_sq = rhobar_sq + w(comp)/rhobar(comp)**2
-          end do
-          rhobar_sq = 1.d0/rhobar_sq
-
-          ! delta_eos = sum_l (rho_l/rhobar_l) - 1
-          delta_eos = -1.d0
-          do comp=1,ncomp
-             delta_eos = delta_eos + sedgey(i,j,k,comp)/rhobar(comp)
-          end do
-
-          do comp=1,ncomp
-             sedgey(i,j,k,comp) = sedgey(i,j,k,comp) - w(comp)*(rhobar_sq/rhobar(comp))*delta_eos
-          end do
-
-       enddo
-       enddo
-       enddo
-
-       ! L2 projection: z-faces
-       do k = zlo(3),zhi(3)
-       do j = zlo(2),zhi(2) 
-       do i = zlo(1),zhi(1) 
-          
-          ! compute mass fractions, w_i = rho_i / rho
-          temp = 0.d0
-          do comp=1,ncomp
-             temp = temp + sedgez(i,j,k,comp)
-          end do
-          do comp=1,ncomp
-             w(comp) = sedgez(i,j,k,comp)/temp
-          end do
-
-          ! rhobar_sq = (sum_i (w_i/rhobar_i^2))^-1
-          rhobar_sq = 0.d0
-          do comp=1,ncomp
-             rhobar_sq = rhobar_sq + w(comp)/rhobar(comp)**2
-          end do
-          rhobar_sq = 1.d0/rhobar_sq
-
-          ! delta_eos = sum_l (rho_l/rhobar_l) - 1
-          delta_eos = -1.d0
-          do comp=1,ncomp
-             delta_eos = delta_eos + sedgez(i,j,k,comp)/rhobar(comp)
-          end do
-
-          do comp=1,ncomp
-             sedgez(i,j,k,comp) = sedgez(i,j,k,comp) - w(comp)*(rhobar_sq/rhobar(comp))*delta_eos
-          end do
-
-       enddo
-       enddo
-       enddo
+       do comp=1,ncomp
+          sedge(comp) = sedge(comp) - w(comp)*(rhobar_sq/rhobar(comp))*delta_eos
+       end do
 
     else if (proj_type .eq. 3) then
 
-       ! boussinesq
+       sedge(ncomp) = rho0 - sum(sedge(1:ncomp-1))
 
-       ! x-faces
-       do k = xlo(3),xhi(3)
-       do j = xlo(2),xhi(2) 
-       do i = xlo(1),xhi(1) 
-          sedgex(i,j,k,ncomp) = rho0 - sum(sedgex(i,j,k,1:ncomp-1))
-       enddo
-       enddo
-       enddo
+    else if (proj_type .eq. 4) then
 
-       ! y-faces
-       do k = ylo(3),yhi(3)
-       do j = ylo(2),yhi(2) 
-       do i = ylo(1),yhi(1) 
-          sedgey(i,j,k,ncomp) = rho0 - sum(sedgey(i,j,k,1:ncomp-1))
-       enddo
-       enddo
-       enddo
-
-       ! z-faces
-       do k = zlo(3),zhi(3)
-       do j = zlo(2),zhi(2) 
-       do i = zlo(1),zhi(1) 
-          sedgez(i,j,k,ncomp) = rho0 - sum(sedgez(i,j,k,1:ncomp-1))
-       enddo
-       enddo
-       enddo
 
     else
        call bl_error("bds.f90: invalid proj_type")
-    end if
+    end if   
 
-  end subroutine bdsupdate_3d
+
+  end subroutine bdsproj_local
+
 
   subroutine bdsfluxdiv_3d(lo,hi,s_update,ng_u,uadv,vadv,wadv,ng_v, &
                           sedgex,sedgey,sedgez,ng_e,dx,ncomp, &
@@ -4377,7 +4239,7 @@ contains
        hi =  upb(get_box(s_update(lev), i))
        select case (dm)
        case (2)
-          call bdsupdate_2d(lo, hi, &
+          call bdsproj_2d(lo, hi, &
                             uadvp(:,:,1,1), vadvp(:,:,1,1), ng_v, &
                             sxp(:,:,1,:), syp(:,:,1,:), ng_e, &
                             dx(lev,:), ncomp, proj_type,xlo,xhi,ylo,yhi)
