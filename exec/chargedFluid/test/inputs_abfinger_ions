@@ -14,7 +14,7 @@
   cfl = 0.1                             ! cfl number (used if fixed_dt<0) to determine time step
 
   max_step = 50000                      ! maximum number of time steps
-  plot_int = 10                         ! Interval for writing a plotfile (for visit/amrvis)
+  plot_int = 1                          ! Interval for writing a plotfile (for visit/amrvis)
   plot_base_name = "plt"                ! prefix for plotfile name
   chk_int = -1                          ! Interval for writing a checkpoint
   check_base_name = "chk"               ! prefix for checkpoint name
@@ -69,7 +69,7 @@
   visc_type = 2
   visc_coef = 0.01002                   ! momentum diffusion coefficient 'eta'   
 
-  advection_type = 1                    ! 0 = centered explicit
+  advection_type = 0                    ! 0 = centered explicit
                                         ! 1 = unlimited bilinear bds in space and time
                                         ! 2 = limited bliniear bds in space and time
                                         ! 3 = unlimited quadratic bds in space and time
