@@ -124,7 +124,7 @@ contains
     type(multifab) ::     rho_nd(mla%nlevel)
     type(multifab) ::   umac_tmp(mla%nlevel,mla%dim)
 
-    integer :: i,dm,n,nlevs
+    integer :: i,dm,n,nlevs,proj_type
 
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
     real(kind=dp_t) :: weights(2)
@@ -149,6 +149,13 @@ contains
           end if
        end if
     end if
+    
+    ! For BDS we need to project edge states onto constraints
+    if(use_charged_fluid .and. electroneutral) then
+      proj_type=4
+    else
+      proj_type=3
+    end if    
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -516,11 +523,11 @@ contains
 
           ! bds increments rho_update with the advection term
           call bds(mla,umac_tmp,rho_tmp,rho_update,bds_force,rho_fc,rho_nd,dx,0.5d0*dt,1, &
-                   nspecies,c_bc_comp,the_bc_tower,proj_type_in=3)
+                   nspecies,c_bc_comp,the_bc_tower,proj_type_in=proj_type)
 
        else if (advection_type .eq. 3 .or. advection_type .eq. 4) then
           call bds_quad(mla,umac_tmp,rho_old,rho_update,bds_force,rho_fc,dx,0.5d0*dt,1,nspecies, &
-                        c_bc_comp,the_bc_tower,proj_type_in=3)
+                        c_bc_comp,the_bc_tower,proj_type_in=proj_type)
        end if
 
     else
@@ -698,11 +705,11 @@ contains
        if (advection_type .eq. 1 .or. advection_type .eq. 2) then
           ! bds increments rho_update with the advection term
           call bds(mla,umac_tmp,rho_tmp,rho_update,bds_force,rho_fc,rho_nd,dx,dt,1, &
-                   nspecies,c_bc_comp,the_bc_tower,proj_type_in=3)
+                   nspecies,c_bc_comp,the_bc_tower,proj_type_in=proj_type)
 
        else if (advection_type .eq. 3 .or. advection_type .eq. 4) then
           call bds_quad(mla,umac_tmp,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies, &
-                        c_bc_comp,the_bc_tower,proj_type_in=3)
+                        c_bc_comp,the_bc_tower,proj_type_in=proj_type)
        end if
 
        do n=1,nlevs

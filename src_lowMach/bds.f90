@@ -7,6 +7,7 @@ module bds_module
   use convert_stag_module
   use bc_module
   use probin_common_module, only: advection_type, rhobar, rho0
+  use probin_charged_module, only: charge_per_mass
 
   implicit none
 
@@ -72,10 +73,7 @@ contains
 
     call build(bpt,"bds")
 
-    ! L2 projection onto EOS?
-    ! 0 = do nothing
-    ! 1 = assume s holds rho and rho*c
-    ! 2 = assume s holds all rho_i's
+    ! L2 projection onto EOS and electroneutrality
     if (present(proj_type_in)) then
        proj_type = proj_type_in
     else
@@ -3968,10 +3966,15 @@ contains
 
     ! local
     integer :: comp
-    real(kind=dp_t) :: w(ncomp), rhobar_sq, delta_eos, temp
+    real(kind=dp_t) :: w(ncomp), z(ncomp), rhobar_sq, delta_eos, temp
     
 
-    if (proj_type .eq. 2) then
+    select case (proj_type) 
+    case(0)
+    
+       ! Do nothing
+    
+    case(2) ! L2 projection onto the linear EOS constraint for low Mach models
           
        ! compute mass fractions, w_i = rho_i / rho
        temp = 0.d0
@@ -3999,17 +4002,28 @@ contains
           sedge(comp) = sedge(comp) - w(comp)*(rhobar_sq/rhobar(comp))*delta_eos
        end do
 
-    else if (proj_type .eq. 3) then
+    case(3) ! Ensure sum(rho)=rho0 for Boussinesq models
+    
+       w = sedge/rho0 ! Mass fractions
+       ! sedge = rho0 * (w/sum(w)) ! Rescale to ensure correct sum
 
-       sedge(ncomp) = rho0 - sum(sedge(1:ncomp-1))
+    case(4) ! Ensure sum(rho)=rho0
+       ! and also sum(z*rho)=0 for electroneutral Boussinesq models
 
-    else if (proj_type .eq. 4) then
+       ! Ensure sum(z*rho)=0
+       z = charge_per_mass(1:ncomp)
+       sedge = sedge - sum(sedge*z) / sum(z*z) * z
 
+       ! Now ensure sum(rho)=rho0 while preserving sum(z*rho)=0
+       w = sedge/rho0 ! Mass fractions
+       sedge = rho0 * (w/sum(w))
+       write(*,*) "z^T*rho=", sum(sedge*z), " 1^T*w-1=", sum(sedge/rho0)-1.0d0
 
-    else
+    case default
        call bl_error("bds.f90: invalid proj_type")
-    end if   
+    end select
 
+    stop
 
   end subroutine bdsproj_local
 
