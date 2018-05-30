@@ -85,7 +85,7 @@ contains
     E_ext_value(:)         = 0.d0
     epot_mg_verbose        = 0
     epot_mg_abs_tol        = 1.d-14
-    epot_mg_rel_tol        = 1.d-9
+    epot_mg_rel_tol        = 1.d-10
 
     electroneutral = .false.
     zero_eps_on_wall_type = 0
