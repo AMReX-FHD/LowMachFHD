@@ -4005,7 +4005,7 @@ contains
     case(3) ! Ensure sum(rho)=rho0 for Boussinesq models
     
        w = sedge/rho0 ! Mass fractions
-       ! sedge = rho0 * (w/sum(w)) ! Rescale to ensure correct sum
+       sedge = rho0 * (w/sum(w)) ! Rescale to ensure correct sum
 
     case(4) ! Ensure sum(rho)=rho0
        ! and also sum(z*rho)=0 for electroneutral Boussinesq models
@@ -4017,13 +4017,11 @@ contains
        ! Now ensure sum(rho)=rho0 while preserving sum(z*rho)=0
        w = sedge/rho0 ! Mass fractions
        sedge = rho0 * (w/sum(w))
-       write(*,*) "z^T*rho=", sum(sedge*z), " 1^T*w-1=", sum(sedge/rho0)-1.0d0
+       !write(*,*) "z^T*rho=", sum(sedge*z), " 1^T*w-1=", sum(sedge/rho0)-1.0d0
 
     case default
        call bl_error("bds.f90: invalid proj_type")
     end select
-
-    stop
 
   end subroutine bdsproj_local
 
