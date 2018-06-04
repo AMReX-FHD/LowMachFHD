@@ -1,7 +1,7 @@
 ! this is a custom version of write plotfile for problems with the 4 species, in order:
 ! HCl NaOH NaCl H2O
 ! and writes out the the plotfile the ionic concentraions (for rho_i and c_i), in order:
-! Na+ Cl- H+ OH- H2O 
+! Na+ Cl- H+ OH- H2O
 
 module write_plotfile_module
 
@@ -85,8 +85,8 @@ contains
     end if
 
     if (algorithm_type .eq. 6) then
-       ! add rho_eos and rho_eos-rho0
-       nvarsCC = nvarsCC+2
+       ! add rho_eos-rho0
+       nvarsCC = nvarsCC+1
     end if
 
     allocate(plot_names(nvarsCC))
@@ -169,9 +169,6 @@ contains
     if (algorithm_type .eq. 6) then
        plot_names(counter) = "rho_eos"
        counter = counter+1
-       plot_names(counter) = "rho_eos_minus_rho0"
-       counter = counter+1
-
     end if
 
     ! staggered quantities
@@ -355,13 +352,11 @@ contains
     end if
 
     if (algorithm_type .eq. 6) then
-       ! rho_eos and rho_eos_minus_rho0
+       ! rho_eos - rho0
        call compute_rhotot_eos(mla,rho,rhotot,plotdata,counter)
-       counter = counter+1
        do n=1,nlevs
-          call multifab_copy_c(plotdata(n),counter,plotdata(n),counter-1,1)
-          call multifab_sub_sub_s_c(plotdata(n),counter,rho0,1)
-       end do
+         call multifab_sub_sub_s_c(plotdata(n),counter,rho0,1)
+       end do  
        counter = counter+1
     end if
 
