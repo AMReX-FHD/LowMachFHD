@@ -3,13 +3,13 @@ module eos_check_module
   use multifab_module
   use ml_layout_module
   use convert_rhoc_to_c_module
-  use probin_common_module, only: rhobar, nspecies, algorithm_type, rho0
+  use probin_common_module, only: rhobar, nspecies, algorithm_type, rho0, rho_eos_form
 
   implicit none
 
   private
 
-  public :: eos_check, compute_rhotot_eos
+  public :: eos_check, compute_rhotot_eos, compute_rho_eos
 
 contains
 
@@ -157,52 +157,105 @@ contains
     end if
 
   end subroutine eos_check_3d
+  
 
-  subroutine compute_rhotot_eos(mla,rho,rhotot,rhotot_eos,rhotot_eos_comp)
+  subroutine compute_rho_eos(rho, rhotot)
+    real(kind=dp_t), intent(in ) :: rho(nspecies)
+    real(kind=dp_t), intent(out) :: rhotot
+    
+    real(kind=dp_t) :: c(nspecies)
+
+    ! compute rhotot via sum
+    rhotot = sum(rho)
+    ! compute concentrations
+    c=rho/rhotot  
+   
+    if(rho_eos_form==2) then ! Linearized EOS of incompressible components    
+       rhotot = rho0  - rho0* sum((rho0/rhobar(1:nspecies-1)-1.0d0)*c(1:nspecies-1))
+    else ! Nonlinear EOS of incompressible components    
+       rhotot = 1.0d0 / sum(c/rhobar(1:nspecies))       
+    end if   
+  
+  end subroutine compute_rho_eos
+
+
+  subroutine compute_rhotot_eos(mla,rho,rhotot_eos,rhotot_eos_comp)
 
     ! compute rhotot_eos = sum(c_i/rhobar_i) in the valid region
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
-    type(multifab) , intent(in   ) :: rhotot(:)
     type(multifab) , intent(inout) :: rhotot_eos(:)
     integer        , intent(in   ) :: rhotot_eos_comp
 
     ! local
-    integer :: n,nlevs,comp
-
-    type(multifab) :: conc(mla%dim), rhoinv(mla%dim)
+    integer i,n,dm,nlevs,ng_r,ng_rr
+    real(kind=dp_t), pointer :: rp(:,:,:,:), rpp(:,:,:,:)
+    integer :: lo(mla%dim),hi(mla%dim)
 
     type(bl_prof_timer),save :: bpt
 
     call build(bpt,"compute_rhotot_eos")
 
     nlevs = mla%nlevel
+    dm = mla%dim
+    ng_r = rho(1)%ng
+    ng_rr = rhotot_eos(1)%ng
 
     do n=1,nlevs
-       call multifab_build(conc(n),mla%la(n),nspecies,0)
-       call multifab_build(rhoinv(n),mla%la(n),1,0)
-    end do
-
-    call convert_rhoc_to_c(mla,rho,rhotot,conc,.true.)
-    
-    do n=1,nlevs
-       call multifab_setval_c(rhotot_eos(n),1.d0,rhotot_eos_comp,1,all=.true.)
-       call multifab_setval_c(rhoinv(n),0.d0,1,1,all=.true.)
-       do comp=1,nspecies
-          call multifab_mult_mult_s_c(conc(n),comp,1.d0/rhobar(comp),1,0)
-          call multifab_plus_plus_c(rhoinv(n),1,conc(n),comp,1,0)
-       end do
-       call multifab_div_div_c(rhotot_eos(n),rhotot_eos_comp,rhoinv(n),1,1,0)
-    end do
-
-    do n=1,nlevs
-       call multifab_destroy(conc(n))
-       call multifab_destroy(rhoinv(n))
+       do i=1,nfabs(rho(n))
+         rp => dataptr(rho(n), i)
+         rpp => dataptr(rhotot_eos(n), i)
+         lo =  lwb(get_box(rho(n), i))
+         hi =  upb(get_box(rho(n), i))
+         select case (dm)
+         case (2)
+            call compute_rhotot_eos_2d(rp(:,:,1,:),ng_r,rpp(:,:,1,rhotot_eos_comp),ng_rr,lo,hi)
+         case (3)
+            call compute_rhotot_eos_3d(rp(:,:,:,:),ng_r,rpp(:,:,:,rhotot_eos_comp),ng_rr,lo,hi)
+         end select
+         
+      end do
     end do
 
     call destroy(bpt)
 
   end subroutine compute_rhotot_eos
 
+  subroutine compute_rhotot_eos_2d(rho,ng_r,rhotot_eos,ng_rr,lo,hi)
+
+    integer        , intent(in   ) :: lo(:), hi(:), ng_r, ng_rr
+    real(kind=dp_t), intent(in   ) :: rho(lo(1)-ng_r:,lo(2)-ng_r:,:)
+    real(kind=dp_t), intent(inout) :: rhotot_eos(lo(1)-ng_rr:,lo(2)-ng_rr:)
+
+    ! local
+    integer :: i,j
+    
+    do j=lo(2),hi(2)
+    do i=lo(1),hi(1)    
+       call compute_rho_eos(rho(i,j,:), rhotot_eos(i,j))
+    end do
+    end do
+
+  end subroutine compute_rhotot_eos_2d
+
+  subroutine compute_rhotot_eos_3d(rho,ng_r,rhotot_eos,ng_rr,lo,hi)
+
+    integer        , intent(in   ) :: lo(:), hi(:), ng_r, ng_rr
+    real(kind=dp_t), intent(in   ) :: rho(lo(1)-ng_r:,lo(2)-ng_r:,lo(3)-ng_r:,:)
+    real(kind=dp_t), intent(inout) :: rhotot_eos(lo(1)-ng_r:,lo(2)-ng_r:,lo(3)-ng_r:)
+
+    ! local
+    integer :: i,j,k
+
+    do k=lo(3),hi(3)
+    do j=lo(2),hi(2)
+    do i=lo(1),hi(1)    
+       call compute_rho_eos(rho(i,j,k,:), rhotot_eos(i,j,k))
+    end do
+    end do
+    end do
+
+  end subroutine compute_rhotot_eos_3d
+  
 end module eos_check_module

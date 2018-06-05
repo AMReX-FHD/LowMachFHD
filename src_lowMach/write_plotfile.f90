@@ -269,7 +269,7 @@ contains
 
     if (algorithm_type .eq. 6) then
        ! rho_eos - rho0
-       call compute_rhotot_eos(mla,rho,rhotot,plotdata,counter)
+       call compute_rhotot_eos(mla,rho,plotdata,counter)
        do n=1,nlevs
           call multifab_sub_sub_s_c(plotdata(n),counter,rho0,1)
        end do

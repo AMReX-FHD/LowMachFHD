@@ -34,6 +34,7 @@ module probin_common_module
   integer,save    :: barodiffusion_type
   real(dp_t),save :: molmass(MAX_SPECIES)
   real(dp_t),save :: rhobar(MAX_SPECIES), rho0
+  integer,save    :: rho_eos_form
   real(dp_t),save :: density_weights(0:MAX_SPECIES)
   integer,save    :: shift_cc_to_boundary(MAX_SPACEDIM,2)
 
@@ -77,6 +78,9 @@ module probin_common_module
   namelist /probin_common/ molmass         ! molecular masses for nspecies (mass per molecule, *not* molar mass)
   namelist /probin_common/ rhobar          ! pure component densities for all species
   namelist /probin_common/ rho0            ! used in some Boussinesq algorithms
+  namelist /probin_common/ rho_eos_form    ! For Boussinesq, how to compute density from EOS:
+                                           ! =1 for nonlinear EOS
+                                           ! =2 or linearized EOS
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
   namelist /probin_common/ variance_coef_mom  ! global scaling epsilon for stochastic momentum forcing
@@ -204,7 +208,8 @@ module probin_common_module
   namelist /probin_common/ histogram_unit      ! If positive, write the values of the densities to a file for histogramming
   namelist /probin_common/ density_weights     ! if nonzero, compute rho <- \sum w_i * rho_i for HydroGrid analysis if analyze_conserved=T
                                                ! or rho <- \sum_{i=1}^{n} w_i*(rho_i/rho) if analyze_conserved=F
-                                               ! If w_0 is nonzero then do rho <- w_0 / rho at the end
+                                               ! If w_0 is negative then do rho <- abs(w_0) / rho at the end
+                                               ! If w_0 is positive then do rho <- w_0 + rho at the end
 
   namelist /probin_common/ shift_cc_to_boundary ! use special routine to shift a cell-centered value to a physical boundary
                                                 ! face instead of using the physical boundary conditions
@@ -263,6 +268,7 @@ contains
     molmass(:) = 1.0d0
     rhobar(:)  = 1.d0
     rho0 = 1.d0
+    rho_eos_form = 1
 
     variance_coef_mom = 1.d0
     variance_coef_mass = 1.d0

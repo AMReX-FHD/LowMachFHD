@@ -454,12 +454,17 @@ contains
        ! or a linearized rho_eos for Boussinesq models, or total charge density for electrohydrodynamics
        if((nspecies_analysis>0).and.(.not.exclude_last_species).and.&
           (sum(abs(density_weights(1:nspecies_analysis)))>0.0d0)) then
-          call setval(s_hydro, 0.0d0, comp) ! rho=0
+          if (density_weights(0)>0.0d0) then
+            call setval(s_hydro, density_weights(0), comp) ! rho=w_0
+          else  
+            call setval(s_hydro, 0.0d0, comp) ! rho=0
+          end if  
           do species=1, nspecies_analysis
              call multifab_saxpy_3_cc(s_hydro,comp,density_weights(species),s_hydro,species+comp,1)
           end do
-          if(abs(density_weights(0))>0.0d0) then ! Compute rho <- density_weights(0) / rho (as in rho_eos for low Mach models)
-            call invert_multifab(la_s,s_hydro,comp,ncomp=1,nghost=0,numerator=density_weights(0))
+          if(density_weights(0)<0.0d0) then
+            ! Compute rho <- density_weights(0) / rho (as in rho_eos for low Mach models)
+            call invert_multifab(la_s,s_hydro,comp,ncomp=1,nghost=0,numerator=abs(density_weights(0)))
           end if
        end if    
 
@@ -604,11 +609,11 @@ contains
           do jj =  lbound(variables,dim=4), ubound(variables,dim=4)
              do ii = lbound(variables,dim=pdim), ubound(variables,dim=pdim)     
                 if (pdim .eq. 1) then
-                   variables_1D(ii,jj) = sum(variables(ii,:,:,jj))
+                   variables_1D(ii,jj) = sum(variables(ii,:,:,jj))/size(variables(ii,:,:,jj))
                 else if (pdim .eq. 2) then
-                   variables_1D(ii,jj) = sum(variables(:,ii,:,jj))
+                   variables_1D(ii,jj) = sum(variables(:,ii,:,jj))/size(variables(:,ii,:,jj))
                 else if (pdim .eq. 3) then
-                   variables_1D(ii,jj) = sum(variables(:,:,ii,jj))
+                   variables_1D(ii,jj) = sum(variables(:,:,ii,jj))/size(variables(:,:,ii,jj))
                 end if
              end do
           end do
