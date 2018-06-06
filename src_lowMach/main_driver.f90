@@ -42,7 +42,7 @@ subroutine main_driver()
                                   advection_type, fixed_dt, max_step, cfl, &
                                   algorithm_type, variance_coef_mom, initial_variance_mom, &
                                   variance_coef_mass, barodiffusion_type, use_bl_rng, &
-                                  density_weights, rhobar, rho0, analyze_conserved
+                                  density_weights, rhobar, rho0, analyze_conserved, rho_eos_form
   use probin_multispecies_module, only: Dbar, start_time, probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
   use probin_charged_module, only: probin_charged_init, use_charged_fluid, dielectric_const, &
@@ -591,13 +591,19 @@ subroutine main_driver()
            
            if ((algorithm_type .eq. 6) .and. all(density_weights(0:nspecies)==0.0d0)) then
               ! Make rho be rho_eos for HydroGrid analysis purposes
-              ! This can be overwridden by specifying density_weights in the input file             
-              density_weights(1:nspecies) = 1.0d0 / rhobar(1:nspecies)
-              if(analyze_conserved) then
-                 density_weights(0) = rho0
-              else
-                 density_weights(0) = 1.0
-              end if
+              ! This can be overwridden by specifying density_weights in the input file
+              if(rho_eos_form==2) then ! Linearized EOS
+                 density_weights(1:nspecies) =  - (rho0/rhobar(1:nspecies)-1.0d0)
+                 if(.not.analyze_conserved) density_weights(1:nspecies)=rho0*density_weights(1:nspecies)
+                 density_weights(0) = rho0 ! No inversion here
+              else ! Nonlinear EOS
+                 density_weights(1:nspecies) = 1.0d0 / rhobar(1:nspecies)
+                 if(analyze_conserved) then
+                    density_weights(0) = -rho0
+                 else
+                    density_weights(0) = -1.0
+                 end if
+              end if   
            end if
            
         else

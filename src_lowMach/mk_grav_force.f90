@@ -6,6 +6,7 @@ module mk_grav_force_module
   use define_bc_module
   use zero_edgeval_module
   use probin_common_module, only: grav, rhobar, nspecies, rho0
+  use eos_check_module, only: compute_rho_eos
 
   implicit none
 
@@ -231,7 +232,7 @@ contains
 
     nlevs = mla%nlevel
     dm = mla%dim
-
+    
     ng_s  = rho_fc(1,1)%ng
     ng_u  = m_force(1,1)%ng
 
@@ -281,109 +282,30 @@ contains
     ! local
     integer i,j,comp
     real(kind=dp_t) :: rhotot
-    real(kind=dp_t) :: c(nspecies)
 
-    if (increment) then
-
-       do j=lo(2),hi(2)
-       do i=lo(1),hi(1)+1
-
-          ! compute rhotot via sum
-          rhotot = 0.d0
-          do comp=1,nspecies
-             rhotot = rhotot + rhox(i,j,comp)
-          end do
-          
-          ! compute concentrations
-          c(1:nspecies) = rhox(i,j,1:nspecies)/rhotot
-
-          ! compute rhotot via EOS
-          rhotot = 0.d0
-          do comp=1,nspecies
-             rhotot = rhotot + c(comp)/rhobar(comp)
-          end do
-          rhotot = 1.d0/rhotot
-
-          m_forcex(i,j) = m_forcex(i,j) + grav(1)*(rhotot-rho0)
-
-       end do
-       end do
-
-       do j=lo(2),hi(2)+1
-       do i=lo(1),hi(1)
-
-          ! compute rhotot via sum
-          rhotot = 0.d0
-          do comp=1,nspecies
-             rhotot = rhotot + rhoy(i,j,comp)
-          end do
-          
-          ! compute concentrations
-          c(1:nspecies) = rhoy(i,j,1:nspecies)/rhotot
-
-          ! compute rhotot via EOS
-          rhotot = 0.d0
-          do comp=1,nspecies
-             rhotot = rhotot + c(comp)/rhobar(comp)
-          end do
-          rhotot = 1.d0/rhotot
-
-          m_forcey(i,j) = m_forcey(i,j) + grav(2)*(rhotot-rho0)
-
-       end do
-       end do
-
-    else
-
-       do j=lo(2),hi(2)
-       do i=lo(1),hi(1)+1
-
-          ! compute rhotot via sum
-          rhotot = 0.d0
-          do comp=1,nspecies
-             rhotot = rhotot + rhox(i,j,comp)
-          end do
-          
-          ! compute concentrations
-          c(1:nspecies) = rhox(i,j,1:nspecies)/rhotot
-
-          ! compute rhotot via EOS
-          rhotot = 0.d0
-          do comp=1,nspecies
-             rhotot = rhotot + c(comp)/rhobar(comp)
-          end do
-          rhotot = 1.d0/rhotot
-
-          m_forcex(i,j) = grav(1)*(rhotot-rho0)
-
-       end do
-       end do
-
-       do j=lo(2),hi(2)+1
-       do i=lo(1),hi(1)
-
-          ! compute rhotot via sum
-          rhotot = 0.d0
-          do comp=1,nspecies
-             rhotot = rhotot + rhoy(i,j,comp)
-          end do
-          
-          ! compute concentrations
-          c(1:nspecies) = rhoy(i,j,1:nspecies)/rhotot
-
-          ! compute rhotot via EOS
-          rhotot = 0.d0
-          do comp=1,nspecies
-             rhotot = rhotot + c(comp)/rhobar(comp)
-          end do
-          rhotot = 1.d0/rhotot
-
-          m_forcey(i,j) = grav(2)*(rhotot-rho0)
-
-       end do
-       end do
-
+    if(.not.increment) then
+       m_forcex=0.0d0
+       m_forcey=0.0d0
     end if
+    
+    do j=lo(2),hi(2)
+    do i=lo(1),hi(1)+1
+
+       call compute_rho_eos(rhox(i,j,1:nspecies), rhotot) 
+       m_forcex(i,j) = m_forcex(i,j) + grav(1)*(rhotot-rho0)
+
+    end do
+    end do
+
+    do j=lo(2),hi(2)+1
+    do i=lo(1),hi(1)
+       
+       call compute_rho_eos(rhoy(i,j,1:nspecies), rhotot) 
+       m_forcey(i,j) = m_forcey(i,j) + grav(2)*(rhotot-rho0)
+
+    end do
+    end do
+
 
   end subroutine mk_grav_force_bousq_2d
 
@@ -402,169 +324,46 @@ contains
     ! local
     integer i,j,k,comp
     real(kind=dp_t) :: rhotot
-    real(kind=dp_t) :: c(nspecies)
 
-    if (increment) then
-
-       do k=lo(3),hi(3)
-       do j=lo(2),hi(2)
-       do i=lo(1),hi(1)+1
-
-          ! compute rhotot via sum
-          rhotot = 0.d0
-          do comp=1,nspecies
-             rhotot = rhotot + rhox(i,j,k,comp)
-          end do
-          
-          ! compute concentrations
-          c(1:nspecies) = rhox(i,j,k,1:nspecies)/rhotot
-
-          ! compute rhotot via EOS
-          rhotot = 0.d0
-          do comp=1,nspecies
-             rhotot = rhotot + c(comp)/rhobar(comp)
-          end do
-          rhotot = 1.d0/rhotot
-
-          m_forcex(i,j,k) = m_forcex(i,j,k) + grav(1)*(rhotot-rho0)
-
-       end do
-       end do
-       end do
-
-       do k=lo(3),hi(3)
-       do j=lo(2),hi(2)+1
-       do i=lo(1),hi(1)
-
-          ! compute rhotot via sum
-          rhotot = 0.d0
-          do comp=1,nspecies
-             rhotot = rhotot + rhoy(i,j,k,comp)
-          end do
-
-          ! compute concentrations
-          c(1:nspecies) = rhoy(i,j,k,1:nspecies)/rhotot
-
-          ! compute rhotot via EOS
-          rhotot = 0.d0
-          do comp=1,nspecies
-             rhotot = rhotot + c(comp)/rhobar(comp)
-          end do
-          rhotot = 1.d0/rhotot
-
-          m_forcey(i,j,k) = m_forcey(i,j,k) + grav(2)*(rhotot-rho0)
-
-       end do
-       end do
-       end do
-
-       do k=lo(3),hi(3)+1
-       do j=lo(2),hi(2)
-       do i=lo(1),hi(1)
-
-          ! compute rhotot via sum
-          rhotot = 0.d0
-          do comp=1,nspecies
-             rhotot = rhotot + rhoz(i,j,k,comp)
-          end do
-          
-          ! compute concentrations
-          c(1:nspecies) = rhoz(i,j,k,1:nspecies)/rhotot
-
-          ! compute rhotot via EOS
-          rhotot = 0.d0
-          do comp=1,nspecies
-             rhotot = rhotot + c(comp)/rhobar(comp)
-          end do
-          rhotot = 1.d0/rhotot
-
-          m_forcez(i,j,k) = m_forcez(i,j,k) + grav(3)*(rhotot-rho0)
-
-       end do
-       end do
-       end do
-
-    else
-
-       do k=lo(3),hi(3)
-       do j=lo(2),hi(2)
-       do i=lo(1),hi(1)+1
-
-          ! compute rhotot via sum
-          rhotot = 0.d0
-          do comp=1,nspecies
-             rhotot = rhotot + rhox(i,j,k,comp)
-          end do
-          
-          ! compute concentrations
-          c(1:nspecies) = rhox(i,j,k,1:nspecies)/rhotot
-
-          ! compute rhotot via EOS
-          rhotot = 0.d0
-          do comp=1,nspecies
-             rhotot = rhotot + c(comp)/rhobar(comp)
-          end do
-          rhotot = 1.d0/rhotot
-
-          m_forcex(i,j,k) = grav(1)*(rhotot-rho0)
-
-       end do
-       end do
-       end do
-
-       do k=lo(3),hi(3)
-       do j=lo(2),hi(2)+1
-       do i=lo(1),hi(1)
-
-          ! compute rhotot via sum
-          rhotot = 0.d0
-          do comp=1,nspecies
-             rhotot = rhotot + rhoy(i,j,k,comp)
-          end do
-          
-          ! compute concentrations
-          c(1:nspecies) = rhoy(i,j,k,1:nspecies)/rhotot
-
-          ! compute rhotot via EOS
-          rhotot = 0.d0
-          do comp=1,nspecies
-             rhotot = rhotot + c(comp)/rhobar(comp)
-          end do
-          rhotot = 1.d0/rhotot
-
-          m_forcey(i,j,k) = grav(2)*(rhotot-rho0)
-
-       end do
-       end do
-       end do
-
-       do k=lo(3),hi(3)+1
-       do j=lo(2),hi(2)
-       do i=lo(1),hi(1)
-
-          ! compute rhotot via sum
-          rhotot = 0.d0
-          do comp=1,nspecies
-             rhotot = rhotot + rhoz(i,j,k,comp)
-          end do
-          
-          ! compute concentrations
-          c(1:nspecies) = rhoz(i,j,k,1:nspecies)/rhotot
-
-          ! compute rhotot via EOS
-          rhotot = 0.d0
-          do comp=1,nspecies
-             rhotot = rhotot + c(comp)/rhobar(comp)
-          end do
-          rhotot = 1.d0/rhotot
-
-          m_forcez(i,j,k) = grav(3)*(rhotot-rho0)
-
-       end do
-       end do
-       end do
-
+    if(.not.increment) then
+       m_forcex=0.0d0
+       m_forcey=0.0d0
+       m_forcez=0.0d0
     end if
+
+
+    do k=lo(3),hi(3)
+    do j=lo(2),hi(2)
+    do i=lo(1),hi(1)+1
+
+       call compute_rho_eos(rhox(i,j,k,1:nspecies), rhotot)
+       m_forcex(i,j,k) = m_forcex(i,j,k) + grav(1)*(rhotot-rho0)
+
+    end do
+    end do
+    end do
+
+    do k=lo(3),hi(3)
+    do j=lo(2),hi(2)+1
+    do i=lo(1),hi(1)
+
+       call compute_rho_eos(rhoy(i,j,k,1:nspecies), rhotot)
+       m_forcey(i,j,k) = m_forcey(i,j,k) + grav(2)*(rhotot-rho0)
+
+    end do
+    end do
+    end do
+
+    do k=lo(3),hi(3)+1
+    do j=lo(2),hi(2)
+    do i=lo(1),hi(1)
+
+       call compute_rho_eos(rhoz(i,j,k,1:nspecies), rhotot)
+       m_forcez(i,j,k) = m_forcez(i,j,k) + grav(3)*(rhotot-rho0)
+
+    end do
+    end do
+    end do
 
   end subroutine mk_grav_force_bousq_3d
 
