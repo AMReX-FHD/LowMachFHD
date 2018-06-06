@@ -442,7 +442,8 @@ subroutine main_driver()
      call dot_with_z(mla,rho_old,charge_old)
      total_charge = multifab_sum_c(charge_old(1),1,1)
      if (parallel_IOProcessor()) then
-        print*,'Total charge',total_charge*product(dx(1,1:dm))
+        ! multiply by total volume (all 3 dimensions, even for 2D problems)
+        print*,'Total charge',total_charge*product(dx(1,1:3))
      end if
 
      ! compute permittivity
@@ -817,7 +818,8 @@ subroutine main_driver()
         if (use_charged_fluid) then
            total_charge = multifab_sum_c(charge_new(1),1,1)
            if (parallel_IOProcessor()) then
-              print*,'Total charge',total_charge*product(dx(1,1:dm))
+              ! multiply by total volume (all 3 dimensions, even for 2D problems)
+              print*,'Total charge',total_charge*product(dx(1,1:3))
            end if
         end if
 

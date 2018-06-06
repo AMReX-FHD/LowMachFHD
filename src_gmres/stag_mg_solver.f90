@@ -51,7 +51,7 @@ contains
 
     ! local variables
     integer :: dm, i, j, vcycle, m, n, nlevs_mg
-    integer :: color,color_start,color_end,nsmooths
+    integer :: color,color_start,color_end
     integer :: vcycle_counter_temp
 
     type(bl_prof_timer), save :: bpt
@@ -357,10 +357,7 @@ contains
              
           end if
              
-          ! control to do a different number of smooths for the bottom solver
-          nsmooths = stag_mg_nsmooths_down
-
-          do m=1,nsmooths
+          do m=1,stag_mg_nsmooths_down
 
              ! do the smooths
              do color=color_start,color_end
@@ -581,11 +578,8 @@ contains
              end do
              
           end if
-             
-          ! control to do a different number of smooths for the bottom solver
-          nsmooths = stag_mg_nsmooths_bottom
 
-          do m=1,nsmooths
+          do m=1,stag_mg_nsmooths_bottom
 
              ! do the smooths
              do color=color_start,color_end
