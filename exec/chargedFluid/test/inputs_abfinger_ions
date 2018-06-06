@@ -2,38 +2,39 @@
  
   ! Problem specification
   !----------------------
-  dim_in = 3                            ! 2D or 3D
+  dim_in = 2                            ! 2D or 3D
   prob_type = 3                         ! see src_lowMach/init_lowmach.f90
 
   prob_lo(1:3) = 0. 0. 0.               ! physical lo coordinate
-  prob_hi(1:3) = 1.6 1.6 0.05           ! physical hi coordinate
-  n_cells(1:3) = 256 256 8              ! number of cells in domain
-  max_grid_size(1:3) = 32 32 8          ! max number of cells in a box
+  prob_hi(1:3) = 0.8 0.8 0.005 ! 1.6 1.6 0.05           ! physical hi coordinate
+  n_cells(1:3) = 128 128 1 ! 256 256 1 ! 8              ! number of cells in domain
+  max_grid_size(1:3) = 64 128 1 ! 8          ! max number of cells in a box
 
-  fixed_dt = 0.001                      ! time step
+  fixed_dt = 0.01                      ! time step
   cfl = 0.1                             ! cfl number (used if fixed_dt<0) to determine time step
 
-  max_step = 50000                      ! maximum number of time steps
-  plot_int = 1                          ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 2 ! 800                      ! maximum number of time steps
+  plot_int = 1 ! 20                          ! Interval for writing a plotfile (for visit/amrvis)
   plot_base_name = "plt"                ! prefix for plotfile name
   chk_int = -1                          ! Interval for writing a checkpoint
   check_base_name = "chk"               ! prefix for checkpoint name
   restart = -1                          ! checkpoint restart number
-  print_int = 1                         ! how often to output EOS drift and sum of conserved quantities
-  project_eos_int = 10                  ! how often to call project_onto_eos
+  print_int = 10                         ! how often to output EOS drift and sum of conserved quantities
+  project_eos_int = 1000                  ! how often to call project_onto_eos
 
   ! Physical properties
   !----------------------
-  grav(1:3) = 0. -981. 0.               ! gravity vector (negative is downwards)
+  !grav(1:3) = 0. -981. 0.               ! gravity vector (negative is downwards)
   nspecies = 5                          ! number of species Na+ Cl- H+ OH- H2O 
 
-  molmass(1:5) = 3.817540868231760d-23 5.887109017990600d-23 1.673723708457240d-24 2.824244779792520d-23 2.991617150638240d-23
-  rhobar(1:5) = 3.349d0 3.349d0 0.1278330278 -1.561089817 1.d0
-  rho0 = 1.                             ! reference density
+  molmass(1:5) = 3.817540700000000E-023	5.887108600000000E-023	1.673723600000000E-024	2.824068560000000E-023 2.991440920000000E-023
+  rhobar(1:5) = 3.349d0 3.349d0 0.1278330278d0 -1.561089817d0 1.d0
+  rho0 = 1.0                          ! reference density
+  rho_eos_form = 2 ! Use linearized EOS to ensure matching densities
   
   ! stochastic properties
   variance_coef_mom = 1.                ! global scaling epsilon for stochastic momentum forcing
-  variance_coef_mass = 1.               ! global scaling epsilon for stochastic mass forcing
+  variance_coef_mass = 0.               ! global scaling epsilon for stochastic mass forcing
   k_B = 1.3806488e-16                   ! Boltzmann's constant
   Runiv = 8.314462175e7                 ! Universal gas constant (not used)
   
@@ -54,7 +55,7 @@
   ! for positive value, the value is assigned as seed value
   ! for 0, a positive value is randomly chosen
   ! if -1 (only for restart), RNGs status is restored from checkpoint data
-  seed_momentum = 0 
+  seed_momentum = 127 
   seed_diffusion = 0
   seed_reaction = 0
   seed_init_mass = 0 
@@ -69,9 +70,9 @@
   visc_type = 2
   visc_coef = 0.01002                   ! momentum diffusion coefficient 'eta'   
 
-  advection_type = 0                    ! 0 = centered explicit
+  advection_type = 2                    ! 0 = centered explicit
                                         ! 1 = unlimited bilinear bds in space and time
-                                        ! 2 = limited bliniear bds in space and time
+                                        ! 2 = limited bilinear bds in space and time
                                         ! 3 = unlimited quadratic bds in space and time
                                         ! 4 = limited quadratic bds in space and time
 
@@ -116,23 +117,23 @@
   ! Control for analyze_spectra.90
   !----------------------
 
-  hydro_grid_int = 1                    ! How often to call updateHydroGrid
+  hydro_grid_int = 0                    ! How often to call updateHydroGrid
                                         ! 0 if never
                                         ! negative for projectHydroGrid custom analysis
                                         ! positive for updateHydroGrid
 
-  project_dir = 1                       ! Projection direction (1=x, 2=y, 3=z)
+  project_dir = -2                       ! Projection direction (1=x, 2=y, 3=z)
   ! Meaning: 0=analyze 3D data only (no projection needed for HydroGrid, 
   !          but still need projection if stats_int>0)
   ! +dim=project along dim then analyze 2D only,
   ! -dim=analyze 3D and then project along dim so we also analyze 2D data
   ! It is better to use the conserved variables but it does not quite work for staggered
 
-  max_grid_projection(1:2) = 32 32      ! parallelization parameters
-  stats_int = 1000                      ! Project grid for analysis
+  max_grid_projection(1:2) = 256 256      ! parallelization parameters
+  stats_int = 20                      ! Project grid for analysis
                                         ! If positive, how often to compute mean and 
                                         ! standard deviation over reduced dimensions
-  n_steps_save_stats = 1000             ! How often to dump HydroGrid output files
+  n_steps_save_stats = 0             ! How often to dump HydroGrid output files
   n_steps_skip = 0                      ! How many steps to skip
   analyze_conserved = F                 ! Should we use conserved variables for the analysis
                                         ! (does not work well)
@@ -164,12 +165,21 @@
   ! Thermodynamic and transport properties:
   !----------------------
   
+  ! Maxwell-Stefan diffusion constants:
   ! These are lower-triangules of symmetric matrices represented as vectors
   ! Number of elements is (nspecies*(nspecies-1)/2)
   ! The values are red row by row starting from top going down (this allows easy addition/deletion of new species/rows)
   ! So D_12; D_13, D_23; D_14, D_24, D_34; D_15, D_25, D_35, D_45
-  Dbar(1:10) = 0.1173869565e-4, 0.5408879652e-4, 0.8255658417e-4, 0.3083589699e-4, 0.4706531648e-4, 0.2168644968e-3, 0.133e-4, 0.203e-4, 0.9353701657e-4, 0.5332523540e-4
-                                        ! Maxwell-Stefan diffusion constant  
+  ! True values:
+  !Dbar(1:10) = 0.1173869565e-4, 0.5408879652e-4, 0.8255658417e-4, 0.3083589699e-4, 0.4706531648e-4, 0.2168644968e-3, 0.133e-4, 0.203e-4, 0.9353701657e-4, 0.5332523540e-4
+  ! Binary ambipolar coefficients for HCl, NaOH, NaCl: 3.336000e-05 2.129000e-05 1.611000e-05
+  ! Now we need Na+ Cl- H+ OH-
+  ! Fake ambipolar values: D_NaCl=0.2599210978e-4
+  !Dbar(1:10) = 0.1173869565e-4, 0.5408879652e-4, 0.8255658417e-4, 0.3083589699e-4, 0.4706531648e-4, 0.2168644968e-3, 2.129000e-05, 3.336000e-05, 3.336000e-05, 2.129000e-05
+  ! All diffusion coefficients equal:
+  Dbar(1:10) = 3e-5, 3e-5, 3e-5, 3e-5, 3e-5, 3e-5, 3e-5, 3e-5, 3e-5, 3e-5
+  !Dbar(1:10) = 0.1173869565e-4, 0.5408879652e-4, 0.8255658417e-4, 0.3083589699e-4, 0.4706531648e-4, 0.2168644968e-3, 3e-5, 3e-5, 3e-5, 3e-5
+                                        
   H_offdiag(1:1) = 0.                   ! Off diagonal elements of H=d^2F/dx^2  
 
   ! These are vectors of length nspecies
@@ -184,19 +194,14 @@
   ! initial values for c
   ! The last value for water will be overwritten to enforce the EOS
   ! These are MASS FRACTIONS (concentrations), not partial densities
-  c_init(1,1:5) = 0.d0 3.485603198930140d-2 9.909680106985710d-4 0.d0 0.964153d0
-  c_init(2,1:5) = 9.045254367887370d-3 0.d0 0.d0 6.691745632112630d-3 0.d0
+  c_init(1,1:4) = 0.000000000000000E+000	3.485603198332630E-002	9.909680166737200E-004	0.000000000000000E+000
+  c_init(2,1:4) = 9.045494193360600E-003	0.000000000000000E+000	0.000000000000000E+000	6.691505806639400E-003
 
   ! c_i boundary conditions (dir,lohi,species)
   ! These are MASS FRACTIONS (concentrations), not partial densities
-
-  ! use this set for reservoir (Dirichlet Values)
-!  c_bc(2,1,1:5) = 0.d0 3.485603198930140d-2 9.909680106985710d-4 0.d0 0.964153d0
-!  c_bc(2,2,1:5) = 9.045254367887370d-3 0.d0 0.d0 6.691745632112630d-3 0.d0
-
   ! use this set for walls (Neumann Values)
-  c_bc(2,1,1:5) = 0. 0. 0. 0.
-  c_bc(2,2,1:5) = 0. 0. 0. 0.
+  c_bc(2,1,1:4) = 0. 0. 0. 0.
+  c_bc(2,2,1:4) = 0. 0. 0. 0.
 
   midpoint_stoch_mass_flux_type = 1     ! 1 = Strato
                                         ! 2 = Ito
@@ -208,11 +213,11 @@
 
 &probin_charged
   use_charged_fluid  = T
-  dielectric_const   = 6.91d-19    ! relative permitivity ~ 78, vacuum permitivity ~ 8.854d-21
+  dielectric_const   = 0 ! 6.91d-19    ! relative permitivity ~ 78, vacuum permitivity ~ 8.854d-21
   dielectric_type    = 0      ! 0 = assumes constant epsilon
                               ! 1 = (1+c1)*dielectric_const
                               ! see fluid_charge.f90:compute_permittivity()
-  charge_per_mass(1:5) = 4.196881383334370d3 -2.721499831417860d3 9.572527484101990d4 -5.672938236315710d3 0.d0
+  charge_per_mass(1:5) = 4.196881568282950E+003	-2.721500024647070E+003	9.572528104401470E+004	-5.673292223472080E+003 0.0
 
   ! 1 = Dirichlet (fixed potential)
   ! 2 = Neumann (fixed charge density)
@@ -229,28 +234,29 @@
 
   electroneutral = T
 
-  epot_mg_verbose = 2
-  epot_mg_abs_tol = 1.d-14
-  epot_mg_rel_tol = 1.d-10
+  epot_mg_verbose = 0
+  epot_mg_abs_tol = 1.0d-12 ! Required until Andy puts in the right code to do this
+  epot_mg_rel_tol = 1.0d-9
 
 /
 
 &probin_chemistry
+  ! Species = Na+ Cl- H+ OH- H2O
 
-  nreactions = 1                        ! number of reactions
-
+  nreactions = 0                        ! number of reactions
+  
   ! stoichiometric factors for each reaction (species,LHS(1)/RHS(2),reaction)
   ! Example: For N1 + 2*N2 -> N3 use
   ! stoichiometric_factors(1:3,1,1) = 1 2 0
   ! stoichiometric_factors(1:3,2,1) = 0 0 1
-  ! NaOH + HCl -> NaCl + H20 
+  ! H+ (3) + OH- (4) -> H2O (5)
   stoichiometric_factors(1:5,1,1) = 0 0 1 1 0
   stoichiometric_factors(1:5,2,1) = 0 0 0 0 1
 
   ! reaction rate constant for each reaction (assuming Law of Mass Action holds)
   ! using rate_multiplier, reaction rates can be changed by the same factor
   ! if include_discrete_LMA_correction, n^2 and n^3 in rate expressions become
-  ! n*(n-1/dv) and n*(n-/dv)*(n-2/dv).
+  ! n*(n-1/dv) and n*(n-1/dv)*(n-2/dv).
   rate_const(1:1) = 1.d-18
   rate_multiplier = 1.
   include_discrete_LMA_correction = T
@@ -264,7 +270,7 @@
   exclude_solvent_comput_rates = 0
 
   ! how to sample chemical production rates
-  use_Poisson_rng = 0                   ! 2=SSA
+  use_Poisson_rng = -1                   ! 2=SSA
                                         ! 1=do tau leaping (Poisson increments)
                                         ! 0= do CLE (Gaussian increments)
                                         ! -1=do deterministic chemistry
@@ -324,8 +330,8 @@
 
   ! GMRES solver parameters
   gmres_rel_tol = 1.e-9                 ! relative tolerance stopping criteria
-  gmres_abs_tol = 1.e-9                 ! absolute tolerance stopping criteria
-  gmres_verbose = 0                     ! gmres verbosity; if greater than 1, more residuals will be printed out
+  gmres_abs_tol = 0                 ! absolute tolerance stopping criteria
+  gmres_verbose = 2                     ! gmres verbosity; if greater than 1, more residuals will be printed out
   gmres_max_outer = 10                  ! max number of outer iterations
   gmres_max_inner = 10                  ! max number of inner iterations, or restart number
   gmres_max_iter = 100                  ! max number of gmres iterations
@@ -373,7 +379,7 @@
       
    outputFolder = "."
    filePrefix = "conv_fing_full"
-   axisToPrint = 1 ! 1=x, 2=y, 3=z axis
+   axisToPrint = 2 ! 1=x, 2=y, 3=z axis
    periodic = T ! Is the system periodic along the y axes
 
 /
@@ -413,7 +419,7 @@
       
    outputFolder = "."
    filePrefix = "conv_fing_vstat"
-   axisToPrint = 2                      ! 1=x, 2=y, 3=z axis
+   axisToPrint = 1                      ! 1=x, 2=y, 3=z axis
    periodic = F                         ! Is the system fully periodic?
 /
 
@@ -452,6 +458,6 @@
       
    outputFolder = "."
    filePrefix = "conv_fing_hstat"
-   axisToPrint = 1 ! 1=x, 2=y, 3=z axis
+   axisToPrint = 2 ! 1=x, 2=y, 3=z axis
    periodic = T ! Is the system fully periodic?
 /

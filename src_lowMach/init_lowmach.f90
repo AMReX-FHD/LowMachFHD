@@ -224,7 +224,7 @@ contains
  
     ! local varables
     integer          :: i,j,n
-    real(kind=dp_t)  :: x,y,rad,L(2),sum,r,r1,r2,y1,y2,c_loc,x1,x2,coeff
+    real(kind=dp_t)  :: x,y,rad,L(2),sumtot,r,r1,r2,y1,y2,c_loc,x1,x2,coeff
     real(kind=dp_t)  :: gradToverT,m_e
  
     real(kind=dp_t)  :: random
@@ -439,7 +439,7 @@ contains
        u = 0.d0
        v = 0.d0
 
-       ! note: c(:,:,3) will be computed below to enforce sum(c)=1
+       ! note: c(:,:,3) will be computed below to enforce sumtot(c)=1
        c(:,:,2) = 0.05d0
 
        do j=lo(2),hi(2)
@@ -506,7 +506,7 @@ contains
        !=============================================================
        ! stratified multispecies due to barodiffusion
        ! approximate analytical steady solution
-       ! assumes the final species is the dominant component
+       ! assumtotes the final species is the dominant component
        !=============================================================
 
        u = 0.d0
@@ -528,8 +528,8 @@ contains
        !=============================================================
        ! stratified multispecies due to thermodiffusion
        ! approximate analytical steady solution
-       ! assumes nspecies=3
-       ! assumes the final species is the dominant component
+       ! assumtotes nspecies=3
+       ! assumtotes the final species is the dominant component
        !=============================================================
 
        if (nspecies .ne. 3) then
@@ -721,23 +721,31 @@ contains
     do j=lo(2),hi(2)
        do i=lo(1),hi(1)
 
-          ! set final c_i such that sum(c_i) = 1 to within roundoff
-          sum = 0.d0
+          ! set final c_i such that sumtot(c_i) = 1 to within roundoff
+          sumtot = 0.d0
           do n=1,nspecies-1
-             sum = sum + c(i,j,n)
+             sumtot = sumtot + c(i,j,n)
           end do
-          c(i,j,nspecies) = 1.d0 - sum
+          c(i,j,nspecies) = 1.d0 - sumtot
 
           ! calculate rho_total from eos
           if (algorithm_type .eq. 6) then
              rho_total = rho0
           else
-             sum = 0.d0
+             sumtot = 0.d0
              do n=1,nspecies
-                ! sum represents rhoinv
-                sum = sum + c(i,j,n)/rhobar(n)
+                ! sumtot represents rhoinv
+                sumtot = sumtot + c(i,j,n)/rhobar(n)
              end do
-             rho_total = 1.d0/sum
+             rho_total = 1.d0/sumtot
+          end if
+          
+          if(use_charged_fluid .and. electroneutral) then ! Confirm electroneutrality
+              sumtot = sum(c(i,j,:)*charge_per_mass(1:nspecies))
+              !write(*,*) "Cell=", i, j, " w=", c(i,j,:), " Z=", sumtot
+              if ( sumtot > 1.0d-12*sum(c(i,j,:)*abs(charge_per_mass(1:nspecies))) ) then
+                 call bl_warn("Initial configuration not electro-neutral to 12 digits")
+              end if   
           end if
 
           ! add mass fluctuations
@@ -746,12 +754,12 @@ contains
 
              ! calculate rho_total from eos including fluctuations
              if (algorithm_type .ne. 6) then
-                sum = 0.d0
+                sumtot = 0.d0
                 do n=1,nspecies
-                   ! sum represents rhoinv
-                   sum = sum + c(i,j,n)/rhobar(n)
+                   ! sumtot represents rhoinv
+                   sumtot = sumtot + c(i,j,n)/rhobar(n)
                 end do
-                rho_total = 1.d0/sum
+                rho_total = 1.d0/sumtot
              end if
 
           end if
@@ -777,7 +785,7 @@ contains
  
     ! local variables
     integer          :: i,j,k,n
-    real(kind=dp_t)  :: x,y,z,rad,L(3),sum,c_loc,y1,r,r1,r2,m_e,gradToverT
+    real(kind=dp_t)  :: x,y,z,rad,L(3),sumtot,c_loc,y1,r,r1,r2,m_e,gradToverT
 
     real(kind=dp_t) :: random
 
@@ -1014,7 +1022,7 @@ contains
        u = 0.d0
        v = 0.d0
 
-       ! note: c(:,:,:,3) will be computed below to enforce sum(c)=1
+       ! note: c(:,:,:,3) will be computed below to enforce sumtot(c)=1
        c(:,:,:,2) = 0.2d0
 
        do k=lo(3),hi(3)
@@ -1092,7 +1100,7 @@ contains
        !=============================================================
        ! stratified multispecies due to barodiffusion
        ! approximate analytical steady solution
-       ! assumes the final species is the dominant component
+       ! assumtotes the final species is the dominant component
        !=============================================================
 
        u = 0.d0
@@ -1116,8 +1124,8 @@ contains
        !=============================================================
        ! stratified multispecies due to thermodiffusion
        ! approximate analytical steady solution
-       ! assumes nspecies=3
-       ! assumes the final species is the dominant component
+       ! assumtotes nspecies=3
+       ! assumtotes the final species is the dominant component
        !=============================================================
 
        if (nspecies .ne. 3) then
@@ -1152,23 +1160,23 @@ contains
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
 
-             ! set final c_i such that sum(c_i) = 1 to within roundoff
-             sum = 0.d0
+             ! set final c_i such that sumtot(c_i) = 1 to within roundoff
+             sumtot = 0.d0
              do n=1,nspecies-1
-                sum = sum + c(i,j,k,n)
+                sumtot = sumtot + c(i,j,k,n)
              end do
-             c(i,j,k,nspecies) = 1.d0 - sum
+             c(i,j,k,nspecies) = 1.d0 - sumtot
 
              ! calculate rho_total from eos
              if (algorithm_type .eq. 6) then
                 rho_total = rho0
              else
-                sum = 0.d0
+                sumtot = 0.d0
                 do n=1,nspecies
-                   ! sum represents rhoinv
-                   sum = sum + c(i,j,k,n)/rhobar(n)
+                   ! sumtot represents rhoinv
+                   sumtot = sumtot + c(i,j,k,n)/rhobar(n)
                 end do
-                rho_total = 1.d0/sum
+                rho_total = 1.d0/sumtot
              end if
 
              ! add mass fluctuations
@@ -1176,12 +1184,12 @@ contains
                 call add_mass_fluctuations(c(i,j,k,1:nspecies),dx,abs(initial_variance_mass),rho_total)
 
                 if (algorithm_type /= 6) then ! Recompute rho from EOS with fluctuations added
-                   sum = 0.d0
+                   sumtot = 0.d0
                    do n=1,nspecies
-                      ! sum represents rhoinv
-                      sum = sum + c(i,j,k,n)/rhobar(n)
+                      ! sumtot represents rhoinv
+                      sumtot = sumtot + c(i,j,k,n)/rhobar(n)
                    end do
-                   rho_total = 1.d0/sum
+                   rho_total = 1.d0/sumtot
                 end if
              end if
 
