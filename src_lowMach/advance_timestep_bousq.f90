@@ -604,7 +604,7 @@ contains
                                  diff_mass_flux,stoch_mass_flux, &
                                  dt,time,dx,weights,the_bc_tower, &
                                  charge_new,grad_Epot_new,Epot, &
-                                 permittivity)
+                                 permittivity,zero_initial_Epot_in=.false.)
 
     else if (midpoint_stoch_mass_flux_type .eq. 2) then
        ! ito
@@ -630,7 +630,7 @@ contains
                                  diff_mass_flux,stoch_mass_flux, &
                                  0.5d0*dt,time,dx,weights,the_bc_tower, &
                                  charge_new,grad_Epot_new,Epot, &
-                                 permittivity)
+                                 permittivity,zero_initial_Epot_in=.false.)
 
        if (variance_coef_mass .ne. 0.d0) then
           ! add stoch_mass_fluxdiv_old to stoch_mass_fluxdiv and multiply by 1/2
