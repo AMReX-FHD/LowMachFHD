@@ -33,7 +33,8 @@ contains
                                            diff_mass_flux,diff_mass_fluxdiv, &
                                            stoch_mass_fluxdiv, &
                                            dx,the_bc_tower,charge, &
-                                           grad_Epot,Epot,permittivity,dt)
+                                           grad_Epot,Epot,permittivity,dt, &
+                                           zero_initial_Epot)
 
     ! this adds -div(F) = div(A_Phi grad Phi) to diff_mass_fluxdiv
     ! grad_Epot = grad Phi
@@ -52,6 +53,7 @@ contains
     type(multifab) , intent(inout)  :: Epot(:)
     type(multifab) , intent(in   )  :: permittivity(:)
     real(kind=dp_t), intent(in   )  :: dt
+    logical        , intent(in   )  :: zero_initial_Epot
 
     ! local variables
     integer i,dm,n,nlevs
@@ -79,7 +81,7 @@ contains
     ! cells contain interior+2 ghost cells) 
     call electrodiffusive_mass_flux(mla,rho,Temp,rhoWchi,electro_mass_flux, &
                                     diff_mass_fluxdiv,stoch_mass_fluxdiv,dx,the_bc_tower, &
-                                    charge,grad_Epot,Epot,permittivity,dt)
+                                    charge,grad_Epot,Epot,permittivity,dt,zero_initial_Epot)
     
     ! add fluxes to diff_mass_flux
     do n=1,nlevs
@@ -106,7 +108,7 @@ contains
   subroutine electrodiffusive_mass_flux(mla,rho,Temp,rhoWchi,electro_mass_flux, &
                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                         dx,the_bc_tower,charge,grad_Epot,Epot, &
-                                        permittivity,dt)
+                                        permittivity,dt,zero_initial_Epot)
 
     ! this computes "-F = A_Phi grad Phi"
 
@@ -124,6 +126,7 @@ contains
     type(multifab) , intent(inout) :: Epot(:)
     type(multifab) , intent(in   ) :: permittivity(:)
     real(kind=dp_t), intent(in   ) :: dt
+    logical        , intent(in   ) :: zero_initial_Epot
 
     ! local variables
     integer :: n,i,comp,dm,nlevs
@@ -200,7 +203,9 @@ contains
     ! -del dot epsilon grad Phi = charge
     do n=1,nlevs
 
-       call setval(Epot(n),0.d0,all=.true.)
+       if (zero_initial_Epot) then
+          call setval(Epot(n),0.d0,all=.true.)
+       end if
 
        ! fill ghost cells for Epot at walls using Dirichlet value
        call multifab_physbc(Epot(n),1,Epot_bc_comp,1,the_bc_tower%bc_tower_array(n), &

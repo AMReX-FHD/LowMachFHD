@@ -30,7 +30,8 @@ contains
                                   diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                   diff_mass_flux,stoch_mass_flux, &
                                   dt,stage_time,dx,weights,the_bc_tower, &
-                                  charge,grad_Epot,Epot,permittivity)
+                                  charge,grad_Epot,Epot,permittivity, &
+                                  zero_initial_Epot_in)
     ! Donev: Add a logical flag for whether to do electroneutral or not
        
     type(ml_layout), intent(in   )   :: mla
@@ -51,6 +52,7 @@ contains
     type(multifab) , intent(inout), optional :: grad_Epot(:,:)
     type(multifab) , intent(inout), optional :: Epot(:)
     type(multifab) , intent(in   ), optional :: permittivity(:)
+    logical        , intent(in   ), optional :: zero_initial_Epot_in
 
     ! local variables
     type(multifab) :: rhoWchi(mla%nlevel)        ! rho*W*chi*Gama
@@ -65,12 +67,19 @@ contains
 
     integer         :: n,i,dm,nlevs
 
+    logical :: zero_initial_Epot
+
     type(bl_prof_timer), save :: bpt
 
     call build(bpt,"compute_mass_fluxdiv")
 
     nlevs = mla%nlevel  ! number of levels 
     dm    = mla%dim     ! dimensionality
+
+    zero_initial_Epot = .true.
+    if (present(zero_initial_Epot_in)) then
+       zero_initial_Epot = zero_initial_Epot_in
+    end if
       
     ! build cell-centered multifabs for nspecies and ghost cells contained in rho.
     do n=1,nlevs
@@ -150,7 +159,7 @@ contains
                                              stoch_mass_fluxdiv, &
                                              dx,the_bc_tower, &
                                              charge,grad_Epot,Epot, &
-                                             permittivity,dt)
+                                             permittivity,dt,zero_initial_Epot)
        end if
     end if
 
