@@ -97,6 +97,10 @@ subroutine main_driver()
 
   type(multifab), allocatable  :: chem_rate(:)
 
+  ! for writing time-averaged umac to plotfile
+  type(multifab), allocatable :: umac_sum(:,:)
+  type(multifab), allocatable :: umac_avg(:,:)
+
   ! For HydroGrid
   integer :: narg, farg, un, n_rngs_mass, n_rngs_mom
   character(len=128) :: fname
@@ -659,12 +663,24 @@ subroutine main_driver()
      ! Hydrogrid analysis and output for initial data
      !=====================================================================
 
+     ! for writing time-averaged umac to plotfile
+     allocate(umac_sum(nlevs,dm))
+     allocate(umac_avg(nlevs,dm))
+     do n=1,nlevs 
+        do i=1,dm
+           call multifab_build_edge(umac_sum(n,i),mla%la(n),1,0,i)
+           call multifab_build_edge(umac_avg(n,i),mla%la(n),1,0,i)
+           call setval(umac_sum(n,i),0.d0)
+           call setval(umac_avg(n,i),0.d0)
+        end do
+     end do
+
      ! write initial plotfile
      if (plot_int .gt. 0) then
         if (parallel_IOProcessor()) then
            write(*,*), 'writing initial plotfile 0'
         end if
-        call write_plotfile(mla,rho_old,rhotot_old,Temp,umac,pi,Epot, &
+        call write_plotfile(mla,rho_old,rhotot_old,Temp,umac,umac_avg,pi,Epot, &
                             grad_Epot_old,gradPhiApprox,0,dx,time)
      end if
 
@@ -789,6 +805,17 @@ subroutine main_driver()
         call bl_error("Error: invalid algorithm_type")
      end if
 
+     ! for writing time-averaged umac to plotfile
+     if (istep .gt. n_steps_skip) then
+        do n=1,nlevs
+           do i=1,dm
+              call multifab_plus_plus_c(umac_sum(n,i),1,umac(n,i),1,1,0)
+              call multifab_copy_c(umac_avg(n,i),1,umac_sum(n,i),1,1,0)
+              call multifab_mult_mult_s_c(umac_avg(n,i),1,(1.d0/(istep-n_steps_skip)),1,0)
+           end do
+        end do
+     end if
+
      time = time + dt
 
      if (parallel_IOProcessor()) then
@@ -830,7 +857,7 @@ subroutine main_driver()
         if (parallel_IOProcessor()) then
            write(*,*), 'writing plotfiles after timestep =', istep 
         end if
-        call write_plotfile(mla,rho_new,rhotot_new,Temp,umac,pi,Epot, &
+        call write_plotfile(mla,rho_new,rhotot_new,Temp,umac,umac_avg,pi,Epot, &
                             grad_Epot_new,gradPhiApprox,istep,dx,time)
      end if
 
@@ -955,6 +982,13 @@ subroutine main_driver()
         call multifab_destroy(chem_rate(n))
      end do
   end if
+
+  do n=1,nlevs 
+     do i=1,dm
+        call multifab_destroy(umac_sum(n,i))
+        call multifab_destroy(umac_avg(n,i))
+     end do
+  end do
 
   deallocate(lo,hi,pmask)
   deallocate(rho_old,rhotot_old,pi)

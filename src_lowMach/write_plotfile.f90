@@ -16,7 +16,7 @@ module write_plotfile_module
 
 contains
   
-  subroutine write_plotfile(mla,rho,rhotot,Temp,umac,pres,Epot,grad_Epot, &
+  subroutine write_plotfile(mla,rho,rhotot,Temp,umac,umac_avg,pres,Epot,grad_Epot, &
                             gradPhiApprox,istep,dx,time)
 
     type(ml_layout),    intent(in)    :: mla
@@ -24,6 +24,7 @@ contains
     type(multifab),     intent(in)    :: rhotot(:)
     type(multifab),     intent(in)    :: Temp(:)
     type(multifab),     intent(in)    :: umac(:,:)
+    type(multifab),     intent(in)    :: umac_avg(:,:)
     type(multifab),     intent(in)    :: pres(:)
     type(multifab),     intent(in)    :: Epot(:)
     type(multifab),     intent(in)    :: grad_Epot(:,:)
@@ -61,8 +62,10 @@ contains
     ! Temp
     ! umac averaged
     ! umac shifted
+    ! umac_avg averaged
+    ! umac_avg shifted
     ! pressure
-    nvarsCC = 2*nspecies + 2*dm + 3
+    nvarsCC = 2*nspecies + 4*dm + 3
 
     if (use_charged_fluid) then
        ! charge
@@ -113,6 +116,24 @@ contains
        counter = counter + 1
     end if
 
+    plot_names(counter) = "tavg_averaged_velx"
+    counter = counter + 1
+    plot_names(counter) = "tavg_averaged_vely"
+    counter = counter + 1
+    if (dm > 2) then
+       plot_names(counter) = "tavg_averaged_velz"
+       counter = counter + 1
+    end if
+
+    plot_names(counter) = "tavg_shifted_velx"
+    counter = counter + 1
+    plot_names(counter) = "tavg_shifted_vely"
+    counter = counter + 1
+    if (dm > 2) then
+       plot_names(counter) = "tavg_shifted_velz"
+       counter = counter + 1
+    end if
+
     plot_names(counter) = "pres"
     counter = counter + 1
 
@@ -143,7 +164,7 @@ contains
     end if
 
     if (algorithm_type .eq. 6) then
-       plot_names(counter) = "rho_eos"
+       plot_names(counter) = "rho_eos_minus_rho0"
        counter = counter+1
     end if
 
@@ -227,6 +248,18 @@ contains
     ! vel shifted
     do i=1,dm
        call shift_face_to_cc(mla,umac(:,i),1,plotdata,counter,1)
+       counter = counter + 1
+    end do
+
+    ! time-averaged vel averaged
+    do i=1,dm
+       call average_face_to_cc(mla,umac_avg(:,i),1,plotdata,counter,1)
+       counter = counter + 1
+    end do
+
+    ! time-averaged vel shifted
+    do i=1,dm
+       call shift_face_to_cc(mla,umac_avg(:,i),1,plotdata,counter,1)
        counter = counter + 1
     end do
 
