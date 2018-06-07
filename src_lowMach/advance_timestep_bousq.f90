@@ -103,7 +103,7 @@ contains
     type(multifab) ::        rhotot_fc_old(mla%nlevel,mla%dim)
     type(multifab) ::        rhotot_fc_new(mla%nlevel,mla%dim)
     type(multifab) ::       diff_mass_flux(mla%nlevel,mla%dim)
-    type(multifab) ::       mom_grav_force(mla%nlevel,mla%dim)
+    type(multifab) ::       mom_grav_force(mla%nlevel,mla%dim)    
 
     ! only used when variance_coef_mass>0 and midpoint_stoch_mass_flux_type=2
     type(multifab) :: stoch_mass_fluxdiv_old(mla%nlevel)
@@ -125,6 +125,9 @@ contains
     type(multifab) ::   umac_tmp(mla%nlevel,mla%dim)
 
     integer :: i,dm,n,nlevs,proj_type
+    
+    ! FIXME: Temporary testing:
+    logical, parameter :: fixme = .false. ! Set to true to try to make second gmres solver converge faster
 
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
     real(kind=dp_t) :: weights(2)
@@ -405,7 +408,7 @@ contains
 
     ! call gmres to compute delta v and delta pi
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc_old, &
-               eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
+               eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)    
 
     ! for the corrector gmres solve we want the stopping criteria based on the
     ! norm of the preconditioned rhs from the predictor gmres solve.  otherwise
@@ -413,11 +416,12 @@ contains
     gmres_abs_tol = max(gmres_abs_tol_in, norm_pre_rhs*gmres_rel_tol)
        
     ! compute v^{n+1,*} = vbar^n + dumac
-    ! no need to update pi yet
+    ! no need to update pi yet FIXME
     do n=1,nlevs
        do i=1,dm
           call multifab_plus_plus_c(umac(n,i),1,dumac(n,i),1,1,0)
        end do
+       if(fixme) call multifab_plus_plus_c(pi(n),1,dpi(n),1,1,0) ! FIXME: Do we want to do this?
     end do
        
     do n=1,nlevs
@@ -808,7 +812,12 @@ contains
     do n=1,nlevs
        do i=1,dm
           call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,adv_mom_fluxdiv_old(n,i),1,1)
-          call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,adv_mom_fluxdiv_new(n,i),1,1)
+          ! FIXME: Make the advective term in the rhs the same to see if corrector gmres converges faster
+          if(.not.fixme) then
+            call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,adv_mom_fluxdiv_new(n,i),1,1)
+          else  
+            call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,adv_mom_fluxdiv_old(n,i),1,1)
+          end if  
        end do
     end do
 
@@ -860,12 +869,15 @@ contains
        end do
     end do
 
-    ! copy umac_old back into umac
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_copy_c(umac(n,i),1,umac_old(n,i),1,1,1)
+    if(.not.fixme) then ! FIXME: Do not reset vbar to v^n
+       ! This uses the previous time step velocity as reference vbar for both predictor AND corrector
+       ! copy umac_old back into umac
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_copy_c(umac(n,i),1,umac_old(n,i),1,1,1)
+          end do
        end do
-    end do
+    end if
 
     ! modify umac to respect the boundary conditions we want after the next gmres solve
     ! thus when we add L_0^n vbar^n to gmres_rhs_v and add div vbar^n to gmres_rhs_p we
