@@ -564,16 +564,26 @@ $v$          & 1.27e-09 & 2.09 & 2.99e-10 \\
 \end{table}
 
 \section{Charged Walls}
-We simulate electro-osmosis by initialing the domain to a homogeneous mixture of fluids with
+We simulate electro-osmosis by initializing the domain to a homogeneous mixture of fluids with
 a net charge.  For solvability, we need Neumann conditions on walls for the electric
 potential,
+\begin{align}\label{spc}
+\frac{\partial\Phi}{\partial n} &= \frac{q^{\rm tot}}{\epsilon L^{\rm tot}} \\
+				&= \frac{\rho \wb^T \zb |\Omega|}{\epsilon L^{\rm tot}}
+\end{align}
+where $L^{\rm tot}$ is the total measure of the walls in the simulation on which we impose a
+ Neumann condition (in particular, this excludes periodic faces), 
+$|\Omega|$ is the total measure of the simulation domain,
+and $q^{\rm tot}$ is the total charge in the domain interior. Note that the formula only makes
+sense dimensionally if the number of physical dimensions $d = 3$: 
 \begin{equation}
-\frac{\partial\Phi}{\partial n} = \frac{q^{\rm tot}}{\epsilon L^{\rm tot}}
+\frac{[V]}{[L]} \sim \frac{\partial\Phi}{\partial n} = \frac{\rho \wb^T \zb |\Omega|}{\epsilon L^{\rm tot}} \sim \frac{([M]/[L]^d)\cdot [C]/[M]\cdot [L]^d}{([C]/[V]/[L])\cdot[L]^{d-1}} = \frac{[V]}{[L]^{d-2}}, 
 \end{equation}
-where $L^{\rm tot}$ is the total length (or area in 3D) of walls in the simulation
-and $q^{\rm tot}$ is the total charge in the interior.  Thus
-the Neumann condition is the surface charge density divided by the permittivity.
-Thus, the total charge (boundary + interior) is zero, and the simulation is well-posed.
+where $[L], [C], [M]$, and $[V]$ denote units of length, charge, mass, and volts, respectively. 
+Hence, when determining the numerical value of a Neumann condition to ensure solvability for a 2D computation, it is important to include in 
+the calculation the ``artificial" length of the domain in the $z$-direction. 
+ 
+If \eqref{spc} is satisfied, the total charge (boundary + interior) is zero, and the simulation is well-posed.
 
 \section{Permittivity Notes}
 

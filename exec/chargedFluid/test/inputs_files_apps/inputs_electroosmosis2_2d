@@ -19,7 +19,7 @@
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 10000                  ! maximum number of time steps
+  max_step = 1500                  ! maximum number of time steps
   plot_int = 100                   ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   prob_type = 2                    ! sets scalars, m, coefficients (see init.f90)
@@ -187,13 +187,22 @@
   ! 2 = Neumann (fixed charge density)
   Epot_wall_bc_type(1,2) = 2
   Epot_wall_bc_type(2,2) = 2
-  Epot_wall(1,2) = 389001448.167d0
-  Epot_wall(2,2) = 389001448.167d0
+  !Epot_wall(1,2) = 389001448.167d0
+  !Epot_wall(2,2) = 389001448.167d0
+  Epot_wall(1,2) = 389001450.485d0
+  Epot_wall(2,2) = 389001450.485d0
   
   E_ext_type = 1
   E_ext_value(1:2) = 1.d11 0.d0
 
 /
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!
+!! Debye length for the above parameters is: 0.000115671837766
+!! Ratio of Debye length to domain length is: 1.10657877036
+!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 ! Stokes solver for velocity
 &probin_gmres
