@@ -126,9 +126,6 @@ contains
 
     integer :: i,dm,n,nlevs,proj_type
     
-    ! FIXME: Temporary testing:
-    logical, parameter :: fixme = .false. ! Set to true to try to make second gmres solver converge faster
-
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
     real(kind=dp_t) :: weights(2)
 
@@ -416,15 +413,19 @@ contains
     gmres_abs_tol = max(gmres_abs_tol_in, norm_pre_rhs*gmres_rel_tol)
        
     ! compute v^{n+1,*} = vbar^n + dumac
-    ! no need to update pi yet FIXME
+    ! compute pi^{n+1/2,*} = pi^{n-1/2} + dpi
     do n=1,nlevs
        do i=1,dm
           call multifab_plus_plus_c(umac(n,i),1,dumac(n,i),1,1,0)
        end do
-       if(fixme) call multifab_plus_plus_c(pi(n),1,dpi(n),1,1,0) ! FIXME: Do we want to do this?
+       call multifab_plus_plus_c(pi(n),1,dpi(n),1,1,0)
     end do
        
     do n=1,nlevs
+       ! presure ghost cells
+       call multifab_fill_boundary(pi(n))
+       call multifab_physbc(pi(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n), &
+                            dx_in=dx(n,:))
        do i=1,dm
           ! set normal velocity on physical domain boundaries
           call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
@@ -812,12 +813,7 @@ contains
     do n=1,nlevs
        do i=1,dm
           call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,adv_mom_fluxdiv_old(n,i),1,1)
-          ! FIXME: Make the advective term in the rhs the same to see if corrector gmres converges faster
-          if(.not.fixme) then
-            call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,adv_mom_fluxdiv_new(n,i),1,1)
-          else  
-            call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,adv_mom_fluxdiv_old(n,i),1,1)
-          end if  
+          call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,adv_mom_fluxdiv_new(n,i),1,1)
        end do
     end do
 
@@ -862,25 +858,18 @@ contains
 
     end if
 
-    ! subtract grad pi^{n-1/2} from gmres_rhs_v
+    ! compute grad pi^{n+1/2,*}
+    call compute_grad(mla,pi,gradpi,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+
+    ! subtract grad pi^{n+1/2,*} from gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
           call multifab_sub_sub_c(gmres_rhs_v(n,i),1,gradpi(n,i),1,1,0)
        end do
     end do
 
-    if(.not.fixme) then ! FIXME: Do not reset vbar to v^n
-       ! This uses the previous time step velocity as reference vbar for both predictor AND corrector
-       ! copy umac_old back into umac
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_copy_c(umac(n,i),1,umac_old(n,i),1,1,1)
-          end do
-       end do
-    end if
-
     ! modify umac to respect the boundary conditions we want after the next gmres solve
-    ! thus when we add L_0^n vbar^n to gmres_rhs_v and add div vbar^n to gmres_rhs_p we
+    ! thus when we add L_0^{n+1} vbar^{n+1,*} to gmres_rhs_v and add div vbar^{n+1,*} to gmres_rhs_p we
     ! are automatically putting the system in delta form WITH homogeneous boundary conditions
     do n=1,nlevs
        do i=1,dm
@@ -897,7 +886,7 @@ contains
        end do
     end do
 
-    ! compute mtemp = rho^{n+1}*vbar^n
+    ! compute mtemp = rho^{n+1}*vbar^{n+1,*}
     call convert_m_to_umac(mla,rhotot_fc_new,mtemp,umac,.false.)
 
     ! add -(mtemp/dt) to gmres_rhs_v
@@ -907,7 +896,7 @@ contains
        end do
     end do
 
-    ! compute diff_mom_fluxdiv_new = L_0^{n+1} vbar^n
+    ! compute diff_mom_fluxdiv_new = L_0^{n+1} vbar^{n+1,*}
     call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv_new,.false.,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
@@ -918,8 +907,8 @@ contains
        end do
     end do
 
-    ! compute div(vbar^n) and store in gmres_rhs_p
-    ! the sign convention is correct since we solve -div(delta v) = div(vbar^n)
+    ! compute div(vbar^{n+1,*}) and store in gmres_rhs_p
+    ! the sign convention is correct since we solve -div(delta v) = div(vbar^{n+1,*})
     call compute_div(mla,umac,gmres_rhs_p,dx,1,1,1)
 
     ! multiply eta and kappa by 1/2 to put in proper form for gmres solve
@@ -947,11 +936,11 @@ contains
     ! call gmres to compute delta v and delta pi
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc_new, &
                eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
-                              
+
     gmres_abs_tol = gmres_abs_tol_in ! Restore the desired tolerance   
        
-    ! compute v^{n+1} = vbar^n + dumac
-    ! compute pi^{n+1/2}= pi^{n-1/2} + dpi
+    ! compute v^{n+1} = vbar^{n+1,*} + dumac
+    ! compute pi^{n+1/2}= pi^{n+1/2,*} + dpi
     do n=1,nlevs
        do i=1,dm
           call multifab_plus_plus_c(umac(n,i),1,dumac(n,i),1,1,0)
