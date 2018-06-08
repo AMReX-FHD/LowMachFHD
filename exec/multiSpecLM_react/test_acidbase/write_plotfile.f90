@@ -21,7 +21,7 @@ module write_plotfile_module
 
 contains
   
-  subroutine write_plotfile(mla,rho,rhotot,Temp,umac,pres,Epot,grad_Epot, &
+  subroutine write_plotfile(mla,rho,rhotot,Temp,umac,umac_avg,pres,Epot,grad_Epot, &
                             gradPhiApprox,istep,dx,time)
 
     type(ml_layout),    intent(in)    :: mla
@@ -29,6 +29,7 @@ contains
     type(multifab),     intent(in)    :: rhotot(:)
     type(multifab),     intent(in)    :: Temp(:)
     type(multifab),     intent(in)    :: umac(:,:)
+    type(multifab),     intent(in)    :: umac_avg(:,:)
     type(multifab),     intent(in)    :: pres(:)
     type(multifab),     intent(in)    :: Epot(:)
     type(multifab),     intent(in)    :: grad_Epot(:,:)
@@ -68,8 +69,10 @@ contains
     ! Temp
     ! umac averaged
     ! umac shifted
+    ! umac_avg averaged
+    ! umac_avg shifted
     ! pressure
-    nvarsCC = 2*nspecies + 2*dm + 3
+    nvarsCC = 2*nspecies + 4*dm + 3
 
     ! split HCl NaOH NaCl H2O -> Na Cl H OH H2O (for both c and rho_i)
     if (nspecies .eq. 4) then
@@ -137,6 +140,24 @@ contains
        counter = counter + 1
     end if
 
+    plot_names(counter) = "tavg_averaged_velx"
+    counter = counter + 1
+    plot_names(counter) = "tavg_averaged_vely"
+    counter = counter + 1
+    if (dm > 2) then
+       plot_names(counter) = "tavg_averaged_velz"
+       counter = counter + 1
+    end if
+
+    plot_names(counter) = "tavg_shifted_velx"
+    counter = counter + 1
+    plot_names(counter) = "tavg_shifted_vely"
+    counter = counter + 1
+    if (dm > 2) then
+       plot_names(counter) = "tavg_shifted_velz"
+       counter = counter + 1
+    end if
+
     plot_names(counter) = "pres"
     counter = counter + 1
 
@@ -147,12 +168,12 @@ contains
        plot_names(counter) = "Epot"
        counter = counter + 1
 
-       plot_names(counter) = "av_gradEpotx"
+       plot_names(counter) = "averaged_Ex"
        counter = counter + 1
-       plot_names(counter) = "av_gradEpoty"
+       plot_names(counter) = "averaged_Ey"
        counter = counter + 1
        if (dm > 2) then
-          plot_names(counter) = "av_gradEpotz"
+          plot_names(counter) = "averaged_Ez"
           counter = counter + 1
        end if
 
@@ -167,7 +188,7 @@ contains
     end if
 
     if (algorithm_type .eq. 6) then
-       plot_names(counter) = "rho_eos"
+       plot_names(counter) = "rho_eos_minus_rho0"
        counter = counter+1
     end if
 
@@ -176,7 +197,7 @@ contains
     ! vel
     nvarsStag = 1
     if (use_charged_fluid) then
-       ! grad_Epot
+       ! electric field (Ex, Ey, Ez)
        ! gradPhiApprox
        nvarsStag = nvarsStag + 2
     end if
@@ -193,9 +214,9 @@ contains
     counter = counter + 1
 
     if (use_charged_fluid) then
-       plot_names_stagx(counter) = "grad_Epotx"
-       plot_names_stagy(counter) = "grad_Epoty"
-       plot_names_stagz(counter) = "grad_Epotz"
+       plot_names_stagx(counter) = "Ex"
+       plot_names_stagy(counter) = "Ey"
+       plot_names_stagz(counter) = "Ez"
        counter = counter + 1
 
        plot_names_stagx(counter) = "gradPhiApproxx"
@@ -317,6 +338,18 @@ contains
        counter = counter + 1
     end do
 
+    ! time-averaged vel averaged
+    do i=1,dm
+       call average_face_to_cc(mla,umac_avg(:,i),1,plotdata,counter,1)
+       counter = counter + 1
+    end do
+
+    ! time-averaged vel shifted
+    do i=1,dm
+       call shift_face_to_cc(mla,umac_avg(:,i),1,plotdata,counter,1)
+       counter = counter + 1
+    end do
+
     ! pressure
     do n = 1,nlevs
        call multifab_copy_c(plotdata(n),counter,pres(n),1,1,0)
@@ -338,13 +371,16 @@ contains
        enddo
        counter = counter + 1
 
-       ! grad_Epot_averaged
+       ! averaged electric field
        do i=1,dm
           call average_face_to_cc(mla,grad_Epot(:,i),1,plotdata,counter,1)
+          do n = 1,nlevs
+             call multifab_mult_mult_s_c(plotdata(n),counter,-1.d0,1,0)
+          end do
           counter = counter + 1
        end do
 
-       ! gradPhiApprox_averaged
+       ! averaged gradPhiApprox
        do i=1,dm
           call average_face_to_cc(mla,gradPhiApprox(:,i),1,plotdata,counter,1)
           counter = counter + 1
@@ -372,10 +408,11 @@ contains
 
     if (use_charged_fluid) then
 
-       ! grad_Epot
+       ! electric field
        do n=1,nlevs
           do i=1,dm
              call multifab_copy_c(plotdata_stag(n,i),counter,grad_Epot(n,i),1,1)
+             call multifab_mult_mult_s_c(plotdata_stag(n,i),counter,-1.d0,1,0)
           end do
        end do
        counter = counter + 1
