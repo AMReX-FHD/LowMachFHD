@@ -46,7 +46,7 @@ subroutine main_driver()
   use probin_multispecies_module, only: Dbar, start_time, probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
   use probin_charged_module, only: probin_charged_init, use_charged_fluid, dielectric_const, &
-                                   dielectric_type
+                                   dielectric_type, electroneutral
   use probin_chemistry_module, only: probin_chemistry_init, nreactions
 
   implicit none
@@ -116,6 +116,10 @@ subroutine main_driver()
   call probin_gmres_init()
   call probin_charged_init() 
   call probin_chemistry_init()
+
+  if ( (any(bc_lo(1:dim_in) .eq. 101) .or. any(bc_hi(1:dim_in) .eq. 201) ) .and. electroneutral) then
+     call bl_error("reservoirs not supported for electroneutral")
+  end if
 
    if (use_bl_rng) then
       ! Build the random number engine and give initial distributions for the
