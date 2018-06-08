@@ -106,6 +106,9 @@ subroutine main_driver()
   character(len=128) :: fname
   logical :: lexist
   logical :: nodal_temp(3)
+
+  ! misc
+  real(kind=dp_t) :: max_charge
   
   !==============================================================
   ! Initialization
@@ -807,6 +810,18 @@ subroutine main_driver()
                                     permittivity)
      else
         call bl_error("Error: invalid algorithm_type")
+     end if
+
+     ! for electroneutral make sure charge does not build up
+     if (use_charged_fluid .and. electroneutral) then
+        max_charge = multifab_norm_inf(charge_new(1))
+        if (max_charge .ge. 1.d-10) then
+           if (parallel_IOProcessor()) then
+              print*,''
+              print*,'WARNING: Max charge density in electroneutral sim exceeds 1d-10',max_charge
+              print*,''
+           end if
+        end if
      end if
 
      ! for writing time-averaged umac to plotfile
