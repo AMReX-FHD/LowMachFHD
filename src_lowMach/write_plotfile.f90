@@ -164,7 +164,7 @@ contains
     end if
 
     if (algorithm_type .eq. 6) then
-       plot_names(counter) = "rho_eos_minus_rho0"
+       plot_names(counter) = "rho_eos"
        counter = counter+1
     end if
 
