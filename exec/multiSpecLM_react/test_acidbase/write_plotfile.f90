@@ -57,6 +57,10 @@ contains
     integer :: nvarsCC, nvarsStag, counter
 
     real(kind=dp_t) :: x
+    real(kind=dp_t), parameter :: m_Na=3.817540700000000d-023, &	
+                                  m_Cl=5.887108600000000d-023, &
+                                  m_H =1.673723600000000d-024, &
+                                  m_OH=2.824068560000000d-023
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -247,15 +251,20 @@ contains
     if (nspecies .eq. 4) then
        ! concentrations
        call convert_rhoc_to_c(mla,rho,rhotot,cc_temp,.true.)
+       
+       ! w_Na = m_Na / (m_Na+m_OH) * w_NaOH + m_Na / (m_Na+m_Cl) * w_NaCl
+       ! w_Cl = m_Cl / (m_H+m_Cl) * w_HCl + m_Cl / (m_Na+m_Cl) * w_NaCl
+       ! w_H = m_H / (m_H+m_Cl) * w_HCl
+       ! w_OH = m_OH / (m_Na+m_OH) * w_NaOH
 
        ! Na
        do n=1,nlevs
           call multifab_setval_c(plotdata(n),0.d0,counter,1,all=.true.)
           ! from NaOH
-          x = 3.817540868231760d-23 / (3.817540868231760d-23 + 2.824244779792520d-23)
+          x = m_Na / (m_Na+m_OH)
           call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),2,1)
           ! from NaCl
-          x = 3.817540868231760d-23 / (3.817540868231760d-23 + 5.887109017990600d-23)
+          x = m_Na / (m_Na+m_Cl)
           call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),3,1)
        end do
        counter = counter+1
@@ -264,10 +273,10 @@ contains
        do n=1,nlevs
           call multifab_setval_c(plotdata(n),0.d0,counter,1,all=.true.)
           ! from HCl
-          x = 5.887109017990600d-23 / (1.673723708457240d-24 + 5.887109017990600d-23)
+          x = m_Cl / (m_H+m_Cl)
           call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),1,1)
           ! from NaCl
-          x = 5.887109017990600d-23 / (3.817540868231760d-23 + 5.887109017990600d-23)
+          x = m_Cl / (m_Na+m_Cl)
           call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),3,1)
        end do
        counter = counter+1
@@ -276,7 +285,7 @@ contains
        do n=1,nlevs
           call multifab_setval_c(plotdata(n),0.d0,counter,1,all=.true.)
           ! from HCl
-          x = 1.673723708457240d-24 / (1.673723708457240d-24 + 5.887109017990600d-23)
+          x = m_H / (m_H+m_Cl)
           call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),1,1)
        end do
        counter = counter+1
@@ -285,7 +294,7 @@ contains
        do n=1,nlevs
           call multifab_setval_c(plotdata(n),0.d0,counter,1,all=.true.)
           ! from NaOH
-          x = 2.824244779792520d-23 / (3.817540868231760d-23 + 2.824244779792520d-23)
+          x = m_OH / (m_Na+m_OH)
           call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),2,1)
        end do
        counter = counter+1

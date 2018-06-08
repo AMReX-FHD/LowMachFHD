@@ -109,6 +109,13 @@ subroutine main_driver()
 
   ! misc
   real(kind=dp_t) :: max_charge, max_charge_abs
+
+  ! DONEV FIXME
+  real(kind=dp_t) :: rho_temp, w_temp(1:5), w_mol(1:3)
+  real(kind=dp_t), parameter :: m_Na=3.817540700000000d-023, &	
+                                m_Cl=5.887108600000000d-023, &
+                                m_H =1.673723600000000d-024, &
+                                m_OH=2.824068560000000d-023
   
   !==============================================================
   ! Initialization
@@ -338,6 +345,29 @@ subroutine main_driver()
      call multifab_physbc(pi(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n), &
                           dx_in=dx(n,:))
   end do
+
+if(.false.) then  
+  ! DONEV FIXME temporary debugging:
+  w_mol=(/0.0014d0,0.0053d0,0.0037d0/) ! Random values
+  if(nspecies==5) then
+      ! 1=HCl, 2=NaOH, 3=NaCl,        4=H2O
+      ! 1=Na+, 2=Cl-,  3=H+,   4=OH-, 5=H2O 
+      ! w_Na = m_Na / (m_Na+m_OH) * w_NaOH + m_Na / (m_Na+m_Cl) * w_NaCl
+      w_temp(1) = m_Na / (m_Na+m_OH) * w_mol(2) + m_Na / (m_Na+m_Cl) * w_mol(3)
+      ! w_Cl = m_Cl / (m_H+m_Cl) * w_HCl + m_Cl / (m_Na+m_Cl) * w_NaCl
+      w_temp(2) = m_Cl / (m_H+m_Cl) * w_mol(1) + m_Cl / (m_Na+m_Cl) * w_mol(3)
+      ! w_H = m_H / (m_H+m_Cl) * w_HCl
+      w_temp(3) = m_H / (m_H+m_Cl) * w_mol(1)
+      ! w_OH = m_OH / (m_Na+m_OH) * w_NaOH
+      w_temp(4) = m_OH / (m_Na+m_OH) * w_mol(2)
+  else
+      w_temp(1:3)=w_mol    
+  end if    
+  w_temp(nspecies) = 1.0d0 - sum(w_temp(1:nspecies))
+  call compute_rho_eos(w_temp(1:nspecies)*rho0, rho_temp)
+  write(*,*) " w_H2O=", w_temp(nspecies), " rho_eos=", rho_temp, " w=", w_temp(1:nspecies-1)
+  stop
+end if
 
   !=======================================================
   ! Build multifabs for all the variables
