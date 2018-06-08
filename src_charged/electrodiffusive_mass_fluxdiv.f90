@@ -150,7 +150,7 @@ contains
 
     real(kind=dp_t) :: Epot_wall_save(2,mla%dim)
 
-    real(kind=dp_t) :: z_temp(nspecies), norm, epot_mg_abs_tol_temp
+    real(kind=dp_t) :: norm, epot_mg_abs_tol_temp
 
     type(bl_prof_timer), save :: bpt
     
@@ -246,23 +246,14 @@ contains
           end if
        end do
 
-       ! save original charge_per_mass
-       z_temp(1:nspecies) = charge_per_mass(1:nspecies)
-
-       ! take absolute value of charge per mass
-       charge_per_mass(1:nspecies) = abs(charge_per_mass(1:nspecies))
-
        ! dot abs(z) with F
-       call dot_with_z(mla,rhsvec,rhs)
+       call dot_with_z(mla,rhsvec,rhs,abs_z=.true.)
        ! compute norm
        norm = multifab_norm_inf(rhsvec(1))
 
        ! set absolute tolerance to be the norm*epot_mg_rel_tol
        epot_mg_abs_tol_temp = epot_mg_abs_tol
        epot_mg_abs_tol = norm*epot_mg_rel_tol
-
-       ! restore charge per mass
-       charge_per_mass(1:nspecies) = z_temp(1:nspecies)
 
        ! compute rhs for Poisson zolve, z dot F
        call dot_with_z(mla,rhsvec,rhs)

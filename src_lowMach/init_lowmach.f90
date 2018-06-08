@@ -16,7 +16,7 @@ module init_lowmach_module
                                   use_bl_rng, nspecies, algorithm_type, initial_variance_mass
   use probin_multispecies_module, only: alpha1, beta, delta, sigma, Dbar, Dtherm, &
                                         c_init, T_init, temp_type, sigma, is_ideal_mixture
-  use probin_charged_module, only: charge_per_mass, use_charged_fluid, electroneutral
+  use probin_charged_module, only: charge_per_mass, use_charged_fluid, electroneutral, epot_mg_rel_tol
  
   implicit none
 
@@ -786,8 +786,8 @@ contains
           if(use_charged_fluid .and. electroneutral) then ! Confirm electroneutrality
               sumtot = sum(c(i,j,:)*charge_per_mass(1:nspecies))
               !write(*,*) "Cell=", i, j, " w=", c(i,j,:), " Z=", sumtot
-              if ( sumtot > 1.0d-12*sum(c(i,j,:)*abs(charge_per_mass(1:nspecies))) ) then
-                 call bl_warn("Initial configuration not electro-neutral to 12 digits")
+              if ( sumtot > epot_mg_rel_tol*sum(c(i,j,:)*abs(charge_per_mass(1:nspecies))) ) then
+                 call bl_warn("Initial configuration not electro-neutral to epot_mg_rel_tol digits")
               end if   
           end if
 
@@ -1220,6 +1220,14 @@ contains
                    sumtot = sumtot + c(i,j,k,n)/rhobar(n)
                 end do
                 rho_total = 1.d0/sumtot
+             end if
+
+             if(use_charged_fluid .and. electroneutral) then ! Confirm electroneutrality
+                 sumtot = sum(c(i,j,k,:)*charge_per_mass(1:nspecies))
+                 !write(*,*) "Cell=", i, j, k, " w=", c(i,j,k,:), " Z=", sumtot
+                 if ( sumtot > epot_mg_rel_tol*sum(c(i,j,k,:)*abs(charge_per_mass(1:nspecies))) ) then
+                    call bl_warn("Initial configuration not electro-neutral to epot_mg_rel_tol digits")
+                 end if   
              end if
 
              ! add mass fluctuations
