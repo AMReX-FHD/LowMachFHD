@@ -13,10 +13,9 @@ module electrodiffusive_mass_fluxdiv_module
   use multifab_physbc_module
   use matvec_mul_module
   use probin_common_module, only: nspecies, variance_coef_mass, shift_cc_to_boundary
-  use probin_gmres_module, only: mg_verbose, mg_abs_tol
   use probin_charged_module, only: Epot_wall_bc_type, Epot_wall, E_ext_type, electroneutral, &
                                    zero_eps_on_wall_type, epot_mg_verbose, epot_mg_abs_tol, &
-                                   epot_mg_rel_tol
+                                   epot_mg_rel_tol, charge_per_mass
   
   use fabio_module
 
@@ -151,6 +150,8 @@ contains
 
     real(kind=dp_t) :: Epot_wall_save(2,mla%dim)
 
+    real(kind=dp_t) :: z_temp(nspecies), norm, epot_mg_abs_tol_temp
+
     type(bl_prof_timer), save :: bpt
     
     call build(bpt,"electrodiffusive_mass_flux")
@@ -235,7 +236,9 @@ contains
        ! compute z^T A_Phi^n, store in solver_beta
        call dot_with_z_face(mla,A_Phi,beta)
 
-       ! compute RHS = div (z^T (F_d + F_s)) FIXME - compute RHS
+       ! compute RHS = div (z^T (F_d + F_s))
+
+       ! first set rhsvec = F_d + F_s
        do n=1,nlevs
           call multifab_copy_c(rhsvec(n),1,diff_mass_fluxdiv(n),1,nspecies,0)
           if (variance_coef_mass .ne. 0.d0) then
@@ -243,6 +246,25 @@ contains
           end if
        end do
 
+       ! save original charge_per_mass
+       z_temp(1:nspecies) = charge_per_mass(1:nspecies)
+
+       ! take absolute value of charge per mass
+       charge_per_mass(1:nspecies) = abs(charge_per_mass(1:nspecies))
+
+       ! dot abs(z) with F
+       call dot_with_z(mla,rhsvec,rhs)
+       ! compute norm
+       norm = multifab_norm_inf(rhsvec(1))
+
+       ! set absolute tolerance to be the norm*epot_mg_rel_tol
+       epot_mg_abs_tol_temp = epot_mg_abs_tol
+       epot_mg_abs_tol = norm*epot_mg_rel_tol
+
+       ! restore charge per mass
+       charge_per_mass(1:nspecies) = z_temp(1:nspecies)
+
+       ! compute rhs for Poisson zolve, z dot F
        call dot_with_z(mla,rhsvec,rhs)
 
     else
@@ -313,6 +335,11 @@ contains
                      abs_eps=epot_mg_abs_tol, &
                      verbose=epot_mg_verbose, &
                      ok_to_fix_singular=.false.)
+
+    if (electroneutral) then
+       epot_mg_abs_tol = epot_mg_abs_tol_temp
+    end if
+    
 
     ! for periodic problems subtract off the average of Epot
     ! we can generalize this later for walls
