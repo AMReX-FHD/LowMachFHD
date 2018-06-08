@@ -46,7 +46,7 @@ subroutine main_driver()
   use probin_multispecies_module, only: Dbar, start_time, probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
   use probin_charged_module, only: probin_charged_init, use_charged_fluid, dielectric_const, &
-                                   dielectric_type, electroneutral
+                                   dielectric_type, electroneutral, epot_mg_rel_tol
   use probin_chemistry_module, only: probin_chemistry_init, nreactions
 
   implicit none
@@ -108,7 +108,7 @@ subroutine main_driver()
   logical :: nodal_temp(3)
 
   ! misc
-  real(kind=dp_t) :: max_charge
+  real(kind=dp_t) :: max_charge, max_charge_abs
   
   !==============================================================
   ! Initialization
@@ -449,12 +449,21 @@ subroutine main_driver()
         end do
      end do
 
+     if(electroneutral) then
+        call dot_with_z(mla,rho_old,charge_old,abs_z=.true.)
+        max_charge_abs = multifab_norm_inf(charge_old(1)) ! This will be saved for reuse
+        if(max_charge_abs<=0.0d0) max_charge_abs=1.0d0 ! Avoid division by zero
+        call dot_with_z(mla,rho_old,charge_old,abs_z=.false.)
+        max_charge = multifab_norm_inf(charge_old(1))
+     end if 
      ! compute total charge
      call dot_with_z(mla,rho_old,charge_old)
-     total_charge = multifab_sum_c(charge_old(1),1,1)
-     if (parallel_IOProcessor()) then
-        ! multiply by total volume (all 3 dimensions, even for 2D problems)
-        print*,'Total charge',total_charge*product(dx(1,1:3))
+     ! multiply by total volume (all 3 dimensions, even for 2D problems)
+     total_charge = multifab_sum_c(charge_old(1),1,1)*product(dx(1,1:3))
+     if (parallel_IOProcessor().and.electroneutral) then
+        print*,'Initial total charge',total_charge, " Rel max charge=", max_charge/max_charge_abs
+     else if (parallel_IOProcessor()) then
+        print*,'Initial total charge',total_charge          
      end if
 
      ! compute permittivity
@@ -814,11 +823,11 @@ subroutine main_driver()
 
      ! for electroneutral make sure charge does not build up
      if (use_charged_fluid .and. electroneutral) then
-        max_charge = multifab_norm_inf(charge_new(1))
-        if (max_charge .ge. 1.d-10) then
+        max_charge = multifab_norm_inf(charge_new(1))        
+        if (max_charge > epot_mg_rel_tol*max_charge_abs) then
            if (parallel_IOProcessor()) then
               print*,''
-              print*,'WARNING: Max charge density in electroneutral sim exceeds 1d-10',max_charge
+              print*,'WARNING: Max charge density exceeds rel_tol, rel max=', max_charge/max_charge_abs
               print*,''
            end if
         end if
@@ -862,10 +871,15 @@ subroutine main_driver()
         call eos_check(mla,rho_new)
 
         if (use_charged_fluid) then
-           total_charge = multifab_sum_c(charge_new(1),1,1)
-           if (parallel_IOProcessor()) then
-              ! multiply by total volume (all 3 dimensions, even for 2D problems)
-              print*,'Total charge',total_charge*product(dx(1,1:3))
+           ! multiply by total volume (all 3 dimensions, even for 2D problems)
+           total_charge = multifab_sum_c(charge_new(1),1,1)*product(dx(1,1:3))
+           if(electroneutral) then
+              max_charge = multifab_norm_inf(charge_new(1))
+           end if
+           if (parallel_IOProcessor().and.electroneutral) then
+              print*,'Total charge',total_charge, " Rel max charge=", max_charge/max_charge_abs
+           else if (parallel_IOProcessor()) then
+              print*,'Total charge',total_charge          
            end if
         end if
 

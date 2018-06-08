@@ -28,35 +28,51 @@ module fluid_charge_module
 contains
 
   ! mfdotz = mf dot z
-  subroutine dot_with_z(mla,mf,mfdotz)
+  subroutine dot_with_z(mla,mf,mfdotz,abs_z)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: mf(:)
     type(multifab) , intent(inout) :: mfdotz(:)
+    logical        , intent(in), optional :: abs_z
+      ! Dot with abs(z) to estimate norms for relative errors (default=false)
 
     ! local variables
     integer :: n,nlevs,comp
+    real(kind=dp_t) :: z_temp(nspecies)
+    
+    z_temp=charge_per_mass(1:nspecies)
+    if(present(abs_z)) then
+      if(abs_z) z_temp=abs(z_temp)
+    end if  
 
     nlevs = mla%nlevel
 
     do n=1,nlevs
        call multifab_setval(mfdotz(n),0.d0,all=.true.)
        do comp=1,nspecies
-          call multifab_saxpy_3_cc(mfdotz(n),1,charge_per_mass(comp),mf(n),comp,1,all=.true.)
+          call multifab_saxpy_3_cc(mfdotz(n),1,z_temp(comp),mf(n),comp,1,all=.true.)
        end do
     end do
 
   end subroutine dot_with_z
 
   ! mfdotz = mf dot z
-  subroutine dot_with_z_face(mla,mf,mfdotz)
+  subroutine dot_with_z_face(mla,mf,mfdotz,abs_z)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: mf(:,:)
     type(multifab) , intent(inout) :: mfdotz(:,:)
+    logical        , intent(in), optional :: abs_z
+      ! Dot with abs(z) to estimate norms for relative errors (default=false)
 
     ! local variables
     integer :: n,nlevs,i,dm,comp
+    real(kind=dp_t) :: z_temp(nspecies)
+
+    z_temp=charge_per_mass(1:nspecies)
+    if(present(abs_z)) then
+      if(abs_z) z_temp=abs(z_temp)
+    end if  
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -65,7 +81,7 @@ contains
        do i=1,dm
           call multifab_setval(mfdotz(n,i),0.d0,all=.true.)
           do comp=1,nspecies
-             call multifab_saxpy_3_cc(mfdotz(n,i),1,charge_per_mass(comp),mf(n,i),comp,1,all=.true.)
+             call multifab_saxpy_3_cc(mfdotz(n,i),1,z_temp(comp),mf(n,i),comp,1,all=.true.)
           end do
        end do
     end do
