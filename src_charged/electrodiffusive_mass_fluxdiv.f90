@@ -12,7 +12,7 @@ module electrodiffusive_mass_fluxdiv_module
   use ml_solve_module
   use multifab_physbc_module
   use matvec_mul_module
-  use probin_common_module, only: nspecies, variance_coef_mass, shift_cc_to_boundary
+  use probin_common_module, only: nspecies, variance_coef_mass, shift_cc_to_boundary, bc_lo, bc_hi
   use probin_charged_module, only: Epot_wall_bc_type, Epot_wall, E_ext_type, electroneutral, &
                                    zero_eps_on_wall_type, epot_mg_verbose, epot_mg_abs_tol, &
                                    epot_mg_rel_tol, charge_per_mass
@@ -30,7 +30,7 @@ contains
 
   subroutine electrodiffusive_mass_fluxdiv(mla,rho,Temp,rhoWchi, &
                                            diff_mass_flux,diff_mass_fluxdiv, &
-                                           stoch_mass_fluxdiv, &
+                                           stoch_mass_flux, &
                                            dx,the_bc_tower,charge, &
                                            grad_Epot,Epot,permittivity,dt, &
                                            zero_initial_Epot)
@@ -44,7 +44,7 @@ contains
     type(multifab) , intent(in   )  :: rhoWchi(:)
     type(multifab) , intent(inout)  :: diff_mass_flux(:,:)
     type(multifab) , intent(inout)  :: diff_mass_fluxdiv(:)
-    type(multifab) , intent(in   )  :: stoch_mass_fluxdiv(:)
+    type(multifab) , intent(in   )  :: stoch_mass_flux(:,:)
     real(kind=dp_t), intent(in   )  :: dx(:,:)
     type(bc_tower) , intent(in   )  :: the_bc_tower
     type(multifab) , intent(inout)  :: charge(:)
@@ -79,7 +79,7 @@ contains
     ! compute the face-centered electro_mass_flux (each direction: cells+1 faces while 
     ! cells contain interior+2 ghost cells) 
     call electrodiffusive_mass_flux(mla,rho,Temp,rhoWchi,electro_mass_flux, &
-                                    diff_mass_fluxdiv,stoch_mass_fluxdiv,dx,the_bc_tower, &
+                                    diff_mass_flux,stoch_mass_flux,dx,the_bc_tower, &
                                     charge,grad_Epot,Epot,permittivity,dt,zero_initial_Epot)
     
     ! add fluxes to diff_mass_flux
@@ -105,7 +105,7 @@ contains
   end subroutine electrodiffusive_mass_fluxdiv
  
   subroutine electrodiffusive_mass_flux(mla,rho,Temp,rhoWchi,electro_mass_flux, &
-                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                        diff_mass_flux,stoch_mass_flux, &
                                         dx,the_bc_tower,charge,grad_Epot,Epot, &
                                         permittivity,dt,zero_initial_Epot)
 
@@ -116,8 +116,8 @@ contains
     type(multifab) , intent(in   ) :: Temp(:)  
     type(multifab) , intent(in   ) :: rhoWchi(:)
     type(multifab) , intent(inout) :: electro_mass_flux(:,:)
-    type(multifab) , intent(in   ) :: diff_mass_fluxdiv(:)
-    type(multifab) , intent(in   ) :: stoch_mass_fluxdiv(:)
+    type(multifab) , intent(in   ) ::    diff_mass_flux(:,:)
+    type(multifab) , intent(in   ) ::   stoch_mass_flux(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
     type(multifab) , intent(inout) :: charge(:)
@@ -238,15 +238,20 @@ contains
 
        ! compute RHS = div (z^T (F_d + F_s))
 
-       ! first set rhsvec = F_d + F_s
+       ! first set rhsvec = div (F_d + F_s)
        do n=1,nlevs
-          call multifab_copy_c(rhsvec(n),1,diff_mass_fluxdiv(n),1,nspecies,0)
+          call compute_div(mla,diff_mass_flux,rhsvec,dx,1,1,nspecies, &
+                           increment_in=.false.)
           if (variance_coef_mass .ne. 0.d0) then
-             call multifab_plus_plus_c(rhsvec(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
+             call compute_div(mla,stoch_mass_flux,rhsvec,dx,1,1,nspecies, &
+                              increment_in=.true.)
           end if
        end do
 
-       ! dot abs(z) with F
+       !!!!!!!!!!!!!!!!!!!!!!
+       ! change solver tolerance based on scales of the problem
+
+       ! dot abs(z) with (div F)
        call dot_with_z(mla,rhsvec,rhs,abs_z=.true.)
        ! compute norm
        norm = multifab_norm_inf(rhsvec(1))
@@ -254,15 +259,28 @@ contains
        ! set absolute tolerance to be the norm*epot_mg_rel_tol
        epot_mg_abs_tol_temp = epot_mg_abs_tol
        epot_mg_abs_tol = norm*epot_mg_rel_tol
+       !!!!!!!!!!!!!!!!!!!!!!
 
-       ! compute rhs for Poisson zolve, z dot F
+       ! compute rhs for Poisson zolve, z^T (div F)
        call dot_with_z(mla,rhsvec,rhs)
 
-       ! for Neumann bc's for electric potential, put in homogeneous form
-       if (any(Epot_wall_bc_type(1:2,1:dm).eq. 2)) then
+       if (any(Epot_wall_bc_type(1:2,1:dm) .ne. 1)) then
+          call bl_error("Electroneutral only works with Neumann potential bc's")
+       end if       
 
-          ! save the numerical values for the Dirichlet and Neumann conditions          
-          ! DONEV: call inhomogeneous_neumann_fix(mla,rhs,permittivity,dx,the_bc_tower)
+       ! for reservoirs, we have Neumann bc's for electric potential
+       ! put in homogeneous form
+       if (any(bc_lo(1:dm) .eq. NO_SLIP_RESERVOIR) .or. &
+           any(bc_hi(1:dm) .eq. NO_SLIP_RESERVOIR) .or. &
+           any(bc_lo(1:dm) .eq. SLIP_RESERVOIR) .or. &
+           any(bc_hi(1:dm) .eq. SLIP_RESERVOIR) ) then
+
+
+          ! take input beta
+
+
+
+
 
        end if
 
@@ -286,7 +304,8 @@ contains
        end do
 
        ! for inhomogeneous Neumann bc's for electric potential, put in homogeneous form
-       if (any(Epot_wall_bc_type(1:2,1:dm).eq. 2)) then
+       if ( any(Epot_wall_bc_type(1:2,1:dm) .eq. 2) .and. &
+            any(Epot_wall(1:2,1:dm) .ne. 0.d0    ) ) then
 
           ! save the numerical values for the Dirichlet and Neumann conditions
           Epot_wall_save(1:2,1:dm) = Epot_wall(1:2,1:dm)
@@ -335,6 +354,7 @@ contains
                      verbose=epot_mg_verbose, &
                      ok_to_fix_singular=.false.)
 
+    ! restore original solver tolerance
     if (electroneutral) then
        epot_mg_abs_tol = epot_mg_abs_tol_temp
     end if
@@ -438,7 +458,7 @@ contains
   end subroutine electrodiffusive_mass_flux
   
   ! We would like to solve A x = b with inhomogeneous bc's
-  ! Here, "A" is -epsilon * Lap
+  ! Here, "A" is -div epsilon grad
   ! This is equivalent to A_H x = b - A x_H, where
   !   A   is the inhomogeneous operator
   !   A_H is the homogeneous operator

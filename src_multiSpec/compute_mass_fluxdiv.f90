@@ -134,19 +134,6 @@ contains
 
     end if
 
-    ! Donev: I propose the following rewrite:
-    ! call compute_mass_fluxdiv() ! Compute F=F_bar+F_tilde using existing routine
-    ! if(electroneutral) then
-    !    solve Poisson equation with epsilon=0 and compute Epot to return to caller
-    !    note no advective fluxes required in this case
-    !    project fluxes by adding div(A_Phi grad Phi)
-    ! else
-    !    call electrodiffusive_mass_fluxdiv() ! Add the electrostatic piece using Epot passed in
-    !    may be better to compute Epot here by solving the simple Poisson equation though
-    !    this way callers don't have to worry about Poisson solves. 
-    !    but one needs to check if this will work with all of the existing algorithms
-    ! end
-
     if (use_charged_fluid) then
        ! we pass in these multifabs for explicit electrodiffusion
        ! implicit electrodiffusion is handled elsewhere
@@ -156,7 +143,7 @@ contains
            present(permittivity)) then
           call electrodiffusive_mass_fluxdiv(mla,rho,Temp,rhoWchi, &
                                              diff_mass_flux,diff_mass_fluxdiv, &
-                                             stoch_mass_fluxdiv, &
+                                             stoch_mass_flux, &
                                              dx,the_bc_tower, &
                                              charge,grad_Epot,Epot, &
                                              permittivity,dt,zero_initial_Epot)
