@@ -258,6 +258,14 @@ contains
        ! compute rhs for Poisson zolve, z dot F
        call dot_with_z(mla,rhsvec,rhs)
 
+       ! for Neumann bc's for electric potential, put in homogeneous form
+       if (any(Epot_wall_bc_type(1:2,1:dm).eq. 2)) then
+
+          ! save the numerical values for the Dirichlet and Neumann conditions          
+          ! DONEV: call inhomogeneous_neumann_fix(mla,rhs,permittivity,dx,the_bc_tower)
+
+       end if
+
     else
 
        ! set beta=permittivity (epsilon)
