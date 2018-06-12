@@ -127,10 +127,6 @@ subroutine main_driver()
   call probin_charged_init() 
   call probin_chemistry_init()
 
-  if ( (any(bc_lo(1:dim_in) .eq. 101) .or. any(bc_hi(1:dim_in) .eq. 201) ) .and. electroneutral) then
-     call bl_error("reservoirs not supported for electroneutral")
-  end if
-
    if (use_bl_rng) then
       ! Build the random number engine and give initial distributions for the
       ! F_BaseLib/bl_random RNG module
