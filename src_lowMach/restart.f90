@@ -21,7 +21,7 @@ module restart_module
 
 contains
 
-  subroutine initialize_from_restart(mla,time,dt,rho,rhotot,pi,umac,pmask)
+  subroutine initialize_from_restart(mla,time,dt,rho,rhotot,pi,umac,umac_sum,pmask)
  
      type(ml_layout),intent(out)   :: mla
      real(dp_t)    , intent(  out) :: time,dt
@@ -29,6 +29,7 @@ contains
      type(multifab), intent(inout) :: rhotot(:)
      type(multifab), intent(inout) :: pi(:)
      type(multifab), intent(inout) :: umac(:,:)
+     type(multifab), intent(inout) :: umac_sum(:,:)
      logical       , intent(in   ) :: pmask(:)
 
      type(ml_boxarray)         :: mba
@@ -66,11 +67,13 @@ contains
         call multifab_build(pi(n)    , mla%la(n),        1, 1)
         do i=1,dm
            call multifab_build_edge(umac(n,i), mla%la(n), 1, 1, i)
+           call multifab_build_edge(umac_sum(n,i), mla%la(n), 1, 1, i)
 
            ! with mixed boundary conditions some of the corner umac ghost cells that
            ! never affect the solution aren't filled, causing segfaults on some compilers
            ! this prevents segfaults
            call setval(umac(n,i),0.d0,all=.true.)
+           call setval(umac_sum(n,i),0.d0,all=.true.)
         end do
      end do
 
@@ -85,8 +88,11 @@ contains
      do n=1,nlevs
         call multifab_copy_c(umac(n,1),1,chkdata_edgex(n),1,1)
         call multifab_copy_c(umac(n,2),1,chkdata_edgey(n),1,1)
+        call multifab_copy_c(umac_sum(n,1),1,chkdata_edgex(n),2,1)      ! SC: note the source component is different for umac_sum than it is for umac
+        call multifab_copy_c(umac_sum(n,2),1,chkdata_edgey(n),2,1)
         if (dm .eq. 3) then
            call multifab_copy_c(umac(n,3),1,chkdata_edgez(n),1,1)
+           call multifab_copy_c(umac_sum(n,3),1,chkdata_edgez(n),2,1)   ! SC: note the source component is different for umac_sum than it is for umac
         end if
      end do
 

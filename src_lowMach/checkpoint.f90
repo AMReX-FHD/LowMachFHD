@@ -13,6 +13,7 @@ module checkpoint_module
                                   seed_diffusion, seed_momentum, seed_reaction, &
                                   check_base_name
   use probin_chemistry_module, only: nreactions
+  use probin_charged_module, only: use_charged_fluid
 
   implicit none
 
@@ -21,14 +22,14 @@ module checkpoint_module
   public :: checkpoint_write, checkpoint_read
 
 contains
-
-  subroutine checkpoint_write(mla,rho,rhotot,pi,umac,time,dt,istep_to_write)
+  subroutine checkpoint_write(mla,rho,rhotot,pi,umac,umac_sum,time,dt,istep_to_write)
     
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:)                ! cell-centered partial densities
     type(multifab) , intent(in   ) :: rhotot(:)             ! cell-centered total density
     type(multifab) , intent(in   ) :: pi(:)                 ! cell-centered pi
     type(multifab) , intent(in   ) :: umac(:,:)             ! edge-based velocities
+    type(multifab) , intent(in   ) :: umac_sum(:,:)         ! edge-based sum of velocities
     integer        , intent(in   ) :: istep_to_write
     real(kind=dp_t), intent(in   ) :: time,dt
 
@@ -82,11 +83,13 @@ contains
     end do
     counter = counter + 1
 
+
     ! staggered quantities (normal velocity)
     do n=1,nlevs
        do i=1,dm
-          call multifab_build_edge(chkdata_edge(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(chkdata_edge(n,i),mla%la(n),2,0,i)
           call multifab_copy_c(chkdata_edge(n,i),1,umac(n,i),1,1)
+          call multifab_copy_c(chkdata_edge(n,i),2,umac_sum(n,i),1,1)  !
        end do
     end do
 

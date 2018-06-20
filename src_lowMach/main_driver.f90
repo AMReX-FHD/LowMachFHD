@@ -46,7 +46,7 @@ subroutine main_driver()
   use probin_multispecies_module, only: Dbar, start_time, probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
   use probin_charged_module, only: probin_charged_init, use_charged_fluid, dielectric_const, &
-                                   dielectric_type, electroneutral, epot_mg_rel_tol
+                                   dielectric_type, electroneutral, epot_mg_rel_tol, print_debye_len
   use probin_chemistry_module, only: probin_chemistry_init, nreactions
 
   implicit none
@@ -154,6 +154,8 @@ subroutine main_driver()
   allocate(diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
   allocate(stoch_mass_flux(nlevs,dm))
   allocate(umac(nlevs,dm),mtemp(nlevs,dm),rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
+  allocate(umac_sum(nlevs,dm))
+  allocate(umac_avg(nlevs,dm))
   allocate(eta(nlevs),kappa(nlevs))
 
   ! 1 component in 2D, 3 components in 3D
@@ -195,8 +197,8 @@ subroutine main_driver()
 
      ! build the ml_layout
      ! read in time and dt from checkpoint
-     ! build and fill rho, rhotot, pi, and umac
-     call initialize_from_restart(mla,time,dt,rho_old,rhotot_old,pi,umac,pmask)
+     ! build and fill rho, rhotot, pi, umac, and umac_sum
+     call initialize_from_restart(mla,time,dt,rho_old,rhotot_old,pi,umac,umac_sum,pmask) 
 
   else
 
@@ -247,6 +249,8 @@ subroutine main_driver()
         call multifab_build(pi(n)        ,mla%la(n),1       ,1)
         do i=1,dm
            call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
+           call multifab_build_edge(umac_sum(n,i),mla%la(n),1,0,i)
+           call setval(umac_sum(n,i),0.d0)
         end do
      end do
 
@@ -380,6 +384,7 @@ end if
         call multifab_build_edge(     mtemp(n,i),mla%la(n),1,0,i)
         call multifab_build_edge( rhotot_fc(n,i),mla%la(n),1,0,i)
         call multifab_build_edge(gradp_baro(n,i),mla%la(n),1,0,i)
+        call multifab_build_edge(umac_avg(n,i),mla%la(n),1,0,i)
      end do
   end do
 
@@ -705,17 +710,6 @@ end if
      ! Hydrogrid analysis and output for initial data
      !=====================================================================
 
-     ! for writing time-averaged umac to plotfile
-     allocate(umac_sum(nlevs,dm))
-     allocate(umac_avg(nlevs,dm))
-     do n=1,nlevs 
-        do i=1,dm
-           call multifab_build_edge(umac_sum(n,i),mla%la(n),1,0,i)
-           call multifab_build_edge(umac_avg(n,i),mla%la(n),1,0,i)
-           call setval(umac_sum(n,i),0.d0)
-           call setval(umac_avg(n,i),0.d0)
-        end do
-     end do
 
      ! write initial plotfile
      if (plot_int .gt. 0) then
@@ -734,7 +728,8 @@ end if
         if (parallel_IOProcessor()) then
            write(*,*), 'writing initial checkpoint 0'
         end if
-        call checkpoint_write(mla,rho_old,rhotot_old,pi,umac,time,dt,0)
+        !call checkpoint_write(mla,rho_old,rhotot_old,pi,umac,time,dt,0)
+        call checkpoint_write(mla,rho_old,rhotot_old,pi,umac,umac_sum,time,dt,0)
      end if
      
      if (stats_int .gt. 0) then
@@ -897,6 +892,8 @@ end if
         call eos_check(mla,rho_new)
 
         if (use_charged_fluid) then
+           print*, istep
+           print*, init_step
            ! multiply by total volume (all 3 dimensions, even for 2D problems)
            total_charge = multifab_sum_c(charge_new(1),1,1)*product(dx(1,1:3))
            if(electroneutral) then
@@ -908,6 +905,7 @@ end if
               print*,'Total charge',total_charge          
            end if
         end if
+
 
      end if
 
@@ -929,7 +927,8 @@ end if
         if (parallel_IOProcessor()) then
            write(*,*), 'writing checkpoint after timestep =', istep 
         end if
-        call checkpoint_write(mla,rho_new,rhotot_new,pi,umac,time,dt,istep)
+        !call checkpoint_write(mla,rho_new,rhotot_new,pi,umac,time,dt,istep)
+        call checkpoint_write(mla,rho_new,rhotot_new,pi,umac,umac_sum,time,dt,istep)
      end if
 
      ! print out projection (average) and variance
