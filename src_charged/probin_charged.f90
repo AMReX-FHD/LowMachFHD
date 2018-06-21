@@ -6,7 +6,7 @@ module probin_charged_module
  
   implicit none
 
-  logical            :: use_charged_fluid
+  logical            :: use_charged_fluid, print_debye_len
   real(kind=dp_t)    :: dielectric_const
   integer            :: dielectric_type
   real(kind=dp_t)    :: charge_per_mass(MAX_SPECIES)
@@ -25,6 +25,7 @@ module probin_charged_module
 
   ! for charged fluid
   namelist /probin_charged/ use_charged_fluid
+  namelist /probin_charged/ print_debye_len
   namelist /probin_charged/ dielectric_const
   namelist /probin_charged/ dielectric_type
   namelist /probin_charged/ charge_per_mass
@@ -71,6 +72,7 @@ contains
 
     ! defaults - will be overwritten by inputs file or command line
     use_charged_fluid  = .false.
+    print_debye_len    = .false.
     dielectric_const   = 1.d0
     dielectric_type    = 0      ! 0 = assumes constant epsilon
                                 ! 1 = (1+c1)*dielectric_const
@@ -116,6 +118,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) use_charged_fluid
+
+       case ('--print_debye_len')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) print_debye_len 
 
        case ('--dielectric_const')
           farg = farg + 1
