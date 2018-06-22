@@ -592,27 +592,32 @@ contains
           select case (dm)
           case (2)
              call project_flux_reservoir_2d(epx(:,:,1,comp), epy(:,:,1,comp), ng_e, &
-                                            dpx(:,:,1,comp), dpy(:,:,1,comp), ng_d, &
+                                            dpx(:,:,1,start_comp:start_comp+num_comp-1), &
+                                            dpy(:,:,1,start_comp:start_comp+num_comp-1), ng_d, &
                                             apx(:,:,1,comp), apy(:,:,1,comp), ng_a, &
-                                            zpx(:,:,1,1),    zpy(:,:,1,1),   ng_z, &
+                                            zpx(:,:,1,1), zpy(:,:,1,1), ng_z, &
                                             lo, hi, &
                                             the_bc_level%phys_bc_level_array(i,:,:))
           case (3)
-             call bl_error("fixme: project_flux_reservoir_3d")
              epz => dataptr(electro_mass_flux(3),i)
-             dpz => dataptr(electro_mass_flux(3),i)
+             dpz => dataptr(diffstoch_mass_flux(3),i)
              apz => dataptr(A_Phi(3),i)
              zpz => dataptr(z_dot_A(3),i)
-             call project_flux_reservoir_3d(epx(:,:,:,comp), epy(:,:,:,comp), &
-                                           epz(:,:,:,comp), ng_e, lo, hi, &
-                                           the_bc_level%phys_bc_level_array(i,:,:))
+             call project_flux_reservoir_3d(epx(:,:,:,comp), epy(:,:,:,comp), epz(:,:,:,comp), ng_e, &
+                                            dpx(:,:,:,start_comp:start_comp+num_comp-1), &
+                                            dpy(:,:,:,start_comp:start_comp+num_comp-1), &
+                                            dpz(:,:,:,start_comp:start_comp+num_comp-1), ng_d, &
+                                            apx(:,:,:,comp), apy(:,:,:,comp), apz(:,:,:,comp), ng_a, &
+                                            zpx(:,:,:,1), zpy(:,:,:,1), zpz(:,:,:,1), ng_z, &
+                                            lo, hi, &
+                                            the_bc_level%phys_bc_level_array(i,:,:))
           end select
        end do
     end do
  
   end subroutine project_flux_reservoir
 
-  subroutine project_flux_reservoir_2d(  electro_mass_fluxx,  electro_mass_fluxy,ng_e, &
+  subroutine project_flux_reservoir_2d(electro_mass_fluxx,electro_mass_fluxy,ng_e, &
                                        diffstoch_mass_fluxx,diffstoch_mass_fluxy,ng_d, &
                                        A_Phix,A_Phiy,ng_a,z_dot_Ax,z_dot_Ay,ng_z, &
                                        lo,hi,bc)
@@ -620,21 +625,26 @@ contains
     integer        , intent(in   ) :: lo(:),hi(:),ng_e,ng_d,ng_a,ng_z
     real(kind=dp_t), intent(inout) ::   electro_mass_fluxx(lo(1)-ng_e:,lo(2)-ng_e:)
     real(kind=dp_t), intent(inout) ::   electro_mass_fluxy(lo(1)-ng_e:,lo(2)-ng_e:)
-    real(kind=dp_t), intent(inout) :: diffstoch_mass_fluxx(lo(1)-ng_d:,lo(2)-ng_d:)
-    real(kind=dp_t), intent(inout) :: diffstoch_mass_fluxy(lo(1)-ng_d:,lo(2)-ng_d:)
+    real(kind=dp_t), intent(inout) :: diffstoch_mass_fluxx(lo(1)-ng_d:,lo(2)-ng_d:,:)
+    real(kind=dp_t), intent(inout) :: diffstoch_mass_fluxy(lo(1)-ng_d:,lo(2)-ng_d:,:)
     real(kind=dp_t), intent(inout) ::               A_Phix(lo(1)-ng_a:,lo(2)-ng_a:)
     real(kind=dp_t), intent(inout) ::               A_Phiy(lo(1)-ng_a:,lo(2)-ng_a:)
     real(kind=dp_t), intent(inout) ::             z_dot_Ax(lo(1)-ng_z:,lo(2)-ng_z:)
     real(kind=dp_t), intent(inout) ::             z_dot_Ay(lo(1)-ng_z:,lo(2)-ng_z:)
     integer        , intent(in   ) :: bc(:,:)
+    
+    integer :: i,j
+    real(kind=dp_t) :: zTF
 
 !!!!!!!!!!!!!!!!!!
 ! lo-x boundary
 !!!!!!!!!!!!!!!!!!
 
     if (bc(1,1) .eq. NO_SLIP_RESERVOIR .or. bc(1,1) .eq. SLIP_RESERVOIR) then
-       electro_mass_fluxx(lo(1),lo(2):hi(2)) = &
-            - A_Phix(lo(1),lo(2):hi(2)) * diffstoch_mass_fluxx(lo(1),lo(2):hi(2)) / z_dot_Ax(lo(1),lo(2):hi(2))
+       do j=lo(2),hi(2)
+         zTF=dot_product(charge_per_mass(1:nspecies),diffstoch_mass_fluxx(lo(1),j,1:nspecies))
+         electro_mass_fluxx(lo(1),j) = - A_Phix(lo(1),j) * zTF / z_dot_Ax(lo(1),j)
+       end do
     end if
 
 !!!!!!!!!!!!!!!!!!
@@ -642,8 +652,10 @@ contains
 !!!!!!!!!!!!!!!!!!
 
     if (bc(1,2) .eq. NO_SLIP_RESERVOIR .or. bc(1,2) .eq. SLIP_RESERVOIR) then
-       electro_mass_fluxx(hi(1)+1,lo(2):hi(2)) = &
-            - A_Phix(hi(1)+1,lo(2):hi(2)) * diffstoch_mass_fluxx(hi(1)+1,lo(2):hi(2)) / z_dot_Ax(hi(1)+1,lo(2):hi(2))
+       do j=lo(2),hi(2)
+         zTF=dot_product(charge_per_mass(1:nspecies), diffstoch_mass_fluxy(hi(1)+1,j,1:nspecies))
+         electro_mass_fluxy(hi(1)+1,j) = - A_Phiy(hi(1)+1,j) * zTF / z_dot_Ay(hi(1)+1,j)
+       end do
     end if
 
 !!!!!!!!!!!!!!!!!!
@@ -651,8 +663,10 @@ contains
 !!!!!!!!!!!!!!!!!!
 
     if (bc(2,1) .eq. NO_SLIP_RESERVOIR .or. bc(2,1) .eq. SLIP_RESERVOIR) then
-       electro_mass_fluxy(lo(1):hi(1),lo(2)) = &
-            - A_Phiy(lo(1):hi(1),lo(2)) * diffstoch_mass_fluxy(lo(1):hi(1),lo(2)) / z_dot_Ay(lo(1):hi(1),lo(2))
+       do i=lo(1),hi(1)
+         zTF=dot_product(charge_per_mass(1:nspecies), diffstoch_mass_fluxy(i,lo(2),1:nspecies))
+         electro_mass_fluxy(i,lo(2)) = - A_Phiy(i,lo(2)) * zTF / z_dot_Ay(i,lo(2))
+       end do
     end if
 
 !!!!!!!!!!!!!!!!!!
@@ -660,26 +674,49 @@ contains
 !!!!!!!!!!!!!!!!!!
 
     if (bc(2,2) .eq. NO_SLIP_RESERVOIR .or. bc(2,2) .eq. SLIP_RESERVOIR) then
-       electro_mass_fluxy(lo(1):hi(1),hi(2)+1) = &
-            - A_Phiy(lo(1):hi(1),hi(2)+1) * diffstoch_mass_fluxy(lo(1):hi(1),hi(2)+1) / z_dot_Ay(lo(1):hi(1),hi(2)+1)
+       do i=lo(1),hi(1)
+         zTF=dot_product(charge_per_mass(1:nspecies), diffstoch_mass_fluxy(i,hi(2)+1,1:nspecies))
+         electro_mass_fluxy(i,hi(2)+1) = - A_Phiy(i,hi(2)+1) * zTF / z_dot_Ay(i,hi(2)+1)
+       end do
     end if
 
   end subroutine project_flux_reservoir_2d
 
-  subroutine project_flux_reservoir_3d(electro_mass_fluxx,electro_mass_fluxy,electro_mass_fluxz,ng_e,lo,hi,bc)
+  subroutine project_flux_reservoir_3d(electro_mass_fluxx,electro_mass_fluxy,electro_mass_fluxz,ng_e, &
+                                       diffstoch_mass_fluxx,diffstoch_mass_fluxy,diffstoch_mass_fluxz,ng_d, &
+                                       A_Phix,A_Phiy,A_Phiz,ng_a, &
+                                       z_dot_Ax,z_dot_Ay,z_dot_Az,ng_z, &
+                                       lo,hi,bc)
 
-    integer        , intent(in   ) :: lo(:),hi(:),ng_e
-    real(kind=dp_t), intent(inout) :: electro_mass_fluxx(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:)
-    real(kind=dp_t), intent(inout) :: electro_mass_fluxy(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:)
-    real(kind=dp_t), intent(inout) :: electro_mass_fluxz(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:)
+    integer        , intent(in   ) :: lo(:),hi(:),ng_e,ng_d,ng_a,ng_z
+    real(kind=dp_t), intent(inout) ::   electro_mass_fluxx(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:)
+    real(kind=dp_t), intent(inout) ::   electro_mass_fluxy(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:)
+    real(kind=dp_t), intent(inout) ::   electro_mass_fluxz(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:)
+    real(kind=dp_t), intent(inout) :: diffstoch_mass_fluxx(lo(1)-ng_d:,lo(2)-ng_d:,lo(3)-ng_d:,:)
+    real(kind=dp_t), intent(inout) :: diffstoch_mass_fluxy(lo(1)-ng_d:,lo(2)-ng_d:,lo(3)-ng_d:,:)
+    real(kind=dp_t), intent(inout) :: diffstoch_mass_fluxz(lo(1)-ng_d:,lo(2)-ng_d:,lo(3)-ng_d:,:)
+    real(kind=dp_t), intent(inout) ::               A_Phix(lo(1)-ng_a:,lo(2)-ng_a:,lo(3)-ng_a:)
+    real(kind=dp_t), intent(inout) ::               A_Phiy(lo(1)-ng_a:,lo(2)-ng_a:,lo(3)-ng_a:)
+    real(kind=dp_t), intent(inout) ::               A_Phiz(lo(1)-ng_a:,lo(2)-ng_a:,lo(3)-ng_a:)
+    real(kind=dp_t), intent(inout) ::             z_dot_Ax(lo(1)-ng_z:,lo(2)-ng_z:,lo(3)-ng_z:)
+    real(kind=dp_t), intent(inout) ::             z_dot_Ay(lo(1)-ng_z:,lo(2)-ng_z:,lo(3)-ng_z:)
+    real(kind=dp_t), intent(inout) ::             z_dot_Az(lo(1)-ng_z:,lo(2)-ng_z:,lo(3)-ng_z:)
     integer        , intent(in   ) :: bc(:,:)
+    
+    integer :: i,j,k
+    real(kind=dp_t) :: zTF
 
 !!!!!!!!!!!!!!!!!!
 ! lo-x boundary
 !!!!!!!!!!!!!!!!!!
 
     if (bc(1,1) .eq. NO_SLIP_RESERVOIR .or. bc(1,1) .eq. SLIP_RESERVOIR) then
-       electro_mass_fluxx(lo(1),lo(2):hi(2),lo(3):hi(3)) = 0.d0
+       do k=lo(3),hi(3)
+       do j=lo(2),hi(2)
+         zTF=dot_product(charge_per_mass(1:nspecies), diffstoch_mass_fluxx(lo(1),j,k,1:nspecies))
+         electro_mass_fluxx(lo(1),j,k) = - A_Phix(lo(1),j,k) * zTF / z_dot_Ax(lo(1),j,k)
+       end do
+       end do
     end if
 
 !!!!!!!!!!!!!!!!!!
@@ -687,7 +724,12 @@ contains
 !!!!!!!!!!!!!!!!!!
 
     if (bc(1,2) .eq. NO_SLIP_RESERVOIR .or. bc(1,2) .eq. SLIP_RESERVOIR) then
-       electro_mass_fluxx(hi(1)+1,lo(2):hi(2),lo(3):hi(3)) = 0.d0
+       do k=lo(3),hi(3)
+       do j=lo(2),hi(2)
+         zTF=dot_product(charge_per_mass(1:nspecies), diffstoch_mass_fluxx(hi(1)+1,j,k,1:nspecies))
+         electro_mass_fluxx(hi(1)+1,j,k) = - A_Phix(hi(1)+1,j,k) * zTF / z_dot_Ax(hi(1)+1,j,k)
+       end do
+       end do
     end if
 
 !!!!!!!!!!!!!!!!!!
@@ -695,7 +737,12 @@ contains
 !!!!!!!!!!!!!!!!!!
 
     if (bc(2,1) .eq. NO_SLIP_RESERVOIR .or. bc(2,1) .eq. SLIP_RESERVOIR) then
-       electro_mass_fluxy(lo(1):hi(1),lo(2),lo(3):hi(3)) = 0.d0
+       do k=lo(3),hi(3)
+       do i=lo(1),hi(1)
+         zTF=dot_product(charge_per_mass(1:nspecies), diffstoch_mass_fluxy(i,lo(2),k,1:nspecies))
+         electro_mass_fluxy(i,lo(2),k) = - A_Phiy(i,lo(2),k) * zTF / z_dot_Ay(i,lo(2),k)
+       end do
+       end do
     end if
 
 !!!!!!!!!!!!!!!!!!
@@ -703,7 +750,12 @@ contains
 !!!!!!!!!!!!!!!!!!
 
     if (bc(2,2) .eq. NO_SLIP_RESERVOIR .or. bc(2,2) .eq. SLIP_RESERVOIR) then
-       electro_mass_fluxy(lo(1):hi(1),hi(2)+1,lo(3):hi(3)) = 0.d0
+       do k=lo(3),hi(3)
+       do i=lo(1),hi(1)
+         zTF=dot_product(charge_per_mass(1:nspecies), diffstoch_mass_fluxy(i,hi(2)+1,k,1:nspecies))
+         electro_mass_fluxy(i,hi(2)+1,k) = - A_Phiy(i,hi(2)+1,k) * zTF / z_dot_Ay(i,hi(2)+1,k)
+       end do
+       end do
     end if
 
 !!!!!!!!!!!!!!!!!!
@@ -711,7 +763,12 @@ contains
 !!!!!!!!!!!!!!!!!!
 
     if (bc(3,1) .eq. NO_SLIP_RESERVOIR .or. bc(3,1) .eq. SLIP_RESERVOIR) then
-       electro_mass_fluxz(lo(1):hi(1),lo(2):hi(2),lo(3)) = 0.d0
+       do j=lo(2),hi(2)
+       do i=lo(1),hi(1)
+         zTF=dot_product(charge_per_mass(1:nspecies), diffstoch_mass_fluxz(i,j,lo(3),1:nspecies))
+         electro_mass_fluxz(i,j,lo(3)) = - A_Phiz(i,j,lo(3)) * zTF / z_dot_Az(i,j,lo(3))
+       end do
+       end do
     end if
 
 !!!!!!!!!!!!!!!!!!
@@ -719,7 +776,12 @@ contains
 !!!!!!!!!!!!!!!!!!
 
     if (bc(3,2) .eq. NO_SLIP_RESERVOIR .or. bc(3,2) .eq. SLIP_RESERVOIR) then
-       electro_mass_fluxz(lo(1):hi(1),lo(2):hi(2),hi(3)+1) = 0.d0
+       do j=lo(2),hi(2)
+       do i=lo(1),hi(1)
+         zTF=dot_product(charge_per_mass(1:nspecies), diffstoch_mass_fluxz(i,j,hi(3)+1,1:nspecies))
+         electro_mass_fluxz(i,j,hi(3)+1) = - A_Phiz(i,j,hi(3)+1) * zTF / z_dot_Az(i,j,hi(3)+1)
+       end do
+       end do
     end if
 
   end subroutine project_flux_reservoir_3d
