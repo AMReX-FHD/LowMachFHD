@@ -653,8 +653,8 @@ contains
 
     if (bc(1,2) .eq. NO_SLIP_RESERVOIR .or. bc(1,2) .eq. SLIP_RESERVOIR) then
        do j=lo(2),hi(2)
-         zTF=dot_product(charge_per_mass(1:nspecies), diffstoch_mass_fluxy(hi(1)+1,j,1:nspecies))
-         electro_mass_fluxy(hi(1)+1,j) = - A_Phiy(hi(1)+1,j) * zTF / z_dot_Ay(hi(1)+1,j)
+         zTF=dot_product(charge_per_mass(1:nspecies), diffstoch_mass_fluxx(hi(1)+1,j,1:nspecies))
+         electro_mass_fluxx(hi(1)+1,j) = - A_Phix(hi(1)+1,j) * zTF / z_dot_Ax(hi(1)+1,j)
        end do
     end if
 
