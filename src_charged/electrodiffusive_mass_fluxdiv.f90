@@ -253,13 +253,17 @@ contains
           end if
        end do
 
+       ! (Donev) As a precaution we should also check c_bc is zero for walls I think at least for electroneutral. 
+       !
+       !
+
        ! compute A_Phi for Poisson solve (does not have z^T)
        call implicit_potential_coef(mla,rho,Temp,A_Phi,the_bc_tower)
               
        ! compute z^T A_Phi^n, store in solver_beta
        call dot_with_z_face(mla,A_Phi,beta)
 
-       ! combine F_tot = F_d + F_s
+       ! combine F_diffstoch = F_d + F_s
        do n=1,nlevs
           do i=1,dm
              call multifab_copy_c(diffstoch_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
@@ -269,12 +273,13 @@ contains
           end do
        end do
        
-       ! zero F_tot on all physical boundaries (i.e., not PERIODIC, not INTERIOR)
-       ! (Donev) This should not really be necessary except if there are thermodiffusive fluxes
+       ! zero F_diffstoch on all walls
+       ! This should not really be necessary except if there are thermodiffusive fluxes
        ! Both the deterministic and stochastic diffusive fluxes at boundaries should be zero for walls
-       ! It seems WRONG to me for reservoirs -- there should be nonzero diffusive fluxes on reservoir BCs
-       do n=1,nlevs
-          call zero_edgeval_physical(diffstoch_mass_flux(n,:),1,nspecies,the_bc_tower%bc_tower_array(n))
+       if (is_nonisothermal) then
+          do n=1,nlevs
+             call zero_edgeval_walls(diffstoch_mass_flux(n,:),1,nspecies,the_bc_tower%bc_tower_array(n))
+          end do
        end do
 
        ! compute RHS = div (z^T (F_d + F_s))
@@ -334,11 +339,9 @@ contains
           ! for Dirichlet conditions, temporarily set the numerical values to zero
           ! so we can put the Neumann boundaries into homogeneous form
           do comp=1,dm
-             do i=1,dm
-                if (Epot_wall_bc_type(comp,1) .eq. 1) then
-                   Epot_wall(comp,1) = 0.d0
-                end if
-             end do
+             if (Epot_wall_bc_type(comp,1) .eq. 1) then
+                Epot_wall(comp,1) = 0.d0
+             end if
           end do
 
           call inhomogeneous_neumann_fix(mla,rhs,permittivity,dx,the_bc_tower)
@@ -452,15 +455,15 @@ contains
        ! (Donev) Technically the BCs for potential here were inhomogeneous but up to now we could pretend they are homogeneous
        ! Making them inhomogeneous simply amounts to overwriting the electro-fluxes on the physical boundaries
        ! So instead of changing grad_Epot on the physical boundaries, here we set
-       ! the electro_mass_flux at reservoirs equal to  F_e = - A_Phi (z^T F_tot ) / (z^T A_Phi)
-       ! This ensures that z^T*(F_tot+F_e) = z^T*(F_tot + A_phi*grad(phi)) = 0 on the reservoir walls
+       ! the electro_mass_flux at reservoirs equal to  F_e = - A_Phi (z^T F_diffstoch ) / (z^T A_Phi)
+       ! This ensures that z^T*(F_diffstoch+F_e) = z^T*(F_diffstoch + A_phi*grad(phi)) = 0 on the reservoir walls
        
        if (any(bc_lo(1:dm) .eq. NO_SLIP_RESERVOIR) .or. &
            any(bc_hi(1:dm) .eq. NO_SLIP_RESERVOIR) .or. &
            any(bc_lo(1:dm) .eq. SLIP_RESERVOIR) .or. &
            any(bc_hi(1:dm) .eq. SLIP_RESERVOIR) ) then
 
-          ! combine F_tot = F_d + F_s (recall we zero'd out the physical boundary faces above)
+          ! combine F_diffstoch = F_d + F_s (recall we zero'd out the physical boundary faces above)
           do n=1,nlevs
              do i=1,dm
                 call multifab_copy_c(diffstoch_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
@@ -582,8 +585,8 @@ contains
   subroutine project_flux_reservoir(electro_mass_flux,diffstoch_mass_flux,A_phi,z_dot_A, &
                                     start_comp,num_comp,the_bc_level)
 
-    ! sets the electro_mass_flux at reservoirs equal to  F_e = - A_Phi (z^T F_tot ) / (z^T A_Phi)
-    ! This ensures that z^T*(F_tot+F_e) = z^T*(F_tot + A_phi*grad(phi)) = 0 on the reservoir walls
+    ! sets the electro_mass_flux at reservoirs equal to  F_e = - A_Phi (z^T F_diffstoch ) / (z^T A_Phi)
+    ! This ensures that z^T*(F_diffstoch+F_e) = z^T*(F_diffstoch + A_phi*grad(phi)) = 0 on the reservoir walls
 
     type(multifab) , intent(inout) :: electro_mass_flux(:)
     type(multifab) , intent(inout) :: diffstoch_mass_flux(:)
