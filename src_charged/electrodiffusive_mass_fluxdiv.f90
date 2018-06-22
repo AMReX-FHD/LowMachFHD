@@ -16,6 +16,7 @@ module electrodiffusive_mass_fluxdiv_module
   use probin_charged_module, only: Epot_wall_bc_type, Epot_wall, E_ext_type, electroneutral, &
                                    zero_eps_on_wall_type, epot_mg_verbose, epot_mg_abs_tol, &
                                    epot_mg_rel_tol, charge_per_mass
+  use probin_multispecies_module, only: is_nonisothermal
   
   use fabio_module
 
