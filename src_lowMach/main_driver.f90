@@ -710,6 +710,11 @@ end if
      ! Hydrogrid analysis and output for initial data
      !=====================================================================
 
+     do n=1,nlevs
+        do i=1,dm
+           call multifab_copy_c(umac_avg(n,i),1,umac(n,i),1,1,0)
+        end do
+     end do
 
      ! write initial plotfile
      if (plot_int .gt. 0) then
