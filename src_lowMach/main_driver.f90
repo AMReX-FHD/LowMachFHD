@@ -897,8 +897,6 @@ end if
         call eos_check(mla,rho_new)
 
         if (use_charged_fluid) then
-           print*, istep
-           print*, init_step
            ! multiply by total volume (all 3 dimensions, even for 2D problems)
            total_charge = multifab_sum_c(charge_new(1),1,1)*product(dx(1,1:3))
            if(electroneutral) then
