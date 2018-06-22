@@ -280,7 +280,7 @@ contains
           do n=1,nlevs
              call zero_edgeval_walls(diffstoch_mass_flux(n,:),1,nspecies,the_bc_tower%bc_tower_array(n))
           end do
-       end do
+       end if
 
        ! compute RHS = div (z^T (F_d + F_s))
        ! first, set rhsvec = div (F_d + F_s)
