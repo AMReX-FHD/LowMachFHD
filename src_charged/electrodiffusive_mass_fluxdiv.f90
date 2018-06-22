@@ -233,19 +233,25 @@ contains
 
     if (electroneutral) then
 
-       ! (Donev) For electroneutral we only support homogeneous Neumann BCs for potential
+       ! For electroneutral we only support homogeneous Neumann BCs for potential
        ! This is the correct Poisson BC for impermeable walls
-       ! For reservoirs, the BCS are actually inhomogeneous but computed on-the-fly by the code later on
+       ! For reservoirs, the BCs are actually inhomogeneous but computed on-the-fly by the code later on
        ! Here we setup just the homogeneous Poisson problem -- this is all that the multigrid solver can handle     
        ! Reactive walls are not yet supported
        
-       ! FIXME: This should only check physical boundaries and skip over periodic ones
-!       if (any(Epot_wall_bc_type(1:2,1:dm) .eq. 1)) then
-!          call bl_error("Electroneutral only works with Neumann potential bc's")
-!       end if     
-        
-       ! (Donev): We should probably check here that all Neumann BCs for potential are homogeneous
-       ! and abort otherwise as well so someone is not fooled   
+       ! check to make sure physical boundary use homogeneous Neumann conditions on electric potential
+       do i=1,dm
+          if (bc_lo(i) .ne. PERIODIC) then
+             if (Epot_wall_bc_type(1,i) .eq. 1 .or. Epot_wall(1,i) .ne. 0.d0) then
+                call bl_error("electroneutral algorithm requires homogeneous Neumann potential bc's on physical boundaries")
+             end if
+          end if
+          if (bc_hi(i) .ne. PERIODIC) then
+             if (Epot_wall_bc_type(2,i) .eq. 1 .or. Epot_wall(2,i) .ne. 0.d0) then
+                call bl_error("electroneutral algorithm requires homogeneous Neumann potential bc's on physical boundaries")
+             end if
+          end if
+       end do
 
        ! compute A_Phi for Poisson solve (does not have z^T)
        call implicit_potential_coef(mla,rho,Temp,A_Phi,the_bc_tower)
