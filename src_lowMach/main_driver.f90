@@ -43,7 +43,7 @@ subroutine main_driver()
                                   algorithm_type, variance_coef_mom, initial_variance_mom, &
                                   variance_coef_mass, barodiffusion_type, use_bl_rng, &
                                   density_weights, rhobar, rho0, analyze_conserved, rho_eos_form
-  use probin_multispecies_module, only: Dbar, start_time, probin_multispecies_init
+  use probin_multispecies_module, only: Dbar, start_time, probin_multispecies_init, c_bc
   use probin_gmres_module, only: probin_gmres_init
   use probin_charged_module, only: probin_charged_init, use_charged_fluid, dielectric_const, &
                                    dielectric_type, electroneutral, epot_mg_rel_tol, print_debye_len
@@ -127,15 +127,25 @@ subroutine main_driver()
   call probin_charged_init() 
   call probin_chemistry_init()
 
-   if (use_bl_rng) then
-      ! Build the random number engine and give initial distributions for the
-      ! F_BaseLib/bl_random RNG module
-      call rng_init()
-   else
-      ! Initialize random numbers *after* the global (root) seed has been set:
-      ! This is for the RNG module that sits in Hydrogrid
-      call SeedParallelRNG(seed)
-   end if
+  ! for reservoirs, make sure the Dirichlet conditions for concentration sum to 1
+  do i=1,dim_in
+     if (bc_lo(i) .eq. NO_SLIP_RESERVOIR .or. bc_lo(i) .eq. SLIP_RESERVOIR) then
+        c_bc(i,1,nspecies) = 1.d0 - sum(c_bc(i,1,1:nspecies-1))
+     end if
+     if (bc_hi(i) .eq. NO_SLIP_RESERVOIR .or. bc_hi(i) .eq. SLIP_RESERVOIR) then
+        c_bc(i,2,nspecies) = 1.d0 - sum(c_bc(i,2,1:nspecies-1))
+     end if
+  end do
+
+  if (use_bl_rng) then
+     ! Build the random number engine and give initial distributions for the
+     ! F_BaseLib/bl_random RNG module
+     call rng_init()
+  else
+     ! Initialize random numbers *after* the global (root) seed has been set:
+     ! This is for the RNG module that sits in Hydrogrid
+     call SeedParallelRNG(seed)
+  end if
 
   ! in this example we fix nlevs to be 1
   ! for adaptive simulations where the grids change, cells at finer
