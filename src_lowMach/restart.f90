@@ -12,6 +12,7 @@ module restart_module
                                   seed_momentum, seed_diffusion, seed_reaction, &
                                   check_base_name
   use probin_chemistry_module, only: nreactions
+  use probin_charged_module, only: use_charged_fluid
 
   implicit none
 
@@ -21,15 +22,20 @@ module restart_module
 
 contains
 
-  subroutine initialize_from_restart(mla,time,dt,rho,rhotot,pi,umac,umac_sum,pmask)
+  !subroutine initialize_from_restart(mla,time,dt,rho,rhotot,pi,umac,umac_sum,pmask,Epot,grad_Epot)
+  subroutine initialize_from_restart(mla,time,dt,rho,rho_sum,rhotot,pi,umac,umac_sum,pmask,Epot,Epot_sum,grad_Epot)
  
      type(ml_layout),intent(out)   :: mla
      real(dp_t)    , intent(  out) :: time,dt
      type(multifab), intent(inout) :: rho(:)
+     type(multifab), intent(inout) :: rho_sum(:)  ! SC
      type(multifab), intent(inout) :: rhotot(:)
      type(multifab), intent(inout) :: pi(:)
+     type(multifab), intent(inout) :: Epot(:)
+     type(multifab), intent(inout) :: Epot_sum(:) ! SC
      type(multifab), intent(inout) :: umac(:,:)
      type(multifab), intent(inout) :: umac_sum(:,:)
+     type(multifab), intent(inout) :: grad_Epot(:,:)
      logical       , intent(in   ) :: pmask(:)
 
      type(ml_boxarray)         :: mba
@@ -63,8 +69,13 @@ contains
 
      do n = 1,nlevs
         call multifab_build(rho(n)   , mla%la(n), nspecies, ng_s)
+        call multifab_build(rho_sum(n), mla%la(n), nspecies, ng_s) ! SC
         call multifab_build(rhotot(n), mla%la(n),        1, ng_s)
         call multifab_build(pi(n)    , mla%la(n),        1, 1)
+        if (use_charged_fluid) then
+           call multifab_build(Epot(n)    , mla%la(n),        1, 1) ! SC: question: should the final arg here be 1 or ng_s? 
+           call multifab_build(Epot_sum(n)    , mla%la(n),        1, 1) ! SC: question: should the final arg here be 1 or ng_s? 
+        endif
         do i=1,dm
            call multifab_build_edge(umac(n,i), mla%la(n), 1, 1, i)
            call multifab_build_edge(umac_sum(n,i), mla%la(n), 1, 1, i)
@@ -74,25 +85,47 @@ contains
            ! this prevents segfaults
            call setval(umac(n,i),0.d0,all=.true.)
            call setval(umac_sum(n,i),0.d0,all=.true.)
+
+           if (use_charged_fluid) then
+              call multifab_build_edge(grad_Epot(n,i), mla%la(n), 1, 1, i)
+              call setval(grad_Epot(n,i),0.d0,all=.true.)                     ! for ghost cells as well
+           endif
+
         end do
      end do
 
      ! cell-centered data
      do n = 1,nlevs
-        call multifab_copy_c(rho(n)   , 1,chkdata(n) ,1           ,nspecies)
-        call multifab_copy_c(rhotot(n), 1,chkdata(n) ,nspecies+1  ,1)
-        call multifab_copy_c(pi(n)    , 1,chkdata(n) ,nspecies+2  ,1)
+        !call multifab_copy_c(rho(n)   , 1,chkdata(n) ,1           ,nspecies)
+        !call multifab_copy_c(rhotot(n), 1,chkdata(n) ,nspecies+1  ,1)
+        !call multifab_copy_c(pi(n)    , 1,chkdata(n) ,nspecies+2  ,1)
+
+        call multifab_copy_c(rho(n)   , 1,chkdata(n) ,1           ,nspecies) !SC
+        call multifab_copy_c(rho_sum(n), 1,chkdata(n),nspecies+1 ,nspecies)
+        call multifab_copy_c(rhotot(n), 1,chkdata(n) ,2*nspecies+1  ,1)
+        call multifab_copy_c(pi(n)    , 1,chkdata(n) ,2*nspecies+2  ,1)
+        if (use_charged_fluid) then
+           call multifab_copy_c(Epot(n)    , 1,chkdata(n) ,2*nspecies+3  ,1)
+           call multifab_copy_c(Epot_sum(n)    , 1,chkdata(n) ,2*nspecies+4  ,1)
+        endif
      end do
 
      ! edge data
      do n=1,nlevs
         call multifab_copy_c(umac(n,1),1,chkdata_edgex(n),1,1)
         call multifab_copy_c(umac(n,2),1,chkdata_edgey(n),1,1)
-        call multifab_copy_c(umac_sum(n,1),1,chkdata_edgex(n),2,1)      ! SC: note the source component is different for umac_sum than it is for umac
+        call multifab_copy_c(umac_sum(n,1),1,chkdata_edgex(n),2,1)      
         call multifab_copy_c(umac_sum(n,2),1,chkdata_edgey(n),2,1)
+        if (use_charged_fluid) then
+           call multifab_copy_c(grad_Epot(n,1),1,chkdata_edgex(n),3,1)  
+           call multifab_copy_c(grad_Epot(n,2),1,chkdata_edgey(n),3,1)
+        endif
         if (dm .eq. 3) then
            call multifab_copy_c(umac(n,3),1,chkdata_edgez(n),1,1)
-           call multifab_copy_c(umac_sum(n,3),1,chkdata_edgez(n),2,1)   ! SC: note the source component is different for umac_sum than it is for umac
+           call multifab_copy_c(umac_sum(n,3),1,chkdata_edgez(n),2,1)   
+           if (use_charged_fluid) then
+              call multifab_copy_c(grad_Epot(n,3),1,chkdata_edgez(n),3,1)  
+           endif
         end if
      end do
 

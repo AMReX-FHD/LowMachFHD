@@ -16,17 +16,21 @@ module write_plotfile_module
 
 contains
   
-  subroutine write_plotfile(mla,rho,rhotot,Temp,umac,umac_avg,pres,Epot,grad_Epot, &
-                            gradPhiApprox,istep,dx,time)
+  !subroutine write_plotfile(mla,rho,rhotot,Temp,umac,umac_avg,pres,Epot,grad_Epot, &
+  !                          gradPhiApprox,istep,dx,time)
+  subroutine write_plotfile(mla,rho,rho_avg,rhotot,Temp,umac,umac_avg,pres,Epot,Epot_avg, &  ! SC
+                              grad_Epot, gradPhiApprox,istep,dx,time)
 
     type(ml_layout),    intent(in)    :: mla
     type(multifab),     intent(inout) :: rho(:)
+    type(multifab),     intent(inout) :: rho_avg(:)  !SC
     type(multifab),     intent(in)    :: rhotot(:)
     type(multifab),     intent(in)    :: Temp(:)
     type(multifab),     intent(in)    :: umac(:,:)
     type(multifab),     intent(in)    :: umac_avg(:,:)
     type(multifab),     intent(in)    :: pres(:)
     type(multifab),     intent(in)    :: Epot(:)
+    type(multifab),     intent(in)    :: Epot_avg(:) !SC
     type(multifab),     intent(in)    :: grad_Epot(:,:)
     type(multifab),     intent(in)    :: gradPhiApprox(:,:)
     integer,            intent(in)    :: istep
@@ -56,23 +60,25 @@ contains
 
     ! cell-centered quantities
 
-    ! rho
-    ! rho_i
-    ! c_i
-    ! Temp
-    ! umac averaged
-    ! umac shifted
-    ! umac_avg averaged
-    ! umac_avg shifted
-    ! pressure
-    nvarsCC = 2*nspecies + 4*dm + 3
+    ! rho                  :1
+    ! rho_i                :nspecies
+    ! rho_avg_i            :nspecies !SC
+    ! c_i                  :nspecies
+    ! Temp                 :1
+    ! umac averaged        :dm
+    ! umac shifted         :dm
+    ! umac_avg averaged    :dm
+    ! umac_avg shifted     :dm
+    ! pressure             :1
+    nvarsCC = 3*nspecies + 4*dm + 3
 
     if (use_charged_fluid) then
-       ! charge
-       ! Epot
-       ! grad_Epot averaged
-       ! gradPhiApprox averaged
-       nvarsCC = nvarsCC + 2 + 2*dm
+       ! charge                   :1
+       ! Epot                     :1
+       ! Epot_avg                 :1  !SC
+       ! grad_Epot averaged       :dm
+       ! gradPhiApprox averaged   :dm
+       nvarsCC = nvarsCC + 3 + 2*dm
     end if
 
     if (algorithm_type .eq. 6) then
@@ -88,6 +94,10 @@ contains
     counter = counter + 1
     do n=1,nspecies
        write(plot_names(counter),'(a,i0)') "rho", n
+       counter = counter + 1
+    enddo
+    do n=1,nspecies                                       !SC
+       write(plot_names(counter),'(a,i0)') "tavg_rho", n
        counter = counter + 1
     enddo
     do n=1,nspecies
@@ -142,6 +152,9 @@ contains
        counter = counter + 1
 
        plot_names(counter) = "Epot"
+       counter = counter + 1
+
+       plot_names(counter) = "tavg_Epot"  !SC
        counter = counter + 1
 
        plot_names(counter) = "averaged_Ex"
@@ -226,6 +239,12 @@ contains
     end do
     counter = counter + nspecies
 
+    ! time-averaged rho ! SC 
+    do n=1,nlevs
+       call multifab_copy_c(plotdata(n),counter,rho_avg(n),1,nspecies,0)
+    end do
+    counter = counter + nspecies
+
     ! compute concentrations
     call convert_rhoc_to_c(mla,rho,rhotot,cc_temp,.true.)
     do n=1,nlevs
@@ -281,6 +300,12 @@ contains
        ! Epot
        do n = 1,nlevs
           call multifab_copy_c(plotdata(n),counter,Epot(n),1,1,0)
+       enddo
+       counter = counter + 1
+
+       ! time-averaged Epot ! SC
+       do n = 1,nlevs
+          call multifab_copy_c(plotdata(n),counter,Epot_avg(n),1,1,0)
        enddo
        counter = counter + 1
 

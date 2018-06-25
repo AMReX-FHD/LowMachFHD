@@ -22,12 +22,17 @@ module checkpoint_module
   public :: checkpoint_write, checkpoint_read
 
 contains
-  subroutine checkpoint_write(mla,rho,rhotot,pi,umac,umac_sum,time,dt,istep_to_write)
+  !subroutine checkpoint_write(mla,rho,rhotot,pi,umac,umac_sum,Epot,grad_Epot,time,dt,istep_to_write)
+  subroutine checkpoint_write(mla,rho,rho_sum,rhotot,pi,umac,umac_sum,Epot,Epot_sum,grad_Epot,time,dt,istep_to_write) ! SC
     
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:)                ! cell-centered partial densities
+    type(multifab) , intent(in   ) :: rho_sum(:)           ! cell-centered partial densities, summed for time average !SC
     type(multifab) , intent(in   ) :: rhotot(:)             ! cell-centered total density
     type(multifab) , intent(in   ) :: pi(:)                 ! cell-centered pi
+    type(multifab) , intent(in   ) :: Epot(:)               ! cell-centered electric potential 
+    type(multifab) , intent(in   ) :: Epot_sum(:)          ! cell-centered electric potential, summed for time average !SC
+    type(multifab) , intent(in   ) :: grad_Epot(:,:)        ! edge-based electric force 
     type(multifab) , intent(in   ) :: umac(:,:)             ! edge-based velocities
     type(multifab) , intent(in   ) :: umac_sum(:,:)         ! edge-based sum of velocities
     integer        , intent(in   ) :: istep_to_write
@@ -50,10 +55,18 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
 
-    ! partial densities
-    ! total density
-    ! pi
-    num_chk = nspecies + 2
+    ! --partial densities
+    ! --partial densities sum over time  ! SC
+    ! --total density
+    ! --pi
+    !SC: If use_charged_fluid is on, we also have:
+    ! --Epot and 
+    ! --Epot_sum 
+    if (use_charged_fluid) then    
+       num_chk = 2*nspecies + 4
+    else
+       num_chk = 2*nspecies + 2
+    endif
 
     allocate(chkdata(nlevs))
     allocate(chkdata_edge(nlevs,dm))
@@ -71,25 +84,51 @@ contains
     end do
     counter = counter + nspecies
 
+    ! sum over time partial densities
+    do n=1,nlevs
+       call multifab_copy_c(chkdata(n),nspecies+1,rho_sum(n),1,nspecies)
+    end do
+    counter = counter + nspecies
+
     ! total density
     do n=1,nlevs
-       call multifab_copy_c(chkdata(n),nspecies+1,rhotot(n),1,1)
+       call multifab_copy_c(chkdata(n),2*nspecies+1,rhotot(n),1,1)
     end do
     counter = counter + 1
 
     ! pi
     do n=1,nlevs
-       call multifab_copy_c(chkdata(n),nspecies+2,pi(n),1,1)
+       call multifab_copy_c(chkdata(n),2*nspecies+2,pi(n),1,1)
     end do
     counter = counter + 1
+
+    ! Epot and Epot_sum
+    if (use_charged_fluid) then
+       do n=1,nlevs
+          call multifab_copy_c(chkdata(n),2*nspecies+3,Epot(n),1,1)
+       enddo
+       counter = counter + 1
+
+       do n=1,nlevs
+          call multifab_copy_c(chkdata(n),2*nspecies+4,Epot_sum(n),1,1)
+       enddo
+       counter = counter + 1
+    endif
 
 
     ! staggered quantities (normal velocity)
     do n=1,nlevs
        do i=1,dm
-          call multifab_build_edge(chkdata_edge(n,i),mla%la(n),2,0,i)
-          call multifab_copy_c(chkdata_edge(n,i),1,umac(n,i),1,1)
-          call multifab_copy_c(chkdata_edge(n,i),2,umac_sum(n,i),1,1)  !
+          if (use_charged_fluid) then
+             call multifab_build_edge(chkdata_edge(n,i),mla%la(n),3,0,i)
+             call multifab_copy_c(chkdata_edge(n,i),1,umac(n,i),1,1)
+             call multifab_copy_c(chkdata_edge(n,i),2,umac_sum(n,i),1,1)  
+             call multifab_copy_c(chkdata_edge(n,i),3,grad_Epot(n,i),1,1) 
+          else
+             call multifab_build_edge(chkdata_edge(n,i),mla%la(n),2,0,i)
+             call multifab_copy_c(chkdata_edge(n,i),1,umac(n,i),1,1)
+             call multifab_copy_c(chkdata_edge(n,i),2,umac_sum(n,i),1,1)  
+          endif
        end do
     end do
 
