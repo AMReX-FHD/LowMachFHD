@@ -254,10 +254,6 @@ contains
           end if
        end do
 
-       ! (Donev) As a precaution we should also check c_bc is zero for walls I think at least for electroneutral. 
-       !
-       !
-
        ! compute A_Phi for Poisson solve (does not have z^T)
        call implicit_potential_coef(mla,rho,Temp,A_Phi,the_bc_tower)
               
@@ -274,20 +270,29 @@ contains
           end do
        end do
        
-       ! zero F_diffstoch on all walls
+       ! zero F_diffstoch on all walls -- this is required for reservoirs
        ! This should not really be necessary except if there are thermodiffusive fluxes
-       ! Both the deterministic and stochastic diffusive fluxes at boundaries should be zero for walls
-       if (is_nonisothermal) then
-          do n=1,nlevs
-             call zero_edgeval_walls(diffstoch_mass_flux(n,:),1,nspecies,the_bc_tower%bc_tower_array(n))
-          end do
-       end if
+       ! since the deterministic and stochastic diffusive fluxes at boundaries should be zero for walls
+       do n=1,nlevs
+          call zero_edgeval_physical(diffstoch_mass_flux(n,:),1,nspecies,the_bc_tower%bc_tower_array(n))
+       end do
 
        ! compute RHS = div (z^T (F_d + F_s))
        ! first, set rhsvec = div (F_d + F_s)
        do n=1,nlevs
           call compute_div(mla,diffstoch_mass_flux,rhsvec,dx,1,1,nspecies, &
                            increment_in=.false.)
+       end do
+
+       ! (Donev) Recompute this so the value on the boundary is the correct one
+       ! combine F_diffstoch = F_d + F_s
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_copy_c(diffstoch_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
+             if (variance_coef_mass .ne. 0.d0) then
+                call multifab_plus_plus_c(diffstoch_mass_flux(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
+             end if
+          end do
        end do
 
        !!!!!!!!!!!!!!!!!!!!!!
@@ -328,9 +333,6 @@ contains
        end do
 
        ! for inhomogeneous Neumann bc's for electric potential, put in homogeneous form
-       ! (Donev) I moved the any here outside since we want to look for boundaries that are both walls and inhomogeneous
-       ! not one or the other
-       ! I also think we should be checking here the value of "bc" to make sure it is not periodic
        if ( any((Epot_wall_bc_type(1:2,1:dm) .eq. 2) .and. &
                 (Epot_wall(1:2,1:dm) .ne. 0.d0     )) ) then
 
@@ -372,9 +374,9 @@ contains
     end if
 
     ! solve (alpha - del dot beta grad) Epot = charge (for electro-explicit)
-    !   (Donev) Inhomogeneous Dirichlet or homogeneous Neumann is OK
+    !   Inhomogeneous Dirichlet or homogeneous Neumann is OK
     ! solve (alpha - del dot beta grad) Epot = z^T F (for electro-neutral)
-    !   (Donev) Only homogeneous Neumann BCs supported
+    !   Only homogeneous Neumann BCs supported
     call ml_cc_solve(mla,rhs,Epot,fine_flx,alpha,beta,dx(:,1:dm),the_bc_tower,Epot_bc_comp, &
                      eps=epot_mg_rel_tol, &
                      abs_eps=epot_mg_abs_tol, &
@@ -453,7 +455,7 @@ contains
     end do
 
     if (electroneutral) then
-       ! (Donev) Technically the BCs for potential here were inhomogeneous but up to now we could pretend they are homogeneous
+       ! Technically the BCs for potential here were inhomogeneous but up to now we could pretend they are homogeneous
        ! Making them inhomogeneous simply amounts to overwriting the electro-fluxes on the physical boundaries
        ! So instead of changing grad_Epot on the physical boundaries, here we set
        ! the electro_mass_flux at reservoirs equal to  F_e = - A_Phi (z^T F_diffstoch ) / (z^T A_Phi)
@@ -484,12 +486,12 @@ contains
        end if
     end if
 
-    ! (Donev) This seems wrong here and I don't get what it is doing and why it is doing it regardless of the BCs?  
+    ! (Donev) I disabled this
+    ! This seems wrong here and I don't get what it is doing and why it is doing it regardless of the BCs?  
     ! zero the total mass flux on walls to make sure 
     ! that the potential gradient matches the species gradient
     do n=1,nlevs
-       call zero_edgeval_walls(electro_mass_flux(n,:),1,nspecies, &
-                               the_bc_tower%bc_tower_array(n))
+       !call zero_edgeval_walls(electro_mass_flux(n,:),1,nspecies, the_bc_tower%bc_tower_array(n))
     end do
 
     do n=1,nlevs
