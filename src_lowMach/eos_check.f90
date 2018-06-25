@@ -225,7 +225,7 @@ contains
   subroutine compute_rhotot_eos_2d(rho,ng_r,rhotot_eos,ng_rr,lo,hi)
 
     integer        , intent(in   ) :: lo(:), hi(:), ng_r, ng_rr
-    real(kind=dp_t), intent(in   ) :: rho(lo(1)-ng_r:,lo(2)-ng_r:,:)
+    real(kind=dp_t), intent(in   ) ::        rho(lo(1)-ng_r: ,lo(2)-ng_r:,:)
     real(kind=dp_t), intent(inout) :: rhotot_eos(lo(1)-ng_rr:,lo(2)-ng_rr:)
 
     ! local
@@ -242,8 +242,8 @@ contains
   subroutine compute_rhotot_eos_3d(rho,ng_r,rhotot_eos,ng_rr,lo,hi)
 
     integer        , intent(in   ) :: lo(:), hi(:), ng_r, ng_rr
-    real(kind=dp_t), intent(in   ) :: rho(lo(1)-ng_r:,lo(2)-ng_r:,lo(3)-ng_r:,:)
-    real(kind=dp_t), intent(inout) :: rhotot_eos(lo(1)-ng_r:,lo(2)-ng_r:,lo(3)-ng_r:)
+    real(kind=dp_t), intent(in   ) ::        rho(lo(1)-ng_r:, lo(2)-ng_r:, lo(3)-ng_r:,:)
+    real(kind=dp_t), intent(inout) :: rhotot_eos(lo(1)-ng_rr:,lo(2)-ng_rr:,lo(3)-ng_rr:)
 
     ! local
     integer :: i,j,k

@@ -16,6 +16,7 @@ module electrodiffusive_mass_fluxdiv_module
   use probin_charged_module, only: Epot_wall_bc_type, Epot_wall, E_ext_type, electroneutral, &
                                    zero_eps_on_wall_type, epot_mg_verbose, epot_mg_abs_tol, &
                                    epot_mg_rel_tol, charge_per_mass
+  use probin_multispecies_module, only: is_nonisothermal
   
   use fabio_module
 
@@ -233,10 +234,25 @@ contains
 
     if (electroneutral) then
 
-       ! FIXME
-!       if (any(Epot_wall_bc_type(1:2,1:dm) .eq. 1)) then
-!          call bl_error("Electroneutral only works with Neumann potential bc's")
-!       end if       
+       ! For electroneutral we only support homogeneous Neumann BCs for potential
+       ! This is the correct Poisson BC for impermeable walls
+       ! For reservoirs, the BCs are actually inhomogeneous but computed on-the-fly by the code later on
+       ! Here we setup just the homogeneous Poisson problem -- this is all that the multigrid solver can handle     
+       ! Reactive walls are not yet supported
+       
+       ! check to make sure physical boundary use homogeneous Neumann conditions on electric potential
+       do i=1,dm
+          if (bc_lo(i) .ne. PERIODIC) then
+             if (Epot_wall_bc_type(1,i) .eq. 1 .or. Epot_wall(1,i) .ne. 0.d0) then
+                call bl_error("electroneutral algorithm requires homogeneous Neumann potential bc's on physical boundaries")
+             end if
+          end if
+          if (bc_hi(i) .ne. PERIODIC) then
+             if (Epot_wall_bc_type(2,i) .eq. 1 .or. Epot_wall(2,i) .ne. 0.d0) then
+                call bl_error("electroneutral algorithm requires homogeneous Neumann potential bc's on physical boundaries")
+             end if
+          end if
+       end do
 
        ! compute A_Phi for Poisson solve (does not have z^T)
        call implicit_potential_coef(mla,rho,Temp,A_Phi,the_bc_tower)
@@ -244,7 +260,7 @@ contains
        ! compute z^T A_Phi^n, store in solver_beta
        call dot_with_z_face(mla,A_Phi,beta)
 
-       ! combine F_tot = F_d + F_s
+       ! combine F_diffstoch = F_d + F_s
        do n=1,nlevs
           do i=1,dm
              call multifab_copy_c(diffstoch_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
@@ -253,8 +269,10 @@ contains
              end if
           end do
        end do
-
-       ! zero F_tot on all physical boundaries (i.e., not PERIODIC, not INTERIOR)
+       
+       ! zero F_diffstoch on all walls -- this is required for reservoirs
+       ! This should not really be necessary except if there are thermodiffusive fluxes
+       ! since the deterministic and stochastic diffusive fluxes at boundaries should be zero for walls
        do n=1,nlevs
           call zero_edgeval_physical(diffstoch_mass_flux(n,:),1,nspecies,the_bc_tower%bc_tower_array(n))
        end do
@@ -264,6 +282,17 @@ contains
        do n=1,nlevs
           call compute_div(mla,diffstoch_mass_flux,rhsvec,dx,1,1,nspecies, &
                            increment_in=.false.)
+       end do
+
+       ! (Donev) Recompute this so the value on the boundary is the correct one
+       ! combine F_diffstoch = F_d + F_s
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_copy_c(diffstoch_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
+             if (variance_coef_mass .ne. 0.d0) then
+                call multifab_plus_plus_c(diffstoch_mass_flux(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
+             end if
+          end do
        end do
 
        !!!!!!!!!!!!!!!!!!!!!!
@@ -304,8 +333,8 @@ contains
        end do
 
        ! for inhomogeneous Neumann bc's for electric potential, put in homogeneous form
-       if ( any(Epot_wall_bc_type(1:2,1:dm) .eq. 2) .and. &
-            any(Epot_wall(1:2,1:dm) .ne. 0.d0    ) ) then
+       if ( any((Epot_wall_bc_type(1:2,1:dm) .eq. 2) .and. &
+                (Epot_wall(1:2,1:dm) .ne. 0.d0     )) ) then
 
           ! save the numerical values for the Dirichlet and Neumann conditions
           Epot_wall_save(1:2,1:dm) = Epot_wall(1:2,1:dm)
@@ -313,11 +342,9 @@ contains
           ! for Dirichlet conditions, temporarily set the numerical values to zero
           ! so we can put the Neumann boundaries into homogeneous form
           do comp=1,dm
-             do i=1,dm
-                if (Epot_wall_bc_type(comp,1) .eq. 1) then
-                   Epot_wall(comp,1) = 0.d0
-                end if
-             end do
+             if (Epot_wall_bc_type(comp,1) .eq. 1) then
+                Epot_wall(comp,1) = 0.d0
+             end if
           end do
 
           call inhomogeneous_neumann_fix(mla,rhs,permittivity,dx,the_bc_tower)
@@ -347,7 +374,9 @@ contains
     end if
 
     ! solve (alpha - del dot beta grad) Epot = charge (for electro-explicit)
+    !   Inhomogeneous Dirichlet or homogeneous Neumann is OK
     ! solve (alpha - del dot beta grad) Epot = z^T F (for electro-neutral)
+    !   Only homogeneous Neumann BCs supported
     call ml_cc_solve(mla,rhs,Epot,fine_flx,alpha,beta,dx(:,1:dm),the_bc_tower,Epot_bc_comp, &
                      eps=epot_mg_rel_tol, &
                      abs_eps=epot_mg_abs_tol, &
@@ -426,12 +455,18 @@ contains
     end do
 
     if (electroneutral) then
+       ! Technically the BCs for potential here were inhomogeneous but up to now we could pretend they are homogeneous
+       ! Making them inhomogeneous simply amounts to overwriting the electro-fluxes on the physical boundaries
+       ! So instead of changing grad_Epot on the physical boundaries, here we set
+       ! the electro_mass_flux at reservoirs equal to  F_e = - A_Phi (z^T F_diffstoch ) / (z^T A_Phi)
+       ! This ensures that z^T*(F_diffstoch+F_e) = z^T*(F_diffstoch + A_phi*grad(phi)) = 0 on the reservoir walls
+       
        if (any(bc_lo(1:dm) .eq. NO_SLIP_RESERVOIR) .or. &
            any(bc_hi(1:dm) .eq. NO_SLIP_RESERVOIR) .or. &
            any(bc_lo(1:dm) .eq. SLIP_RESERVOIR) .or. &
            any(bc_hi(1:dm) .eq. SLIP_RESERVOIR) ) then
 
-          ! combine F_tot = F_d + F_s (recall we zero'd out the physical boundary faces above)
+          ! combine F_diffstoch = F_d + F_s (recall we zero'd out the physical boundary faces above)
           do n=1,nlevs
              do i=1,dm
                 call multifab_copy_c(diffstoch_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
@@ -441,7 +476,6 @@ contains
              end do
           end do
 
-          ! setting the electro_mass_flux at reservoirs equal to F_tot - A_Phi F_tot / (z^T A_Phi)
           do n=1,nlevs
              call project_flux_reservoir(electro_mass_flux(n,:), &
                                          diffstoch_mass_flux(n,:), &
@@ -452,11 +486,12 @@ contains
        end if
     end if
 
+    ! (Donev) I disabled this
+    ! This seems wrong here and I don't get what it is doing and why it is doing it regardless of the BCs?  
     ! zero the total mass flux on walls to make sure 
     ! that the potential gradient matches the species gradient
     do n=1,nlevs
-       call zero_edgeval_walls(electro_mass_flux(n,:),1,nspecies, &
-                               the_bc_tower%bc_tower_array(n))
+       !call zero_edgeval_walls(electro_mass_flux(n,:),1,nspecies, the_bc_tower%bc_tower_array(n))
     end do
 
     do n=1,nlevs
@@ -553,7 +588,8 @@ contains
   subroutine project_flux_reservoir(electro_mass_flux,diffstoch_mass_flux,A_phi,z_dot_A, &
                                     start_comp,num_comp,the_bc_level)
 
-    ! vel_bc_n(nlevs,dm) are the normal velocities
+    ! sets the electro_mass_flux at reservoirs equal to  F_e = - A_Phi (z^T F_diffstoch ) / (z^T A_Phi)
+    ! This ensures that z^T*(F_diffstoch+F_e) = z^T*(F_diffstoch + A_phi*grad(phi)) = 0 on the reservoir walls
 
     type(multifab) , intent(inout) :: electro_mass_flux(:)
     type(multifab) , intent(inout) :: diffstoch_mass_flux(:)
@@ -592,27 +628,32 @@ contains
           select case (dm)
           case (2)
              call project_flux_reservoir_2d(epx(:,:,1,comp), epy(:,:,1,comp), ng_e, &
-                                            dpx(:,:,1,comp), dpy(:,:,1,comp), ng_d, &
+                                            dpx(:,:,1,start_comp:start_comp+num_comp-1), &
+                                            dpy(:,:,1,start_comp:start_comp+num_comp-1), ng_d, &
                                             apx(:,:,1,comp), apy(:,:,1,comp), ng_a, &
-                                            zpx(:,:,1,1),    zpy(:,:,1,1),   ng_z, &
+                                            zpx(:,:,1,1), zpy(:,:,1,1), ng_z, &
                                             lo, hi, &
                                             the_bc_level%phys_bc_level_array(i,:,:))
           case (3)
-             call bl_error("fixme: project_flux_reservoir_3d")
              epz => dataptr(electro_mass_flux(3),i)
-             dpz => dataptr(electro_mass_flux(3),i)
+             dpz => dataptr(diffstoch_mass_flux(3),i)
              apz => dataptr(A_Phi(3),i)
              zpz => dataptr(z_dot_A(3),i)
-             call project_flux_reservoir_3d(epx(:,:,:,comp), epy(:,:,:,comp), &
-                                           epz(:,:,:,comp), ng_e, lo, hi, &
-                                           the_bc_level%phys_bc_level_array(i,:,:))
+             call project_flux_reservoir_3d(epx(:,:,:,comp), epy(:,:,:,comp), epz(:,:,:,comp), ng_e, &
+                                            dpx(:,:,:,start_comp:start_comp+num_comp-1), &
+                                            dpy(:,:,:,start_comp:start_comp+num_comp-1), &
+                                            dpz(:,:,:,start_comp:start_comp+num_comp-1), ng_d, &
+                                            apx(:,:,:,comp), apy(:,:,:,comp), apz(:,:,:,comp), ng_a, &
+                                            zpx(:,:,:,1), zpy(:,:,:,1), zpz(:,:,:,1), ng_z, &
+                                            lo, hi, &
+                                            the_bc_level%phys_bc_level_array(i,:,:))
           end select
        end do
     end do
  
   end subroutine project_flux_reservoir
 
-  subroutine project_flux_reservoir_2d(  electro_mass_fluxx,  electro_mass_fluxy,ng_e, &
+  subroutine project_flux_reservoir_2d(electro_mass_fluxx,electro_mass_fluxy,ng_e, &
                                        diffstoch_mass_fluxx,diffstoch_mass_fluxy,ng_d, &
                                        A_Phix,A_Phiy,ng_a,z_dot_Ax,z_dot_Ay,ng_z, &
                                        lo,hi,bc)
@@ -620,21 +661,26 @@ contains
     integer        , intent(in   ) :: lo(:),hi(:),ng_e,ng_d,ng_a,ng_z
     real(kind=dp_t), intent(inout) ::   electro_mass_fluxx(lo(1)-ng_e:,lo(2)-ng_e:)
     real(kind=dp_t), intent(inout) ::   electro_mass_fluxy(lo(1)-ng_e:,lo(2)-ng_e:)
-    real(kind=dp_t), intent(inout) :: diffstoch_mass_fluxx(lo(1)-ng_d:,lo(2)-ng_d:)
-    real(kind=dp_t), intent(inout) :: diffstoch_mass_fluxy(lo(1)-ng_d:,lo(2)-ng_d:)
+    real(kind=dp_t), intent(inout) :: diffstoch_mass_fluxx(lo(1)-ng_d:,lo(2)-ng_d:,:)
+    real(kind=dp_t), intent(inout) :: diffstoch_mass_fluxy(lo(1)-ng_d:,lo(2)-ng_d:,:)
     real(kind=dp_t), intent(inout) ::               A_Phix(lo(1)-ng_a:,lo(2)-ng_a:)
     real(kind=dp_t), intent(inout) ::               A_Phiy(lo(1)-ng_a:,lo(2)-ng_a:)
     real(kind=dp_t), intent(inout) ::             z_dot_Ax(lo(1)-ng_z:,lo(2)-ng_z:)
     real(kind=dp_t), intent(inout) ::             z_dot_Ay(lo(1)-ng_z:,lo(2)-ng_z:)
     integer        , intent(in   ) :: bc(:,:)
+    
+    integer :: i,j
+    real(kind=dp_t) :: zTF
 
 !!!!!!!!!!!!!!!!!!
 ! lo-x boundary
 !!!!!!!!!!!!!!!!!!
 
     if (bc(1,1) .eq. NO_SLIP_RESERVOIR .or. bc(1,1) .eq. SLIP_RESERVOIR) then
-       electro_mass_fluxx(lo(1),lo(2):hi(2)) = &
-            - A_Phix(lo(1),lo(2):hi(2)) * diffstoch_mass_fluxx(lo(1),lo(2):hi(2)) / z_dot_Ax(lo(1),lo(2):hi(2))
+       do j=lo(2),hi(2)
+         zTF=dot_product(charge_per_mass(1:nspecies),diffstoch_mass_fluxx(lo(1),j,1:nspecies))
+         electro_mass_fluxx(lo(1),j) = - A_Phix(lo(1),j) * zTF / z_dot_Ax(lo(1),j)
+       end do
     end if
 
 !!!!!!!!!!!!!!!!!!
@@ -642,8 +688,10 @@ contains
 !!!!!!!!!!!!!!!!!!
 
     if (bc(1,2) .eq. NO_SLIP_RESERVOIR .or. bc(1,2) .eq. SLIP_RESERVOIR) then
-       electro_mass_fluxx(hi(1)+1,lo(2):hi(2)) = &
-            - A_Phix(hi(1)+1,lo(2):hi(2)) * diffstoch_mass_fluxx(hi(1)+1,lo(2):hi(2)) / z_dot_Ax(hi(1)+1,lo(2):hi(2))
+       do j=lo(2),hi(2)
+         zTF=dot_product(charge_per_mass(1:nspecies), diffstoch_mass_fluxx(hi(1)+1,j,1:nspecies))
+         electro_mass_fluxx(hi(1)+1,j) = - A_Phix(hi(1)+1,j) * zTF / z_dot_Ax(hi(1)+1,j)
+       end do
     end if
 
 !!!!!!!!!!!!!!!!!!
@@ -651,8 +699,10 @@ contains
 !!!!!!!!!!!!!!!!!!
 
     if (bc(2,1) .eq. NO_SLIP_RESERVOIR .or. bc(2,1) .eq. SLIP_RESERVOIR) then
-       electro_mass_fluxy(lo(1):hi(1),lo(2)) = &
-            - A_Phiy(lo(1):hi(1),lo(2)) * diffstoch_mass_fluxy(lo(1):hi(1),lo(2)) / z_dot_Ay(lo(1):hi(1),lo(2))
+       do i=lo(1),hi(1)
+         zTF=dot_product(charge_per_mass(1:nspecies), diffstoch_mass_fluxy(i,lo(2),1:nspecies))
+         electro_mass_fluxy(i,lo(2)) = - A_Phiy(i,lo(2)) * zTF / z_dot_Ay(i,lo(2))
+       end do
     end if
 
 !!!!!!!!!!!!!!!!!!
@@ -660,26 +710,49 @@ contains
 !!!!!!!!!!!!!!!!!!
 
     if (bc(2,2) .eq. NO_SLIP_RESERVOIR .or. bc(2,2) .eq. SLIP_RESERVOIR) then
-       electro_mass_fluxy(lo(1):hi(1),hi(2)+1) = &
-            - A_Phiy(lo(1):hi(1),hi(2)+1) * diffstoch_mass_fluxy(lo(1):hi(1),hi(2)+1) / z_dot_Ay(lo(1):hi(1),hi(2)+1)
+       do i=lo(1),hi(1)
+         zTF=dot_product(charge_per_mass(1:nspecies), diffstoch_mass_fluxy(i,hi(2)+1,1:nspecies))
+         electro_mass_fluxy(i,hi(2)+1) = - A_Phiy(i,hi(2)+1) * zTF / z_dot_Ay(i,hi(2)+1)
+       end do
     end if
 
   end subroutine project_flux_reservoir_2d
 
-  subroutine project_flux_reservoir_3d(electro_mass_fluxx,electro_mass_fluxy,electro_mass_fluxz,ng_e,lo,hi,bc)
+  subroutine project_flux_reservoir_3d(electro_mass_fluxx,electro_mass_fluxy,electro_mass_fluxz,ng_e, &
+                                       diffstoch_mass_fluxx,diffstoch_mass_fluxy,diffstoch_mass_fluxz,ng_d, &
+                                       A_Phix,A_Phiy,A_Phiz,ng_a, &
+                                       z_dot_Ax,z_dot_Ay,z_dot_Az,ng_z, &
+                                       lo,hi,bc)
 
-    integer        , intent(in   ) :: lo(:),hi(:),ng_e
-    real(kind=dp_t), intent(inout) :: electro_mass_fluxx(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:)
-    real(kind=dp_t), intent(inout) :: electro_mass_fluxy(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:)
-    real(kind=dp_t), intent(inout) :: electro_mass_fluxz(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:)
+    integer        , intent(in   ) :: lo(:),hi(:),ng_e,ng_d,ng_a,ng_z
+    real(kind=dp_t), intent(inout) ::   electro_mass_fluxx(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:)
+    real(kind=dp_t), intent(inout) ::   electro_mass_fluxy(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:)
+    real(kind=dp_t), intent(inout) ::   electro_mass_fluxz(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:)
+    real(kind=dp_t), intent(inout) :: diffstoch_mass_fluxx(lo(1)-ng_d:,lo(2)-ng_d:,lo(3)-ng_d:,:)
+    real(kind=dp_t), intent(inout) :: diffstoch_mass_fluxy(lo(1)-ng_d:,lo(2)-ng_d:,lo(3)-ng_d:,:)
+    real(kind=dp_t), intent(inout) :: diffstoch_mass_fluxz(lo(1)-ng_d:,lo(2)-ng_d:,lo(3)-ng_d:,:)
+    real(kind=dp_t), intent(inout) ::               A_Phix(lo(1)-ng_a:,lo(2)-ng_a:,lo(3)-ng_a:)
+    real(kind=dp_t), intent(inout) ::               A_Phiy(lo(1)-ng_a:,lo(2)-ng_a:,lo(3)-ng_a:)
+    real(kind=dp_t), intent(inout) ::               A_Phiz(lo(1)-ng_a:,lo(2)-ng_a:,lo(3)-ng_a:)
+    real(kind=dp_t), intent(inout) ::             z_dot_Ax(lo(1)-ng_z:,lo(2)-ng_z:,lo(3)-ng_z:)
+    real(kind=dp_t), intent(inout) ::             z_dot_Ay(lo(1)-ng_z:,lo(2)-ng_z:,lo(3)-ng_z:)
+    real(kind=dp_t), intent(inout) ::             z_dot_Az(lo(1)-ng_z:,lo(2)-ng_z:,lo(3)-ng_z:)
     integer        , intent(in   ) :: bc(:,:)
+    
+    integer :: i,j,k
+    real(kind=dp_t) :: zTF
 
 !!!!!!!!!!!!!!!!!!
 ! lo-x boundary
 !!!!!!!!!!!!!!!!!!
 
     if (bc(1,1) .eq. NO_SLIP_RESERVOIR .or. bc(1,1) .eq. SLIP_RESERVOIR) then
-       electro_mass_fluxx(lo(1),lo(2):hi(2),lo(3):hi(3)) = 0.d0
+       do k=lo(3),hi(3)
+       do j=lo(2),hi(2)
+         zTF=dot_product(charge_per_mass(1:nspecies), diffstoch_mass_fluxx(lo(1),j,k,1:nspecies))
+         electro_mass_fluxx(lo(1),j,k) = - A_Phix(lo(1),j,k) * zTF / z_dot_Ax(lo(1),j,k)
+       end do
+       end do
     end if
 
 !!!!!!!!!!!!!!!!!!
@@ -687,7 +760,12 @@ contains
 !!!!!!!!!!!!!!!!!!
 
     if (bc(1,2) .eq. NO_SLIP_RESERVOIR .or. bc(1,2) .eq. SLIP_RESERVOIR) then
-       electro_mass_fluxx(hi(1)+1,lo(2):hi(2),lo(3):hi(3)) = 0.d0
+       do k=lo(3),hi(3)
+       do j=lo(2),hi(2)
+         zTF=dot_product(charge_per_mass(1:nspecies), diffstoch_mass_fluxx(hi(1)+1,j,k,1:nspecies))
+         electro_mass_fluxx(hi(1)+1,j,k) = - A_Phix(hi(1)+1,j,k) * zTF / z_dot_Ax(hi(1)+1,j,k)
+       end do
+       end do
     end if
 
 !!!!!!!!!!!!!!!!!!
@@ -695,7 +773,12 @@ contains
 !!!!!!!!!!!!!!!!!!
 
     if (bc(2,1) .eq. NO_SLIP_RESERVOIR .or. bc(2,1) .eq. SLIP_RESERVOIR) then
-       electro_mass_fluxy(lo(1):hi(1),lo(2),lo(3):hi(3)) = 0.d0
+       do k=lo(3),hi(3)
+       do i=lo(1),hi(1)
+         zTF=dot_product(charge_per_mass(1:nspecies), diffstoch_mass_fluxy(i,lo(2),k,1:nspecies))
+         electro_mass_fluxy(i,lo(2),k) = - A_Phiy(i,lo(2),k) * zTF / z_dot_Ay(i,lo(2),k)
+       end do
+       end do
     end if
 
 !!!!!!!!!!!!!!!!!!
@@ -703,7 +786,12 @@ contains
 !!!!!!!!!!!!!!!!!!
 
     if (bc(2,2) .eq. NO_SLIP_RESERVOIR .or. bc(2,2) .eq. SLIP_RESERVOIR) then
-       electro_mass_fluxy(lo(1):hi(1),hi(2)+1,lo(3):hi(3)) = 0.d0
+       do k=lo(3),hi(3)
+       do i=lo(1),hi(1)
+         zTF=dot_product(charge_per_mass(1:nspecies), diffstoch_mass_fluxy(i,hi(2)+1,k,1:nspecies))
+         electro_mass_fluxy(i,hi(2)+1,k) = - A_Phiy(i,hi(2)+1,k) * zTF / z_dot_Ay(i,hi(2)+1,k)
+       end do
+       end do
     end if
 
 !!!!!!!!!!!!!!!!!!
@@ -711,7 +799,12 @@ contains
 !!!!!!!!!!!!!!!!!!
 
     if (bc(3,1) .eq. NO_SLIP_RESERVOIR .or. bc(3,1) .eq. SLIP_RESERVOIR) then
-       electro_mass_fluxz(lo(1):hi(1),lo(2):hi(2),lo(3)) = 0.d0
+       do j=lo(2),hi(2)
+       do i=lo(1),hi(1)
+         zTF=dot_product(charge_per_mass(1:nspecies), diffstoch_mass_fluxz(i,j,lo(3),1:nspecies))
+         electro_mass_fluxz(i,j,lo(3)) = - A_Phiz(i,j,lo(3)) * zTF / z_dot_Az(i,j,lo(3))
+       end do
+       end do
     end if
 
 !!!!!!!!!!!!!!!!!!
@@ -719,7 +812,12 @@ contains
 !!!!!!!!!!!!!!!!!!
 
     if (bc(3,2) .eq. NO_SLIP_RESERVOIR .or. bc(3,2) .eq. SLIP_RESERVOIR) then
-       electro_mass_fluxz(lo(1):hi(1),lo(2):hi(2),hi(3)+1) = 0.d0
+       do j=lo(2),hi(2)
+       do i=lo(1),hi(1)
+         zTF=dot_product(charge_per_mass(1:nspecies), diffstoch_mass_fluxz(i,j,hi(3)+1,1:nspecies))
+         electro_mass_fluxz(i,j,hi(3)+1) = - A_Phiz(i,j,hi(3)+1) * zTF / z_dot_Az(i,j,hi(3)+1)
+       end do
+       end do
     end if
 
   end subroutine project_flux_reservoir_3d
