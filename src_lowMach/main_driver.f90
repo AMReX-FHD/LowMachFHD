@@ -980,8 +980,8 @@ end if
         if (parallel_IOProcessor()) then
            write(*,*), 'writing plotfiles after timestep =', istep 
         end if
-        call write_plotfile(mla,rho_old,rho_avg,rhotot_old,Temp,umac,umac_avg,pi,Epot, & 
-                            Epot_avg,grad_Epot_old,gradPhiApprox,istep,dx,time)
+        call write_plotfile(mla,rho_new,rho_avg,rhotot_new,Temp,umac,umac_avg,pi,Epot, & 
+                            Epot_avg,grad_Epot_new,gradPhiApprox,istep,dx,time)
      end if
 
      ! write checkpoint at specific intervals
