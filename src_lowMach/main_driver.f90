@@ -449,9 +449,6 @@ end if
   end if
 
   if (use_charged_fluid) then
-     if (algorithm_type .ne. 0) then
-        call bl_error("Error: only Inertial algorithm supported for the charged fluid case.")
-     endif 
      do n=1,nlevs
         call multifab_build(charge_old(n)       ,mla%la(n),1,1)
         call multifab_build(charge_new(n)       ,mla%la(n),1,1)

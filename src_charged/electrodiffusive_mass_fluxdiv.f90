@@ -284,17 +284,6 @@ contains
                            increment_in=.false.)
        end do
 
-       ! (Donev) Recompute this so the value on the boundary is the correct one
-       ! combine F_diffstoch = F_d + F_s
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_copy_c(diffstoch_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
-             if (variance_coef_mass .ne. 0.d0) then
-                call multifab_plus_plus_c(diffstoch_mass_flux(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
-             end if
-          end do
-       end do
-
        !!!!!!!!!!!!!!!!!!!!!!
        ! change solver tolerance based on scales of the problem
 
@@ -466,7 +455,8 @@ contains
            any(bc_lo(1:dm) .eq. SLIP_RESERVOIR) .or. &
            any(bc_hi(1:dm) .eq. SLIP_RESERVOIR) ) then
 
-          ! combine F_diffstoch = F_d + F_s (recall we zero'd out the physical boundary faces above)
+          ! combine F_diffstoch = F_d + F_s
+          ! Recompute this so the value on the boundary is the correct one
           do n=1,nlevs
              do i=1,dm
                 call multifab_copy_c(diffstoch_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
@@ -483,6 +473,7 @@ contains
                                          beta(n,:), &
                                          1,nspecies,the_bc_tower%bc_tower_array(n))
           end do
+
        end if
     end if
 
@@ -491,7 +482,7 @@ contains
     ! zero the total mass flux on walls to make sure 
     ! that the potential gradient matches the species gradient
     do n=1,nlevs
-       !call zero_edgeval_walls(electro_mass_flux(n,:),1,nspecies, the_bc_tower%bc_tower_array(n))
+       call zero_edgeval_walls(electro_mass_flux(n,:),1,nspecies, the_bc_tower%bc_tower_array(n))
     end do
 
     do n=1,nlevs
