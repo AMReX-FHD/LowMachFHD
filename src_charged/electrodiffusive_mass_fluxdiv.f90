@@ -482,7 +482,7 @@ contains
     ! zero the total mass flux on walls to make sure 
     ! that the potential gradient matches the species gradient
     do n=1,nlevs
-       call zero_edgeval_walls(electro_mass_flux(n,:),1,nspecies, the_bc_tower%bc_tower_array(n))
+       !call zero_edgeval_walls(electro_mass_flux(n,:),1,nspecies, the_bc_tower%bc_tower_array(n))
     end do
 
     do n=1,nlevs
