@@ -908,15 +908,17 @@ end if
      if (istep .gt. n_steps_skip) then
         do n=1,nlevs
 
-           ! first do rho                                                                      
+           ! first do rho
            call multifab_plus_plus_c(rho_sum(n),1,rho_new(n),1,nspecies,0)
            call multifab_copy_c(rho_avg(n),1,rho_sum(n),1,nspecies,0)
            call multifab_mult_mult_s_c(rho_avg(n),1,(1.d0/(istep-n_steps_skip)),nspecies,0)
 
            ! next do Epot
-           call multifab_plus_plus_c(Epot_sum(n),1,Epot(n),1,1,0)
-           call multifab_copy_c(Epot_avg(n),1,Epot_sum(n),1,1,0)
-           call multifab_mult_mult_s_c(Epot_avg(n),1,(1.d0/(istep-n_steps_skip)),1,0)
+           if (use_charged_fluid) then
+              call multifab_plus_plus_c(Epot_sum(n),1,Epot(n),1,1,0)
+              call multifab_copy_c(Epot_avg(n),1,Epot_sum(n),1,1,0)
+              call multifab_mult_mult_s_c(Epot_avg(n),1,(1.d0/(istep-n_steps_skip)),1,0)
+           end if
       
            ! lastly do umac
            do i=1,dm
