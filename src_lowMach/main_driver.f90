@@ -107,12 +107,12 @@ subroutine main_driver()
   type(multifab), allocatable :: umac_avg(:,:)
 
   ! for writing time-averaged species' densities to plotfile
-  type(multifab), allocatable :: rho_sum(:) ! SC
-  type(multifab), allocatable :: rho_avg(:) ! SC
+  type(multifab), allocatable :: rho_sum(:) 
+  type(multifab), allocatable :: rho_avg(:) 
 
   ! for writing time-averaged Electric_field to plotfile
-  type(multifab), allocatable :: Epot_sum(:) ! SC
-  type(multifab), allocatable :: Epot_avg(:) ! SC
+  type(multifab), allocatable :: Epot_sum(:) 
+  type(multifab), allocatable :: Epot_avg(:) 
 
   ! For HydroGrid
   integer :: narg, farg, un, n_rngs_mass, n_rngs_mom
@@ -173,8 +173,8 @@ subroutine main_driver()
   allocate(lo(dm),hi(dm),pmask(dm))
   allocate(rho_old(nlevs),rhotot_old(nlevs),pi(nlevs))
   allocate(rho_new(nlevs),rhotot_new(nlevs))
-  allocate(rho_sum(nlevs)) ! SC
-  allocate(rho_avg(nlevs)) ! SC
+  allocate(rho_sum(nlevs)) 
+  allocate(rho_avg(nlevs)) 
   allocate(Temp(nlevs))
   allocate(diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
   allocate(stoch_mass_flux(nlevs,dm))
@@ -192,8 +192,8 @@ subroutine main_driver()
   allocate(permittivity(nlevs))
   allocate(grad_Epot_old(nlevs,dm),grad_Epot_new(nlevs,dm))
   allocate(Epot(nlevs))
-  allocate(Epot_sum(nlevs)) ! SC
-  allocate(Epot_avg(nlevs)) ! SC
+  allocate(Epot_sum(nlevs)) 
+  allocate(Epot_avg(nlevs)) 
   allocate(gradPhiApprox(nlevs,dm))
 
   allocate(chem_rate(nlevs))
@@ -222,8 +222,7 @@ subroutine main_driver()
      ! build the ml_layout
      ! read in time and dt from checkpoint
      ! build and fill rho, rhotot, pi, umac, and umac_sum
-     !call initialize_from_restart(mla,time,dt,rho_old,rhotot_old,pi,umac,umac_sum,pmask,Epot,grad_Epot_old) 
-     call initialize_from_restart(mla,time,dt,rho_old,rho_sum,rhotot_old,pi,umac,umac_sum,pmask,Epot,Epot_sum,grad_Epot_old) ! SC
+     call initialize_from_restart(mla,time,dt,rho_old,rho_sum,rhotot_old,pi,umac,umac_sum,pmask,Epot,Epot_sum,grad_Epot_old) 
 
   else
 
@@ -270,8 +269,8 @@ subroutine main_driver()
 
      do n=1,nlevs
         call multifab_build(rho_old(n)   ,mla%la(n),nspecies,ng_s)
-        call multifab_build(rho_sum(n)   ,mla%la(n),nspecies,ng_s) ! SC
-        call setval(rho_sum(n),0.d0) ! SC
+        call multifab_build(rho_sum(n)   ,mla%la(n),nspecies,ng_s) 
+        call setval(rho_sum(n),0.d0) 
         call multifab_build(rhotot_old(n),mla%la(n),1       ,ng_s)
         call multifab_build(pi(n)        ,mla%la(n),1       ,1)
         do i=1,dm
@@ -402,7 +401,7 @@ end if
 
   do n=1,nlevs 
      call multifab_build(rho_new(n)          ,mla%la(n),nspecies,ng_s)
-     call multifab_build(rho_avg(n)          ,mla%la(n),nspecies,ng_s) !SC
+     call multifab_build(rho_avg(n)          ,mla%la(n),nspecies,ng_s) 
      call multifab_build(rhotot_new(n)       ,mla%la(n),1       ,ng_s) 
      call multifab_build(Temp(n)             ,mla%la(n),1       ,ng_s)
      call multifab_build(diff_mass_fluxdiv(n),mla%la(n),nspecies,0) 
@@ -458,11 +457,11 @@ end if
         call multifab_build(charge_new(n)       ,mla%la(n),1,1)
         call multifab_build(permittivity(n)     ,mla%la(n),1,1)
         call multifab_build(Epot_mass_fluxdiv(n),mla%la(n),nspecies,0) 
-        call multifab_build(Epot_avg(n)      ,mla%la(n),1       ,1) !SC
+        call multifab_build(Epot_avg(n)      ,mla%la(n),1       ,1) 
 
         if (restart .lt. 0) then ! only build Epot, Epot_sum, and grad_Epot_old below if a checkpoint file wasn't provided
            call multifab_build(Epot(n)             ,mla%la(n),1,1)
-           call multifab_build(Epot_sum(n)      ,mla%la(n),1       ,1) !SC
+           call multifab_build(Epot_sum(n)      ,mla%la(n),1       ,1) 
         endif
         do i=1,dm
            if (restart .lt. 0) then 
@@ -512,8 +511,8 @@ end if
 
         if (restart .lt. 0) then
            call multifab_setval(Epot(n),0.d0,all=.true.)
-           call multifab_setval(Epot_sum(n),0.d0,all=.true.) ! SC
-           call multifab_setval(Epot_avg(n),0.d0,all=.true.) ! SC ---> I don't think Epot_avg should be here, but I'm not sure where to have it rn
+           call multifab_setval(Epot_sum(n),0.d0,all=.true.) 
+           call multifab_setval(Epot_avg(n),0.d0,all=.true.) 
         endif
 
         call multifab_setval(Epot_mass_fluxdiv(n),0.d0,all=.true.)
@@ -774,9 +773,7 @@ end if
         if (parallel_IOProcessor()) then
            write(*,*), 'writing initial plotfile 0'
         end if
-        !call write_plotfile(mla,rho_old,rhotot_old,Temp,umac,umac_avg,pi,Epot, &
-        !                    grad_Epot_old,gradPhiApprox,0,dx,time)
-        call write_plotfile(mla,rho_old,rho_avg,rhotot_old,Temp,umac,umac_avg,pi,Epot, &     !SC
+        call write_plotfile(mla,rho_old,rho_avg,rhotot_old,Temp,umac,umac_avg,pi,Epot, & 
                             Epot_avg,grad_Epot_old,gradPhiApprox,0,dx,time)
      end if
 
@@ -785,8 +782,7 @@ end if
         if (parallel_IOProcessor()) then
            write(*,*), 'writing initial checkpoint 0'
         end if
-        !call checkpoint_write(mla,rho_old,rhotot_old,pi,umac,umac_sum,Epot,grad_Epot_old,time,dt,0)
-        call checkpoint_write(mla,rho_old,rho_sum,rhotot_old,pi,umac,umac_sum,Epot,Epot_sum,grad_Epot_old,time,dt,0) ! SC
+        call checkpoint_write(mla,rho_old,rho_sum,rhotot_old,pi,umac,umac_sum,Epot,Epot_sum,grad_Epot_old,time,dt,0) 
      end if
      
      if (stats_int .gt. 0) then
@@ -915,11 +911,9 @@ end if
      if (istep .gt. n_steps_skip) then
         do n=1,nlevs
 
-           ! first do rho                                                                      !SC
+           ! first do rho                                                                      
            call multifab_plus_plus_c(rho_sum(n),1,rho_new(n),1,nspecies,0)
-           do m=1,nspecies
-              call multifab_copy_c(rho_avg(n),m,rho_sum(n),m,nspecies,0)
-           end do
+           call multifab_copy_c(rho_avg(n),1,rho_sum(n),1,nspecies,0)
            call multifab_mult_mult_s_c(rho_avg(n),1,(1.d0/(istep-n_steps_skip)),nspecies,0)
 
            ! next do Epot
@@ -987,10 +981,8 @@ end if
         if (parallel_IOProcessor()) then
            write(*,*), 'writing plotfiles after timestep =', istep 
         end if
-        !call write_plotfile(mla,rho_new,rhotot_new,Temp,umac,umac_avg,pi,Epot, &
-        !                    grad_Epot_new,gradPhiApprox,istep,dx,time)
-        call write_plotfile(mla,rho_old,rho_avg,rhotot_old,Temp,umac,umac_avg,pi,Epot, &     !SC
-                            Epot_avg,grad_Epot_old,gradPhiApprox,0,dx,time)
+        call write_plotfile(mla,rho_old,rho_avg,rhotot_old,Temp,umac,umac_avg,pi,Epot, & 
+                            Epot_avg,grad_Epot_old,gradPhiApprox,istep,dx,time)
      end if
 
      ! write checkpoint at specific intervals
@@ -999,8 +991,7 @@ end if
         if (parallel_IOProcessor()) then
            write(*,*), 'writing checkpoint after timestep =', istep 
         end if
-        !call checkpoint_write(mla,rho_new,rhotot_new,pi,umac,umac_sum,Epot,grad_Epot_new,time,dt,istep)
-        call checkpoint_write(mla,rho_new,rho_sum,rhotot_new,pi,umac,umac_sum,Epot,Epot_sum,grad_Epot_new,time,dt,istep) ! SC
+        call checkpoint_write(mla,rho_new,rho_sum,rhotot_new,pi,umac,umac_sum,Epot,Epot_sum,grad_Epot_new,time,dt,istep)
      end if
 
      ! print out projection (average) and variance
@@ -1099,7 +1090,6 @@ end if
         call multifab_destroy(permittivity(n))
         call multifab_destroy(Epot(n))
         call multifab_destroy(Epot_mass_fluxdiv(n))
-           call multifab_setval(Epot(n),0.d0,all=.true.)
         do i=1,dm
            call multifab_destroy(grad_Epot_old(n,i))
            call multifab_destroy(grad_Epot_new(n,i))
@@ -1115,7 +1105,7 @@ end if
   end if
 
   do n=1,nlevs 
-     call multifab_destroy(rho_sum(n))      !SC
+     call multifab_destroy(rho_sum(n))      
      call multifab_destroy(rho_avg(n))
      if (use_charged_fluid) then
         call multifab_destroy(Epot_sum(n))
@@ -1129,7 +1119,7 @@ end if
 
   deallocate(lo,hi,pmask)
   deallocate(rho_old,rhotot_old,pi)
-  deallocate(rho_sum, rho_avg) ! SC
+  deallocate(rho_sum, rho_avg) 
   deallocate(rho_new,rhotot_new)
   deallocate(Temp)
   deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv)
@@ -1144,7 +1134,7 @@ end if
   deallocate(permittivity)
   deallocate(grad_Epot_old,grad_Epot_new)
   deallocate(Epot)
-  deallocate(Epot_sum, Epot_avg) !SC
+  deallocate(Epot_sum, Epot_avg) 
   deallocate(gradPhiApprox)
 
   deallocate(chem_rate)

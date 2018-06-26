@@ -22,16 +22,15 @@ module checkpoint_module
   public :: checkpoint_write, checkpoint_read
 
 contains
-  !subroutine checkpoint_write(mla,rho,rhotot,pi,umac,umac_sum,Epot,grad_Epot,time,dt,istep_to_write)
-  subroutine checkpoint_write(mla,rho,rho_sum,rhotot,pi,umac,umac_sum,Epot,Epot_sum,grad_Epot,time,dt,istep_to_write) ! SC
+  subroutine checkpoint_write(mla,rho,rho_sum,rhotot,pi,umac,umac_sum,Epot,Epot_sum,grad_Epot,time,dt,istep_to_write) 
     
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:)                ! cell-centered partial densities
-    type(multifab) , intent(in   ) :: rho_sum(:)           ! cell-centered partial densities, summed for time average !SC
+    type(multifab) , intent(in   ) :: rho_sum(:)           ! cell-centered partial densities, summed for time average 
     type(multifab) , intent(in   ) :: rhotot(:)             ! cell-centered total density
     type(multifab) , intent(in   ) :: pi(:)                 ! cell-centered pi
     type(multifab) , intent(in   ) :: Epot(:)               ! cell-centered electric potential 
-    type(multifab) , intent(in   ) :: Epot_sum(:)          ! cell-centered electric potential, summed for time average !SC
+    type(multifab) , intent(in   ) :: Epot_sum(:)          ! cell-centered electric potential, summed for time average
     type(multifab) , intent(in   ) :: grad_Epot(:,:)        ! edge-based electric force 
     type(multifab) , intent(in   ) :: umac(:,:)             ! edge-based velocities
     type(multifab) , intent(in   ) :: umac_sum(:,:)         ! edge-based sum of velocities
@@ -56,10 +55,10 @@ contains
     dm = mla%dim
 
     ! --partial densities
-    ! --partial densities sum over time  ! SC
+    ! --partial densities sum over time 
     ! --total density
     ! --pi
-    !SC: If use_charged_fluid is on, we also have:
+    ! If use_charged_fluid is on, we also have:
     ! --Epot and 
     ! --Epot_sum 
     if (use_charged_fluid) then    

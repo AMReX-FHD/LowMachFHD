@@ -37,6 +37,7 @@ module probin_common_module
   integer,save    :: rho_eos_form
   real(dp_t),save :: density_weights(0:MAX_SPECIES)
   integer,save    :: shift_cc_to_boundary(MAX_SPACEDIM,2)
+  logical,save    :: plot_umac_tavg, plot_Epot_tavg, plot_rho_tavg, plot_avg_gradPhiApprox 
 
   integer(kind=ll_t)      :: n_cells_long(MAX_SPACEDIM)
   integer(kind=ll_t),save :: total_volume
@@ -105,6 +106,13 @@ module probin_common_module
 
   namelist /probin_common/ use_bl_rng         ! if false, use HydroGrid RNGs
                                               ! if true, use F_BaseLib/bl_random RNGs
+
+  ! Controls for deciding whether to plot various quantities (eg averaged, time averaged)
+  !----------------------
+  namelist /probin_common/ plot_umac_tavg               ! Boolean, time average
+  namelist /probin_common/ plot_Epot_tavg               ! Boolean, time average
+  namelist /probin_common/ plot_rho_tavg                ! Boolean, time average  
+  namelist /probin_common/ plot_avg_gradPhiApprox       ! Boolean, time average  
                                               
 
   ! random number seed (for HydroGrid RNGs)
@@ -276,6 +284,11 @@ contains
     Runiv = 8.314462175d7
 
     algorithm_type = 0
+
+    plot_umac_tavg = .false.
+    plot_Epot_tavg = .false.
+    plot_rho_tavg = .false.
+    plot_avg_gradPhiApprox = .false.
 
     barodiffusion_type = 0
 
@@ -535,6 +548,26 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) algorithm_type
+
+       case ('--plot_umac_tavg')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) plot_umac_tavg 
+
+       case ('--plot_Epot_tavg')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) plot_Epot_tavg 
+
+       case ('--plot_rho_tavg')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) plot_rho_tavg 
+
+       case ('--plot_avg_gradPhiApprox')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) plot_avg_gradPhiApprox
 
        case ('--barodiffusion_type')
           farg = farg + 1
