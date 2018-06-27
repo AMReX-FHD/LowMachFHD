@@ -477,12 +477,13 @@ contains
        end if
     end if
 
-    ! (Donev) I disabled this
-    ! This seems wrong here and I don't get what it is doing and why it is doing it regardless of the BCs?  
-    ! zero the total mass flux on walls to make sure 
-    ! that the potential gradient matches the species gradient
+    ! for walls we need to zero the electro_mass_flux since we have already zero'd the diff and stoch
+    ! mass fluxes.  For inhomogeneous Neumann conditions on Epot, the physically correct thing would
+    ! have been to compute species gradients to exactly counterbalance the Neumann conditions on Epot
+    ! so the total mass flux (diff + stoch + Epot) is zero, but the numerical remedy here is to simply
+    ! zero them individually.
     do n=1,nlevs
-       !call zero_edgeval_walls(electro_mass_flux(n,:),1,nspecies, the_bc_tower%bc_tower_array(n))
+       call zero_edgeval_walls(electro_mass_flux(n,:),1,nspecies, the_bc_tower%bc_tower_array(n))
     end do
 
     do n=1,nlevs
