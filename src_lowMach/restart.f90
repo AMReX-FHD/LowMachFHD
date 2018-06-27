@@ -22,17 +22,16 @@ module restart_module
 
 contains
 
-  !subroutine initialize_from_restart(mla,time,dt,rho,rhotot,pi,umac,umac_sum,pmask,Epot,grad_Epot)
   subroutine initialize_from_restart(mla,time,dt,rho,rho_sum,rhotot,pi,umac,umac_sum,pmask,Epot,Epot_sum,grad_Epot)
  
      type(ml_layout),intent(out)   :: mla
      real(dp_t)    , intent(  out) :: time,dt
      type(multifab), intent(inout) :: rho(:)
-     type(multifab), intent(inout) :: rho_sum(:)  ! SC
+     type(multifab), intent(inout) :: rho_sum(:)  
      type(multifab), intent(inout) :: rhotot(:)
      type(multifab), intent(inout) :: pi(:)
      type(multifab), intent(inout) :: Epot(:)
-     type(multifab), intent(inout) :: Epot_sum(:) ! SC
+     type(multifab), intent(inout) :: Epot_sum(:) 
      type(multifab), intent(inout) :: umac(:,:)
      type(multifab), intent(inout) :: umac_sum(:,:)
      type(multifab), intent(inout) :: grad_Epot(:,:)
@@ -69,12 +68,12 @@ contains
 
      do n = 1,nlevs
         call multifab_build(rho(n)   , mla%la(n), nspecies, ng_s)
-        call multifab_build(rho_sum(n), mla%la(n), nspecies, ng_s) ! SC
+        call multifab_build(rho_sum(n), mla%la(n), nspecies, ng_s) 
         call multifab_build(rhotot(n), mla%la(n),        1, ng_s)
         call multifab_build(pi(n)    , mla%la(n),        1, 1)
         if (use_charged_fluid) then
-           call multifab_build(Epot(n)    , mla%la(n),        1, 1) ! SC: question: should the final arg here be 1 or ng_s? 
-           call multifab_build(Epot_sum(n)    , mla%la(n),        1, 1) ! SC: question: should the final arg here be 1 or ng_s? 
+           call multifab_build(Epot(n)    , mla%la(n),        1, 1)  
+           call multifab_build(Epot_sum(n)    , mla%la(n),        1, 1)  
         endif
         do i=1,dm
            call multifab_build_edge(umac(n,i), mla%la(n), 1, 1, i)
@@ -96,11 +95,7 @@ contains
 
      ! cell-centered data
      do n = 1,nlevs
-        !call multifab_copy_c(rho(n)   , 1,chkdata(n) ,1           ,nspecies)
-        !call multifab_copy_c(rhotot(n), 1,chkdata(n) ,nspecies+1  ,1)
-        !call multifab_copy_c(pi(n)    , 1,chkdata(n) ,nspecies+2  ,1)
-
-        call multifab_copy_c(rho(n)   , 1,chkdata(n) ,1           ,nspecies) !SC
+        call multifab_copy_c(rho(n)   , 1,chkdata(n) ,1           ,nspecies) 
         call multifab_copy_c(rho_sum(n), 1,chkdata(n),nspecies+1 ,nspecies)
         call multifab_copy_c(rhotot(n), 1,chkdata(n) ,2*nspecies+1  ,1)
         call multifab_copy_c(pi(n)    , 1,chkdata(n) ,2*nspecies+2  ,1)
