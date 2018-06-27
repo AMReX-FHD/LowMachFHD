@@ -184,7 +184,9 @@ contains
     end if
 
     ! set the Dirichlet velocity value on reservoir faces
-    call reservoir_bc_fill(mla,total_mass_flux,vel_bc_n,the_bc_tower%bc_tower_array)
+    if (algorithm_type .ne. 6) then
+       call reservoir_bc_fill(mla,total_mass_flux,vel_bc_n,the_bc_tower%bc_tower_array)
+    end if  
 
     if (restart .lt. 0) then
 
