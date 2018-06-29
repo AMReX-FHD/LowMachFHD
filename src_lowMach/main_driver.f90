@@ -918,7 +918,7 @@ end if
      ! for electroneutral make sure charge does not build up
      if (use_charged_fluid .and. electroneutral) then
         max_charge = multifab_norm_inf(charge_new(1))        
-        if (max_charge > epot_mg_rel_tol*max_charge_abs) then
+        if (max_charge > 10*epot_mg_rel_tol*max_charge_abs) then
            if (parallel_IOProcessor()) then
               print*,''
               print*,'WARNING: Max charge density exceeds rel_tol, rel max=', max_charge/max_charge_abs
