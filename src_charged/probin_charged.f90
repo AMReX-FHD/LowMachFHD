@@ -22,6 +22,8 @@ module probin_charged_module
   integer            :: zero_charge_on_wall_type
   integer            :: epot_mg_verbose
   real(kind=dp_t)    :: epot_mg_abs_tol, epot_mg_rel_tol
+  integer            :: bc_function_type
+  real(kind=dp_t)    :: L_pos, L_trans, L_zero
 
   ! for charged fluid
   namelist /probin_charged/ use_charged_fluid
@@ -31,6 +33,14 @@ module probin_charged_module
   namelist /probin_charged/ charge_per_mass
   namelist /probin_charged/ Epot_wall_bc_type  ! 1 = Dirichlet (fixed potential)
                                                ! 2 = Neumann (fixed charge density)
+
+  namelist /probin_charged/ bc_function_type   ! 0 = constant 
+                                               ! 1 = cubic, see description below
+
+  namelist /probin_charged/ L_pos              ! length of part of boundary where there is positive charge flux, if cubic function is imposed
+  namelist /probin_charged/ L_trans            ! length of transition part of boundary, where the value varies like a cubic
+  namelist /probin_charged/ L_zero             ! length of part of boundary where there is zero charge flux, if cubic function is imposed
+
   namelist /probin_charged/ Epot_wall          ! Dirichlet or Neumann condition
   namelist /probin_charged/ theta_pot          ! for implicit algorithm_type=3, controls
                                                ! temporal discretization for potential term
@@ -49,6 +59,7 @@ module probin_charged_module
   namelist /probin_charged/ epot_mg_verbose    ! verbosity for poisson solve
   namelist /probin_charged/ epot_mg_abs_tol    ! absolute tolerance for poisson solve
   namelist /probin_charged/ epot_mg_rel_tol    ! relative tolerance for poisson solve
+
 
 
 contains
@@ -79,6 +90,10 @@ contains
                                 ! see fluid_charge.f90:compute_permittivity()
     charge_per_mass(:)     = 0.d0
     Epot_wall_bc_type(:,:) = 1
+    bc_function_type       = 0 
+    L_pos                  = 0.d0
+    L_trans                = 0.d0
+    L_zero                 = 0.d0
     Epot_wall(:,:)         = 0.d0
     theta_pot              = 0.5d0
     num_pot_iters          = 2

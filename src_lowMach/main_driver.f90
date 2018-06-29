@@ -50,7 +50,8 @@ subroutine main_driver()
   use probin_gmres_module, only: probin_gmres_init
 
   use probin_charged_module, only: probin_charged_init, use_charged_fluid, dielectric_const, &
-                                   dielectric_type, electroneutral, epot_mg_rel_tol, charge_per_mass, print_debye_len
+                                   dielectric_type, electroneutral, epot_mg_rel_tol, charge_per_mass, & 
+                                   print_debye_len, bc_function_type, L_pos, L_trans, L_zero
 
   use probin_chemistry_module, only: probin_chemistry_init, nreactions
 
@@ -121,7 +122,7 @@ subroutine main_driver()
   logical :: nodal_temp(3)
 
   ! misc
-  real(kind=dp_t) :: max_charge, max_charge_abs, debye_len
+  real(kind=dp_t) :: max_charge, max_charge_abs, debye_len, sum_of_boundary_lens, delta_x
 
   ! DONEV FIXME
   real(kind=dp_t) :: rho_temp, w_temp(1:5), w_mol(1:3)
@@ -139,6 +140,28 @@ subroutine main_driver()
   call probin_gmres_init()
   call probin_charged_init() 
   call probin_chemistry_init()
+
+  ! first check that if we prescribe a nonconstant, piecewise cubic BC for Epot, 
+  ! then the length of the various regions must equal Lx ie prob_hi(1)
+  ! Additionally, the point at which L_pos/trans_zero regions change from one to another
+  ! must align with cell boundaries. ie the x-loc of the | markers below must = M*dx, M = integer
+  ! |---L_pos---|--L_trans--|---L_zero---|--L_trans--|---L_pos---| 
+  if (bc_function_type.eq.1) then  
+     sum_of_boundary_lens = 2.d0*L_pos + 2.d0*L_trans + L_zero
+     if (sum_of_boundary_lens.ne.prob_hi(1)) then 
+        call bl_error("If you impose a non-constant cubic BC for Epot, the regions summed length must match total domain length.")
+     end if 
+     delta_x = prob_hi(1)/n_cells(1)
+     if (L_pos/delta_x.ne.floor(L_pos/delta_x)) then 
+        call bl_error("L_pos must be an integer multiple of dx")
+     end if 
+     if (L_trans/delta_x.ne.floor(L_trans/delta_x)) then 
+        call bl_error("L_trans must be an integer multiple of dx")
+     end if 
+     if (L_zero/delta_x.ne.floor(L_zero/delta_x)) then 
+        call bl_error("L_zero must be an integer multiple of dx")
+     end if 
+  end if 
 
   ! for reservoirs, make sure the Dirichlet conditions for concentration sum to 1
   do i=1,dim_in
