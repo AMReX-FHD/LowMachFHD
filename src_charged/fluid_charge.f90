@@ -422,13 +422,14 @@ contains
   ! compute vector rho W z / (n k_B T) on cell centers and average to faces
   ! compute tensor rho W chi on cell centers and average to faces
   ! multiply them together and store the resulting vector in A_Phi
-  subroutine implicit_potential_coef(mla,rho,Temp,A_Phi,the_bc_tower)
+  subroutine implicit_potential_coef(mla,rho,Temp,A_Phi,the_bc_tower,rhoWchi_face_in)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab ), intent(in   ) :: rho(:)
     type(multifab ), intent(in   ) :: Temp(:)
     type(multifab ), intent(inout) :: A_Phi(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
+    type(multifab ), intent(in), optional :: rhoWchi_face_in(:,:)
     
     ! local
     type(multifab) :: rhotot_temp (mla%nlevel)
@@ -469,16 +470,26 @@ contains
     call average_cc_to_face(nlevs,charge_coef,A_Phi,1,c_bc_comp,nspecies, &
                             the_bc_tower%bc_tower_array,.true.)
 
-    ! compute rhoWchi on cell centers
-    call compute_molconc_molmtot(mla,rho,rhotot_temp,molarconc,molmtot)
-    call compute_mixture_properties(mla,rho,rhotot_temp,D_bar,D_therm,Hessian)
-    call compute_rhoWchi(mla,rho,rhotot_temp,molarconc,rhoWchi,D_bar)
+    ! rhoWchi on faces
+    if (present(rhoWchi_face_in)) then
+       ! copy rhoWchi to faces
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_copy_c(rhoWchi_face(n,i),1,rhoWchi_face_in(n,i),1,nspecies**2,0)
+          end do
+       end do
+    else
+       ! compute rhoWchi on cell centers
+       call compute_molconc_molmtot(mla,rho,rhotot_temp,molarconc,molmtot)
+       call compute_mixture_properties(mla,rho,rhotot_temp,D_bar,D_therm,Hessian)
+       call compute_rhoWchi(mla,rho,rhotot_temp,molarconc,rhoWchi,D_bar)
 
-    ! average rhoWchi to faces
-    call average_cc_to_face(nlevs, rhoWchi, rhoWchi_face, 1, tran_bc_comp, &
-                            nspecies**2, the_bc_tower%bc_tower_array, .false.) 
+       ! average rhoWchi to faces
+       call average_cc_to_face(nlevs, rhoWchi, rhoWchi_face, 1, tran_bc_comp, &
+                               nspecies**2, the_bc_tower%bc_tower_array, .false.) 
+    end if
 
-    ! multiply A_Phi by rhoWchi
+    ! multiply A_Phi by rhoWchi_face
     do n=1,nlevs
        do i=1,dm
           call matvec_mul(mla, A_Phi(n,i), rhoWchi_face(n,i), nspecies)

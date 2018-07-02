@@ -255,10 +255,7 @@ contains
        end do
 
        ! compute A_Phi for Poisson solve (does not have z^T)
-       ! Donev: This seems unnecessary to me: rhoWchi is computed already and it doesn't change
-       ! Can't we just pass rhoWchi in here -- it was computed already above
-       ! This is not a cheap computation so we should avoid repeating it if not needed
-       call implicit_potential_coef(mla,rho,Temp,A_Phi,the_bc_tower)
+       call implicit_potential_coef(mla,rho,Temp,A_Phi,the_bc_tower,rhoWchi_face)
               
        ! compute z^T A_Phi^n, store in solver_beta
        call dot_with_z_face(mla,A_Phi,beta)
