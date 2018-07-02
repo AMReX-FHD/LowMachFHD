@@ -398,11 +398,12 @@ contains
     ! (Donev) The inhomogeneous BC for phi must be computed here for each face:
     ! grad(phi) = -z^T*F_diffstoch/(z^T*A_Phi)
     ! We only need this to fill in BCs for phi
-    if (.false. .and. electroneutral .and. &
-          any(bc_lo(1:dm) .eq. NO_SLIP_RESERVOIR) .or. &
-          any(bc_hi(1:dm) .eq. NO_SLIP_RESERVOIR) .or. &
-          any(bc_lo(1:dm) .eq. SLIP_RESERVOIR) .or. &
-          any(bc_hi(1:dm) .eq. SLIP_RESERVOIR) ) then
+    if (.false. &
+         .and. electroneutral &
+         .and. (any(bc_lo(1:dm) .eq. NO_SLIP_RESERVOIR) .or. &
+                any(bc_hi(1:dm) .eq. NO_SLIP_RESERVOIR) .or. &
+                any(bc_lo(1:dm) .eq. SLIP_RESERVOIR) .or. &
+                any(bc_hi(1:dm) .eq. SLIP_RESERVOIR)) ) then
           ! Fill ghost cells for phi to satisfy inhomogeneous BCs if needed
 
 
