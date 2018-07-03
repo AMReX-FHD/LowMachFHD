@@ -183,7 +183,7 @@ contains
        call bndry_reg_build(fine_flx(n),mla%la(n),ml_layout_get_pd(mla,n))
     end do
 
-    ! if periodic, ensure charge sums to zero by subtracting off the averaeg
+    ! if periodic, ensure charge sums to zero by subtracting off the average
     if (all(mla%pmask(1:dm))) then
        sum = multifab_sum_c(charge(1),1,1) / multifab_volume(charge(1))
        call multifab_sub_sub_s_c(charge(1),1,sum,1,0)
@@ -191,7 +191,7 @@ contains
           if (parallel_IOProcessor()) then
              print*,'average charge =',sum
           end if
-          call bl_warn("Warning: average charge is not zero")
+          call bl_warn("Warning: electrodiffusive_mass_flux - average charge is not zero")
        end if
     end if
 
@@ -384,28 +384,17 @@ contains
        call multifab_sub_sub_s(Epot(1),sum)
     end if  
 
-    ! we need to fill the ghost cells so the inhomogeneous Neumann phi case
-    ! has properly filled ghost cells (since the solver assumed homogeneous BC's)
-    do n=1,nlevs
-       ! For electro explicit the inhomogeneous BCs are assumed to be constants
-       ! so this will do the right thing. 
-       ! We will overwrite the ghost values of Epot for electroneutral reservoirs shortly
-       call multifab_physbc(Epot(n),1,Epot_bc_comp,1,the_bc_tower%bc_tower_array(n), &
-                            dx_in=dx(n,:))
-       call multifab_fill_boundary(Epot(n))
-    end do
+    ! fill ghost cells for electric potential
+    if (electroneutral .and. &
+         ( any(bc_lo(1:dm) .eq. NO_SLIP_RESERVOIR) .or. &
+           any(bc_hi(1:dm) .eq. NO_SLIP_RESERVOIR) .or. &
+           any(bc_lo(1:dm) .eq. SLIP_RESERVOIR)    .or. &
+           any(bc_hi(1:dm) .eq. SLIP_RESERVOIR) ) ) then
 
-    ! he inhomogeneous BC for phi must be computed here for each face:
-    ! grad(phi) = -z^T*F_diffstoch/(z^T*A_Phi)
-    ! We only need this to fill in BCs for phi
-    if (.false. &
-         .and. electroneutral &
-         .and. (any(bc_lo(1:dm) .eq. NO_SLIP_RESERVOIR) .or. &
-                any(bc_hi(1:dm) .eq. NO_SLIP_RESERVOIR) .or. &
-                any(bc_lo(1:dm) .eq. SLIP_RESERVOIR) .or. &
-                any(bc_hi(1:dm) .eq. SLIP_RESERVOIR)) ) then
-          ! Fill ghost cells for phi to satisfy inhomogeneous BCs if needed
-
+       ! for electroneutral problems with reservoirs,
+       ! the inhomogeneous BC for phi must be computed here for each face:
+       ! grad(phi) = -z^T*F_diffstoch/(z^T*A_Phi)
+       ! We only need this to fill in BCs for phi
 
        ! combine F_diffstoch = F_d + F_s
        ! Recompute this so the value on the boundary is the correct one
@@ -418,12 +407,27 @@ contains
           end do
        end do
 
-       do n=1,nlevs ! fill ghost cells for phi instead of projecting fluxes
+       ! fill ghost cells for phi using
+       ! grad(phi) = -z^T*F_diffstoch/(z^T*A_Phi)
+       do n=1,nlevs
           call fill_phi_bc_eln_reservoir(Epot(n), diffstoch_mass_flux(n,:), &
                                         A_Phi(n,:), beta(n,:), &
                                         1,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
        end do
-          
+
+
+    else
+
+       ! for all other problems, use the Dirichlet or Neumann values supplied by
+       ! Epot_wall_bc_type and Epot_wall
+       ! note that for the inhomogeneous Neumann phi case, since the solver assumed 
+       ! homogeneous BC's, this routine will properly fill the ghost cells
+       do n=1,nlevs
+          call multifab_physbc(Epot(n),1,Epot_bc_comp,1,the_bc_tower%bc_tower_array(n), &
+                               dx_in=dx(n,:))
+          call multifab_fill_boundary(Epot(n))
+       end do
+
     end if
 
     ! compute the gradient of the electric potential
