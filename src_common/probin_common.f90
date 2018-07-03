@@ -221,6 +221,7 @@ module probin_common_module
 
   namelist /probin_common/ shift_cc_to_boundary ! use special routine to shift a cell-centered value to a physical boundary
                                                 ! face instead of using the physical boundary conditions
+                                                ! this is currently only used for electroconvection (see chargedFluid/doc/Applications)  
 
   !------------------------------------------------------------- 
 
