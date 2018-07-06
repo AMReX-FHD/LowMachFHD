@@ -74,7 +74,6 @@ contains
          zlo = lwb(znodalbox)
          zhi = upb(znodalbox)
 
-!    do i=1,nfabs(m1(1,1))
        m1xp => dataptr(m1(1,1), i)   ! for u
        m2xp => dataptr(m2(1,1), i)   ! for v
 
@@ -102,9 +101,7 @@ contains
     end do
     !$omp end parallel
 
-!    do comp=1,dm
-       call parallel_reduce(prod_val, inner_prod_proc, MPI_SUM)
-!    end do
+    call parallel_reduce(prod_val, inner_prod_proc, MPI_SUM)
 
     call multifab_destroy(temp_cc)
 
@@ -323,109 +320,32 @@ contains
     real(kind=dp_t), intent(inout) :: prod_val
 
     ! local
-    integer :: i,dm,nlevs,ng_m1,ng_m2
-    integer :: lo(mla%dim), hi(mla%dim)
-
-    real(kind=dp_t) :: inner_prod_proc, inner_prod_grid
-
-    real(kind=dp_t), pointer :: m1p(:,:,:,:)
-    real(kind=dp_t), pointer :: m2p(:,:,:,:)
-    
-    type(mfiter) :: mfi
-    type(box) :: tilebox
-    integer :: tlo(mla%dim), thi(mla%dim)
+    integer :: n,nlevs
 
     type(bl_prof_timer), save :: bpt
 
+    type(multifab) :: prod(mla%nlevel)
+
     call build(bpt,"cc_inner_prod")
 
-    inner_prod_proc = 0.d0
     nlevs = mla%nlevel
-    dm = mla%dim
 
-    ng_m1 = m1(1)%ng
-    ng_m2 = m2(1)%ng
-
-    if (nlevs .gt. 1) then
-       call bl_error('cc_inner_prod not written for multilevel yet')
-    end if
-
-    !$omp parallel private(mfi,i,tilebox,tlo,thi,m1p,m2p,lo,hi,inner_prod_grid) &
-    !$omp reduction(+:inner_prod_proc)
-
-    call mfiter_build(mfi, m1(1), tiling=.true.)
-
-    do while (more_tile(mfi))
-       i = get_fab_index(mfi)
-
-       tilebox = get_tilebox(mfi)
-       tlo = lwb(tilebox)
-       thi = upb(tilebox)
-!    do i=1,nfabs(m1(1))
-       m1p => dataptr(m1(1), i)   ! for u
-       m2p => dataptr(m2(1), i)   ! for v
-
-       lo = lwb(get_box(m1(1), i))
-       hi = upb(get_box(m1(1), i))
-       inner_prod_grid = 0.d0
-       select case (dm)
-       case (2)
-          call cc_inner_prod_2d(m1p(:,:,1,comp1),ng_m1,m2p(:,:,1,comp2),ng_m2, &
-                                lo, hi, inner_prod_grid,tlo,thi)
-       case (3)
-          call cc_inner_prod_3d(m1p(:,:,:,comp1),ng_m1,m2p(:,:,:,comp2),ng_m2, &
-                                lo, hi, inner_prod_grid,tlo,thi)
-       end select
-
-       inner_prod_proc = inner_prod_proc + inner_prod_grid
-
+    do n=1,nlevs
+       call multifab_build(prod(n),mla%la(n),1,0)
+       call multifab_copy_c(prod(n),1,m1(n),comp1,1,0)
+       call multifab_mult_mult_c(prod(n),1,m2(n),comp2,1,0)
     end do
-    !$omp end parallel
 
-    call parallel_reduce(prod_val, inner_prod_proc, MPI_SUM)
+    prod_val = multifab_sum_c(prod(1),1,1,all=.false.)
+
+    do n=1,nlevs
+       call multifab_destroy(prod(n))
+    end do
 
     call destroy(bpt)
 
   end subroutine cc_inner_prod
 
-  subroutine cc_inner_prod_2d(m1,ng_m1,m2,ng_m2,glo,ghi,inner_prod,tlo,thi)
-
-    integer        , intent(in   ) :: glo(:), ghi(:), ng_m1, ng_m2,tlo(:),thi(:)
-    real(kind=dp_t), intent(in   ) :: m1(glo(1)-ng_m1:,glo(2)-ng_m1:)
-    real(kind=dp_t), intent(in   ) :: m2(glo(1)-ng_m2:,glo(2)-ng_m2:)
-    real(kind=dp_t), intent(inout) :: inner_prod
-
-    ! local
-    integer :: i,j
-
-    do j=tlo(2),thi(2)
-       do i=tlo(1),thi(1)
-          inner_prod = inner_prod + m1(i,j)*m2(i,j)
-       end do
-    end do
-
-  end subroutine cc_inner_prod_2d
-
-  subroutine cc_inner_prod_3d(m1,ng_m1,m2,ng_m2,glo,ghi,inner_prod,tlo,thi)
-
-    integer        , intent(in   ) :: glo(:), ghi(:), ng_m1, ng_m2,tlo(:),thi(:)
-    real(kind=dp_t), intent(in   ) :: m1(glo(1)-ng_m1:,glo(2)-ng_m1:,glo(3)-ng_m1:)
-    real(kind=dp_t), intent(in   ) :: m2(glo(1)-ng_m2:,glo(2)-ng_m2:,glo(3)-ng_m2:)
-    real(kind=dp_t), intent(inout) :: inner_prod
-
-    ! local
-    integer :: i,j,k
-
-    do k=tlo(3),thi(3)
-       do j=tlo(2),thi(2)
-          do i=tlo(1),thi(1)
-             inner_prod = inner_prod + m1(i,j,k)*m2(i,j,k)
-          end do
-       end do
-    end do
-
-  end subroutine cc_inner_prod_3d
-  
   subroutine stag_l2_norm(mla, m, norm)
 
     type(ml_layout), intent(in   ) :: mla
