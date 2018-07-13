@@ -20,6 +20,7 @@ module probin_charged_module
   logical            :: electroneutral
   integer            :: zero_eps_on_wall_type
   integer            :: zero_charge_on_wall_type
+  real(kind=dp_t)    :: zero_eps_on_wall_left_end, zero_eps_on_wall_right_start
   integer            :: epot_mg_verbose
   real(kind=dp_t)    :: epot_mg_abs_tol, epot_mg_rel_tol
   integer            :: bc_function_type
@@ -56,6 +57,8 @@ module probin_charged_module
   namelist /probin_charged/ zero_charge_on_wall_type ! set sigma=0 on certain Neumann walls
                                                      ! if we want homogeneous Neumann bc's on 
                                                      ! phi for part of a Dirichlet wall
+  namelist /probin_charged/ zero_eps_on_wall_left_end   ! eg if set to 0.25, then eps will be set to 0 on the wall from 0*Lx --> 0.25*Lx
+  namelist /probin_charged/ zero_eps_on_wall_right_start     ! eg if set to 0.75, then eps will be set to 0 on the wall from 0.75*Lx --> 1.*Lx
   namelist /probin_charged/ epot_mg_verbose    ! verbosity for poisson solve
   namelist /probin_charged/ epot_mg_abs_tol    ! absolute tolerance for poisson solve
   namelist /probin_charged/ epot_mg_rel_tol    ! relative tolerance for poisson solve
@@ -107,6 +110,8 @@ contains
     electroneutral = .false.
     zero_eps_on_wall_type = 0
     zero_charge_on_wall_type = 0
+    zero_eps_on_wall_left_end = 0.25d0
+    zero_eps_on_wall_right_start = 0.75d0
  
     ! read from input file 
     need_inputs = .true.
