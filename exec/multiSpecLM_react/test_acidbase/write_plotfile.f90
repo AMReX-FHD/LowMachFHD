@@ -21,17 +21,19 @@ module write_plotfile_module
 
 contains
   
-  subroutine write_plotfile(mla,rho,rhotot,Temp,umac,umac_avg,pres,Epot,grad_Epot, &
-                            gradPhiApprox,istep,dx,time)
+  subroutine write_plotfile(mla,rho,rho_avg,rhotot,Temp,umac,umac_avg,pres,Epot,Epot_avg, &
+                            grad_Epot,gradPhiApprox,istep,dx,time)
 
     type(ml_layout),    intent(in)    :: mla
     type(multifab),     intent(inout) :: rho(:)
+    type(multifab),     intent(inout) :: rho_avg(:)
     type(multifab),     intent(in)    :: rhotot(:)
     type(multifab),     intent(in)    :: Temp(:)
     type(multifab),     intent(in)    :: umac(:,:)
     type(multifab),     intent(in)    :: umac_avg(:,:)
     type(multifab),     intent(in)    :: pres(:)
     type(multifab),     intent(in)    :: Epot(:)
+    type(multifab),     intent(in)    :: Epot_avg(:)
     type(multifab),     intent(in)    :: grad_Epot(:,:)
     type(multifab),     intent(in)    :: gradPhiApprox(:,:)
     integer,            intent(in)    :: istep
