@@ -485,7 +485,7 @@ contains
        ! tanh smoothed in y, sinusoidal pertrubation in x
        do i=lo(1),hi(1)
           x = prob_lo(1) + dx(1)*(dble(i)+0.5d0)
-          sinx = 0.1*(prob_hi(2)-prob_lo(2)) * sin(4.d0*M_PI*x/(prob_hi(1)-prob_lo(1)))
+          sinx = 0.1*(prob_hi(2)-prob_lo(2)) * sin(2.d0*M_PI*x/(prob_hi(1)-prob_lo(1)))
           do j=lo(2),hi(2)
              y = prob_lo(2) + dx(2)*(dble(j)+0.5d0) - y1 + sinx
              do n=1,nspecies
