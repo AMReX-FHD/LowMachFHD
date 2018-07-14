@@ -25,8 +25,8 @@ module probin_common_module
   real(dp_t),save :: wallspeed_lo(MAX_SPACEDIM-1,MAX_SPACEDIM)
   real(dp_t),save :: wallspeed_hi(MAX_SPACEDIM-1,MAX_SPACEDIM)
   integer,save    :: hydro_grid_int,project_dir,max_grid_projection(2)
-  integer,save    :: stats_int,n_steps_save_stats,n_steps_skip,histogram_unit
-  logical,save    :: analyze_conserved,center_snapshots
+  integer,save    :: stats_int,n_steps_save_stats,n_steps_skip,histogram_unit,reset_tavg_step
+  logical,save    :: analyze_conserved,center_snapshots,reset_tavg_vals
   real(dp_t),save :: variance_coef_mom,variance_coef_mass,initial_variance_mom,initial_variance_mass
   real(dp_t),save :: k_B,Runiv,visc_coef
   integer,save    :: stoch_stress_form,filtering_width,max_step
@@ -207,6 +207,8 @@ module probin_common_module
                                                ! standard deviation over reduced dimensions
   namelist /probin_common/ n_steps_save_stats  ! How often to dump HydroGrid output files
   namelist /probin_common/ n_steps_skip        ! How many steps to skip
+  namelist /probin_common/ reset_tavg_vals     ! Boolean to indicate if we want to reset the time averaged vals or not
+  namelist /probin_common/ reset_tavg_step     ! If reset_tavg_vals = T, at what timestep do we reset
   namelist /probin_common/ analyze_conserved   ! Should we use conserved variables for the analysis
                                                ! (does not work well)
   namelist /probin_common/ center_snapshots    ! Should we use cell-centered momenta for the analysis
@@ -328,6 +330,8 @@ contains
     stats_int = -1
     n_steps_save_stats = -1
     n_steps_skip = 0
+    reset_tavg_vals = .false.
+    reset_tavg_step = 0 
     analyze_conserved = .false.
     center_snapshots = .false.
     histogram_unit=-1

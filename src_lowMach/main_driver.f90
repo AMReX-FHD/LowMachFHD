@@ -43,7 +43,7 @@ subroutine main_driver()
                                   algorithm_type, variance_coef_mom, initial_variance_mom, &
                                   variance_coef_mass, barodiffusion_type, use_bl_rng, &
                                   density_weights, rhobar, rho0, analyze_conserved, rho_eos_form, &
-                                  molmass, k_B
+                                  molmass, k_B, reset_tavg_vals, reset_tavg_step
 
   use probin_multispecies_module, only: Dbar, start_time, probin_multispecies_init, c_init, T_init, c_bc
 
@@ -927,30 +927,70 @@ end if
         end if
      end if
 
+        
+
      ! for writing time-averaged umac, rho, and Epot to plotfile
      if (istep .gt. n_steps_skip) then
-        do n=1,nlevs
-
-           ! first do rho
-           call multifab_plus_plus_c(rho_sum(n),1,rho_new(n),1,nspecies,0)
-           call multifab_copy_c(rho_avg(n),1,rho_sum(n),1,nspecies,0)
-           call multifab_mult_mult_s_c(rho_avg(n),1,(1.d0/(istep-n_steps_skip)),nspecies,0)
-
-           ! next do Epot
-           if (use_charged_fluid) then
-              call multifab_plus_plus_c(Epot_sum(n),1,Epot(n),1,1,0)
-              call multifab_copy_c(Epot_avg(n),1,Epot_sum(n),1,1,0)
-              call multifab_mult_mult_s_c(Epot_avg(n),1,(1.d0/(istep-n_steps_skip)),1,0)
+        ! Note: reset time avg quantities is only possible if reset_tavg_step >= n_steps_skip
+        ! Also note: if reset is turned ON, and istep is between n_steps_skip and reset_tavg_step,
+        !            then the code below will not track the average (since it will get reset anyways)
+        !
+        ! TL;DR: don't turn reset_tavg_vals ON unless you want to use it. 
+        if (reset_tavg_vals .and. (reset_tavg_step.ge.n_steps_skip)) then
+           if (istep.eq.reset_tavg_step) then 
+              do n=1,nlevs
+                 ! reset rho_sum, epot_sum, and umac_sum to be 0
+                 call setval(rho_sum(n),0.d0)
+                 call setval(Epot_sum(n),0.d0, all=.true.) 
+                 do i=1,dm
+                    call setval(umac_sum(n,i),0.d0) 
+                 end do 
+              end do 
+           else if (istep .gt. reset_tavg_step) then
+              ! do the normal averaging, starting from the reset step
+              do n=1,nlevs
+                 ! first do rho
+                 call multifab_plus_plus_c(rho_sum(n),1,rho_new(n),1,nspecies,0)
+                 call multifab_copy_c(rho_avg(n),1,rho_sum(n),1,nspecies,0)
+                 call multifab_mult_mult_s_c(rho_avg(n),1,(1.d0/(istep-reset_tavg_step)),nspecies,0)
+ 
+                 ! next do Epot
+                 if (use_charged_fluid) then
+                    call multifab_plus_plus_c(Epot_sum(n),1,Epot(n),1,1,0)
+                    call multifab_copy_c(Epot_avg(n),1,Epot_sum(n),1,1,0)
+                    call multifab_mult_mult_s_c(Epot_avg(n),1,(1.d0/(istep-reset_tavg_step)),1,0)
+                 end if
+         
+                 ! lastly do umac
+                 do i=1,dm
+                    call multifab_plus_plus_c(umac_sum(n,i),1,umac(n,i),1,1,0)
+                    call multifab_copy_c(umac_avg(n,i),1,umac_sum(n,i),1,1,0)
+                    call multifab_mult_mult_s_c(umac_avg(n,i),1,(1.d0/(istep-reset_tavg_step)),1,0)
+                 end do
+              end do
            end if
-      
-           ! lastly do umac
-           do i=1,dm
-              call multifab_plus_plus_c(umac_sum(n,i),1,umac(n,i),1,1,0)
-              call multifab_copy_c(umac_avg(n,i),1,umac_sum(n,i),1,1,0)
-              call multifab_mult_mult_s_c(umac_avg(n,i),1,(1.d0/(istep-n_steps_skip)),1,0)
+        else  
+           do n=1,nlevs
+              ! first do rho
+              call multifab_plus_plus_c(rho_sum(n),1,rho_new(n),1,nspecies,0)
+              call multifab_copy_c(rho_avg(n),1,rho_sum(n),1,nspecies,0)
+              call multifab_mult_mult_s_c(rho_avg(n),1,(1.d0/(istep-n_steps_skip)),nspecies,0)
 
+              ! next do Epot
+              if (use_charged_fluid) then
+                 call multifab_plus_plus_c(Epot_sum(n),1,Epot(n),1,1,0)
+                 call multifab_copy_c(Epot_avg(n),1,Epot_sum(n),1,1,0)
+                 call multifab_mult_mult_s_c(Epot_avg(n),1,(1.d0/(istep-n_steps_skip)),1,0)
+              end if
+      
+              ! lastly do umac
+              do i=1,dm
+                 call multifab_plus_plus_c(umac_sum(n,i),1,umac(n,i),1,1,0)
+                 call multifab_copy_c(umac_avg(n,i),1,umac_sum(n,i),1,1,0)
+                 call multifab_mult_mult_s_c(umac_avg(n,i),1,(1.d0/(istep-n_steps_skip)),1,0)
+              end do
            end do
-        end do
+        end if
      end if
 
      time = time + dt

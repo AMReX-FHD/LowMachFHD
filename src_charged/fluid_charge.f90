@@ -14,7 +14,8 @@ module fluid_charge_module
   use probin_common_module, only: molmass, k_B, rhobar, nspecies, prob_lo, prob_hi
   use probin_charged_module, only: charge_per_mass, dpdt_factor, &
                                    dielectric_const, dielectric_type, &
-                                   E_ext_type, E_ext_value, zero_eps_on_wall_type
+                                   E_ext_type, E_ext_value, zero_eps_on_wall_type, &
+                                   zero_eps_on_wall_left_end, zero_eps_on_wall_right_start
 
   implicit none
 
@@ -1034,7 +1035,7 @@ contains
           do i=lo(1),hi(1)
              x = prob_lo(1) + dx(1)*(i+0.5d0)
 
-             if (y .eq. 0.d0 .and. (x .le. 0.25d0*Lx .or. x .ge. 0.75d0*Lx) ) then
+             if (y .eq. 0.d0 .and. (x .le. zero_eps_on_wall_left_end*Lx .or. x .ge. zero_eps_on_wall_right_start*Lx) ) then
                 betay(i,j) = 0.d0
              end if
 
