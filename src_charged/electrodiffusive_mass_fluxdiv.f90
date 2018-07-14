@@ -279,10 +279,13 @@ contains
 
        ! compute RHS = div (z^T (F_d + F_s))
        ! first, set rhsvec = div (F_d + F_s)
-       do n=1,nlevs
-          call compute_div(mla,diffstoch_mass_flux,rhsvec,dx,1,1,nspecies, &
-                           increment_in=.false.)
-       end do
+       call compute_div(mla,diffstoch_mass_flux,rhsvec,dx,1,1,nspecies,increment_in=.false.)
+
+       ! to handle slow drift in charge density
+       ! rhsvec -= rho/dt
+!       do n=1,nlevs
+!          call multifab_saxpy_3(rhsvec(n),-1.d0/dt,rho(n))
+!       end do       
 
        !!!!!!!!!!!!!!!!!!!!!!
        ! change solver tolerance based on scales of the problem
@@ -290,11 +293,12 @@ contains
        ! dot abs(z) with (div F)
        call dot_with_z(mla,rhsvec,rhs,abs_z=.true.)
        ! compute norm
-       norm = multifab_norm_inf(rhsvec(1))
+       norm = multifab_norm_inf(rhs(1))
 
        ! set absolute tolerance to be the norm*epot_mg_rel_tol
        epot_mg_abs_tol_temp = epot_mg_abs_tol
        epot_mg_abs_tol = norm*epot_mg_rel_tol
+
        !!!!!!!!!!!!!!!!!!!!!!
 
        ! compute rhs for Poisson zolve, z^T (div F)
