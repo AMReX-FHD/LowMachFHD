@@ -281,11 +281,19 @@ contains
        ! first, set rhsvec = div (F_d + F_s)
        call compute_div(mla,diffstoch_mass_flux,rhsvec,dx,1,1,nspecies,increment_in=.false.)
 
-       ! to handle slow drift in charge density
-       ! rhsvec -= rho/dt
-!       do n=1,nlevs
-!          call multifab_saxpy_3(rhsvec(n),-1.d0/dt,rho(n))
-!       end do       
+       ! AJN HACK
+       ! increment rhsvec by rho; we will dot with z below
+       do n=1,nlevs
+
+          ! OPTION 1: no correction
+
+          ! OPTION 2: add (rho w) / dt to RHS (dotted with z below)
+          !call multifab_saxpy_3(rhsvec(n),1.d0/dt,rho(n))  ! crashes
+
+          ! OPTION 3: add (rho w) to RHS (dotted with z below)
+          !call multifab_saxpy_3(rhsvec(n),1.d0,rho(n))
+
+       end do
 
        !!!!!!!!!!!!!!!!!!!!!!
        ! change solver tolerance based on scales of the problem
@@ -297,12 +305,18 @@ contains
 
        ! set absolute tolerance to be the norm*epot_mg_rel_tol
        epot_mg_abs_tol_temp = epot_mg_abs_tol
-       epot_mg_abs_tol = norm*epot_mg_rel_tol
+       ! AJN HACK use absolute tolerance from inputs file so the Poisson solve becomes active
+!       epot_mg_abs_tol = norm*epot_mg_rel_tol
 
        !!!!!!!!!!!!!!!!!!!!!!
 
        ! compute rhs for Poisson zolve, z^T (div F)
        call dot_with_z(mla,rhsvec,rhs)
+
+       ! AJN HACK
+       ! subtract off average of rhs to make system solvable
+       sum = multifab_sum_c(rhs(1),1,1) / multifab_volume(rhs(1))
+       call multifab_sub_sub_s_c(rhs(1),1,sum,1,0)
 
     else
        
