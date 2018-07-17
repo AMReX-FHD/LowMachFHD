@@ -13,7 +13,7 @@ module init_lowmach_module
   use bl_rng_module
   use probin_common_module, only: prob_lo, prob_hi, prob_type, k_B, grav, &
                                   molmass, rhobar, rho0, smoothing_width, u_init, n_cells, &
-                                  use_bl_rng, nspecies, algorithm_type, initial_variance_mass
+                                  use_bl_rng, nspecies, algorithm_type, initial_variance_mass, n_cells
   use probin_multispecies_module, only: alpha1, beta, delta, sigma, Dbar, Dtherm, &
                                         c_init, T_init, temp_type, sigma, is_ideal_mixture
   use probin_charged_module, only: charge_per_mass, use_charged_fluid, electroneutral, epot_mg_rel_tol
@@ -128,7 +128,9 @@ module init_lowmach_module
 
   !=========================================================
   ! case 16:
-  ! Same as case 15 but now the central stripe is 1/3 of the domain
+  ! Concentrations and streamwise vel. u only depend on wall normal variable, ie the fields are homogeneous in the 
+  ! x and z directions. The values for the fields are read in from .txt files. Also, v = w = 0.
+  ! Note that currently only nspecies=3 is supported. 
 
 contains
 
@@ -148,12 +150,18 @@ contains
  
     ! local variables
     integer                        :: lo(mla%dim), hi(mla%dim)
-    integer                        :: dm, ng_c, ng_u, ng_r, i, n, nlevs
+    integer                        :: dm, ng_c, ng_u, ng_r, i, n, nlevs, j
     real(kind=dp_t), pointer       :: dp(:,:,:,:)   ! pointer for rho (last dim:nspecies)   
     real(kind=dp_t), pointer       :: up(:,:,:,:)   ! pointers for mac velocities
     real(kind=dp_t), pointer       :: vp(:,:,:,:)
     real(kind=dp_t), pointer       :: wp(:,:,:,:)
     real(kind=dp_t), pointer       :: rp(:,:,:,:)
+
+    ! These are only used/initialized if prob_type = 16...
+    real(kind=dp_t)   :: c1_1d_arr(n_cells(2)) ! these arrays will contain the values read in from 
+    real(kind=dp_t)   :: c2_1d_arr(n_cells(2)) ! ci_1d_vals.txt/u_1d_vals.txt
+    real(kind=dp_t)   :: c3_1d_arr(n_cells(2))
+    real(kind=dp_t)   :: u_1d_arr(n_cells(2))  ! Note: only nspecies=3 is currently supported
 
     type(multifab) :: conc(mla%dim)
 
@@ -185,6 +193,25 @@ contains
     delta  = 0.5d0 
     sigma  = (prob_hi(1)-prob_lo(1))/10.0d0  ! variance of gaussian distribution
 
+    ! if prob_type = 16 and dm = 3, then we should read in the 1d values of 
+    ! c1,c2,c3,u
+    if (prob_type.eq.16 .and. dm.eq.3) then 
+       if (nspecies.ne.3) then 
+          call bl_error("Only nspecies = 3 is currently supported for prob_type 16")
+       endif 
+       open(unit=34,file="c1_1d_vals.txt")
+       open(unit=35,file="c2_1d_vals.txt")
+       open(unit=36,file="c3_1d_vals.txt")
+       open(unit=37,file="u_1d_vals.txt")
+       do j=1,n_cells(2)
+          read(34,*) c1_1d_arr(j)
+          read(35,*) c2_1d_arr(j)
+          read(36,*) c3_1d_arr(j)
+          read(37,*) u_1d_arr(j)
+       end do 
+    end if 
+    
+
     ! looping over boxes 
     do n=1,nlevs
        do i=1,nfabs(rho(n))
@@ -203,7 +230,8 @@ contains
              wp => dataptr(umac(n,3),i)
              call init_rho_and_umac_3d(dp(:,:,:,:),ng_c,rp(:,:,:,:),ng_r, &
                                        up(:,:,:,1),vp(:,:,:,1),wp(:,:,:,1),ng_u, &
-                                       lo,hi,dx(n,:),time)
+                                       lo,hi,dx(n,:),time,c1_1d_arr,c2_1d_arr, &
+                                       c3_1d_arr,u_1d_arr)
           end select
        end do
     end do
@@ -815,7 +843,7 @@ contains
     
   end subroutine init_rho_and_umac_2d
 
-  subroutine init_rho_and_umac_3d(c,ng_c,rho,ng_r,u,v,w,ng_u,lo,hi,dx,time)
+  subroutine init_rho_and_umac_3d(c,ng_c,rho,ng_r,u,v,w,ng_u,lo,hi,dx,time,c1_file,c2_file,c3_file,u_file)
     
     integer          :: lo(3), hi(3), ng_c, ng_u, ng_r
     real(kind=dp_t)  ::   c(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:,:)
@@ -825,6 +853,13 @@ contains
     real(kind=dp_t)  ::   w(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
     real(kind=dp_t)  :: dx(:)
     real(kind=dp_t)  :: time 
+
+    ! These are only used if prob_type = 16...
+    ! indexing chosen to match c(...) (without ghost cells)
+    real(kind=dp_t)  :: c1_file(lo(2):lo(2)+n_cells(2))
+    real(kind=dp_t)  :: c2_file(lo(2):lo(2)+n_cells(2))
+    real(kind=dp_t)  :: c3_file(lo(2):lo(2)+n_cells(2))
+    real(kind=dp_t)  :: u_file(lo(2):lo(2)+n_cells(2))
  
     ! local variables
     integer          :: i,j,k,n
@@ -1192,6 +1227,25 @@ contains
              enddo
           enddo
        enddo
+
+    case (16) !SC
+    
+    !=============================================================
+    ! Here we restart from a (statistically) 1d state where
+    ! the values rho_i and u only depend on the wall normal 
+    ! coordinate. 
+    !=============================================================
+   
+    ! flow only nonzero in first component
+    v = 0.d0 
+    w = 0.d0 
+    do j =lo(2), hi(2)
+       c(:,j,:,1) = c1_file(j)
+       c(:,j,:,2) = c2_file(j) 
+       c(:,j,:,3) = c3_file(j)
+       u(:,j,:)   = u_file(j) 
+    end do 
+
 
     case default
 
