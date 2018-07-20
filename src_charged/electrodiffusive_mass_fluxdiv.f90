@@ -15,7 +15,7 @@ module electrodiffusive_mass_fluxdiv_module
   use probin_common_module, only: nspecies, variance_coef_mass, shift_cc_to_boundary, bc_lo, bc_hi
   use probin_charged_module, only: Epot_wall_bc_type, Epot_wall, E_ext_type, electroneutral, &
                                    zero_eps_on_wall_type, epot_mg_verbose, epot_mg_abs_tol, &
-                                   epot_mg_rel_tol, charge_per_mass
+                                   epot_mg_rel_tol, charge_per_mass, relxn_param_charge
   use probin_multispecies_module, only: is_nonisothermal
   
   use fabio_module
@@ -288,10 +288,10 @@ contains
           ! OPTION 1: no correction
 
           ! OPTION 2: add (rho w) / dt to RHS (dotted with z below)
-          !call multifab_saxpy_3(rhsvec(n),1.d0/dt,rho(n))  ! crashes
+          call multifab_saxpy_3(rhsvec(n),relxn_param_charge/dt,rho(n))  ! crashes
 
           ! OPTION 3: add (rho w) to RHS (dotted with z below)
-          !call multifab_saxpy_3(rhsvec(n),1.d0,rho(n))
+          !call multifab_saxpy_3(rhsvec(n),relxn_param_charge,rho(n))
 
        end do
 
@@ -304,9 +304,11 @@ contains
        norm = multifab_norm_inf(rhs(1))
 
        ! set absolute tolerance to be the norm*epot_mg_rel_tol
-       epot_mg_abs_tol_temp = epot_mg_abs_tol
        ! AJN HACK use absolute tolerance from inputs file so the Poisson solve becomes active
+!       epot_mg_abs_tol_temp = epot_mg_abs_tol
 !       epot_mg_abs_tol = norm*epot_mg_rel_tol
+       epot_mg_abs_tol_temp = epot_mg_rel_tol
+       epot_mg_rel_tol = 0 ! HACK Force the use of absolute tolerance
 
        !!!!!!!!!!!!!!!!!!!!!!
 
@@ -392,7 +394,8 @@ contains
 
     ! restore original solver tolerance
     if (electroneutral) then
-       epot_mg_abs_tol = epot_mg_abs_tol_temp
+       !epot_mg_abs_tol = epot_mg_abs_tol_temp
+       epot_mg_rel_tol = epot_mg_abs_tol_temp ! HACK to silence warning about relative tolerance
     end if
 
     ! for periodic problems subtract off the average of Epot

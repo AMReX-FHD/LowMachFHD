@@ -14,7 +14,7 @@ module probin_charged_module
   real(kind=dp_t)    :: Epot_wall(1:2,MAX_SPACEDIM)
   real(kind=dp_t)    :: theta_pot
   integer            :: num_pot_iters
-  real(kind=dp_t)    :: dpdt_factor
+  real(kind=dp_t)    :: dpdt_factor, relxn_param_charge
   integer            :: E_ext_type
   real(kind=dp_t)    :: E_ext_value(1:3)
   logical            :: electroneutral
@@ -46,7 +46,7 @@ module probin_charged_module
   namelist /probin_charged/ theta_pot          ! for implicit algorithm_type=3, controls
                                                ! temporal discretization for potential term
   namelist /probin_charged/ num_pot_iters
-  namelist /probin_charged/ dpdt_factor
+  namelist /probin_charged/ dpdt_factor, relxn_param_charge
   namelist /probin_charged/ E_ext_type         ! external electric field
   namelist /probin_charged/ E_ext_value
 
