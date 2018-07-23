@@ -153,7 +153,7 @@ contains
 
     real(kind=dp_t) :: Epot_wall_save(2,mla%dim)
 
-    real(kind=dp_t) :: norm, epot_mg_abs_tol_temp
+    real(kind=dp_t) :: norm, epot_mg_tol_temp
 
     type(bl_prof_timer), save :: bpt
     
@@ -281,17 +281,14 @@ contains
        ! first, set rhsvec = div (F_d + F_s)
        call compute_div(mla,diffstoch_mass_flux,rhsvec,dx,1,1,nspecies,increment_in=.false.)
 
-       ! AJN HACK
+       ! In order to prevent slow charge buildup, we include the charge density in the rhs
+       ! We allow for a relaxation factor here, though the default value of 1 is fine
        ! increment rhsvec by rho; we will dot with z below
+       write(*,*) "Relaxing charge with relxn_param_charge=", relxn_param_charge
        do n=1,nlevs
 
-          ! OPTION 1: no correction
-
-          ! OPTION 2: add (rho w) / dt to RHS (dotted with z below)
+           ! OPTION 2: add (rho w) / dt to RHS (dotted with z below)
           call multifab_saxpy_3(rhsvec(n),relxn_param_charge/dt,rho(n))  ! crashes
-
-          ! OPTION 3: add (rho w) to RHS (dotted with z below)
-          !call multifab_saxpy_3(rhsvec(n),relxn_param_charge,rho(n))
 
        end do
 
@@ -304,18 +301,18 @@ contains
        norm = multifab_norm_inf(rhs(1))
 
        ! set absolute tolerance to be the norm*epot_mg_rel_tol
-       ! AJN HACK use absolute tolerance from inputs file so the Poisson solve becomes active
-!       epot_mg_abs_tol_temp = epot_mg_abs_tol
-!       epot_mg_abs_tol = norm*epot_mg_rel_tol
-       epot_mg_abs_tol_temp = epot_mg_rel_tol
-       epot_mg_rel_tol = 0 ! HACK Force the use of absolute tolerance
+       epot_mg_tol_temp = epot_mg_abs_tol
+       epot_mg_abs_tol = norm*epot_mg_rel_tol
+       ! AJN HACK: use absolute tolerance from inputs file so the Poisson solve always does a few iterations
+       !epot_mg_tol_temp = epot_mg_rel_tol ! Save this value
+       !epot_mg_rel_tol = 0 ! force the use of absolute tolerance
 
        !!!!!!!!!!!!!!!!!!!!!!
 
        ! compute rhs for Poisson zolve, z^T (div F)
        call dot_with_z(mla,rhsvec,rhs)
 
-       ! AJN HACK
+       ! When including charge on the rhs, the sum may not be zero anymore though it should be very close to zero
        ! subtract off average of rhs to make system solvable
        sum = multifab_sum_c(rhs(1),1,1) / multifab_volume(rhs(1))
        call multifab_sub_sub_s_c(rhs(1),1,sum,1,0)
@@ -394,8 +391,8 @@ contains
 
     ! restore original solver tolerance
     if (electroneutral) then
-       !epot_mg_abs_tol = epot_mg_abs_tol_temp
-       epot_mg_rel_tol = epot_mg_abs_tol_temp ! HACK to silence warning about relative tolerance
+       epot_mg_abs_tol = epot_mg_tol_temp
+       !epot_mg_rel_tol = epot_mg_tol_temp ! Restore value from HACK
     end if
 
     ! for periodic problems subtract off the average of Epot

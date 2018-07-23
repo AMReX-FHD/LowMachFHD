@@ -14,7 +14,8 @@ module probin_charged_module
   real(kind=dp_t)    :: Epot_wall(1:2,MAX_SPACEDIM)
   real(kind=dp_t)    :: theta_pot
   integer            :: num_pot_iters
-  real(kind=dp_t)    :: dpdt_factor, relxn_param_charge
+  real(kind=dp_t)    :: dpdt_factor
+  real(kind=dp_t)    :: relxn_param_charge = 1.0_dp_t
   integer            :: E_ext_type
   real(kind=dp_t)    :: E_ext_value(1:3)
   logical            :: electroneutral
@@ -46,11 +47,12 @@ module probin_charged_module
   namelist /probin_charged/ theta_pot          ! for implicit algorithm_type=3, controls
                                                ! temporal discretization for potential term
   namelist /probin_charged/ num_pot_iters
-  namelist /probin_charged/ dpdt_factor, relxn_param_charge
+  namelist /probin_charged/ dpdt_factor
   namelist /probin_charged/ E_ext_type         ! external electric field
   namelist /probin_charged/ E_ext_value
 
   namelist /probin_charged/ electroneutral     ! use electroneutral diffusion fluxes
+  namelist /probin_charged/ relxn_param_charge ! Used to prevent slow buildup of charge for electroneutral, keep at 1.0
   namelist /probin_charged/ zero_eps_on_wall_type ! set eps=0 on certain Dirichlet walls
                                                   ! if we want homogeneous Neumann bc's on 
                                                   ! phi for part of a Dirichlet wall
@@ -108,6 +110,7 @@ contains
     epot_mg_rel_tol        = 1.d-10
 
     electroneutral = .false.
+    relxn_param_charge = 1.0d0
     zero_eps_on_wall_type = 0
     zero_charge_on_wall_type = 0
     zero_eps_on_wall_left_end = 0.25d0
