@@ -174,7 +174,7 @@
   correct_flux = T                      ! Manually ensure mass is conserved to roundoff 
   print_error_norms = T
   chi_iterations = 10                   ! number of iterations used in Dbar2chi_iterative
-  plot_stag = F                         ! plot staggered velocities in separate plotfile
+  plot_stag = T                         ! plot staggered velocities in separate plotfile
   
   ! Physical properties:
   !----------------------
