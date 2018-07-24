@@ -153,7 +153,7 @@ contains
 
     real(kind=dp_t) :: Epot_wall_save(2,mla%dim)
 
-    real(kind=dp_t) :: norm, epot_mg_tol_temp
+    real(kind=dp_t) :: norm, epot_mg_abs_tol_temp
 
     type(bl_prof_timer), save :: bpt
     
@@ -284,7 +284,6 @@ contains
        ! In order to prevent slow charge buildup, we include the charge density in the rhs
        ! We allow for a relaxation factor here, though the default value of 1 is fine
        ! increment rhsvec by rho; we will dot with z below
-       write(*,*) "Relaxing charge with relxn_param_charge=", relxn_param_charge
        do n=1,nlevs
 
            ! OPTION 2: add (rho w) / dt to RHS (dotted with z below)
@@ -301,12 +300,8 @@ contains
        norm = multifab_norm_inf(rhs(1))
 
        ! set absolute tolerance to be the norm*epot_mg_rel_tol
-       epot_mg_tol_temp = epot_mg_abs_tol
+       epot_mg_abs_tol_temp = epot_mg_abs_tol
        epot_mg_abs_tol = norm*epot_mg_rel_tol
-       ! AJN HACK: use absolute tolerance from inputs file so the Poisson solve always does a few iterations
-       !epot_mg_tol_temp = epot_mg_rel_tol ! Save this value
-       !epot_mg_rel_tol = 0 ! force the use of absolute tolerance
-
        !!!!!!!!!!!!!!!!!!!!!!
 
        ! compute rhs for Poisson zolve, z^T (div F)
@@ -391,8 +386,7 @@ contains
 
     ! restore original solver tolerance
     if (electroneutral) then
-       epot_mg_abs_tol = epot_mg_tol_temp
-       !epot_mg_rel_tol = epot_mg_tol_temp ! Restore value from HACK
+       epot_mg_abs_tol = epot_mg_abs_tol_temp
     end if
 
     ! for periodic problems subtract off the average of Epot
