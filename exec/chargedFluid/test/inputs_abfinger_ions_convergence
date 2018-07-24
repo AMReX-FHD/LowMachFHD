@@ -1,4 +1,7 @@
 &probin_common
+
+! convergence numbers for c1-c5, vx, vy using these parameters
+! 1.8152701262 1.8699884358 1.8430045371 1.9057663203 1.9642424656 1.911065161 2.0171371476
  
   smoothing_width = 2.d0                ! scale factor for smoothing initial profile
   n_cells(1:3) = 128 128 1              ! number of cells in domain
