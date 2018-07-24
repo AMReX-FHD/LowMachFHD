@@ -259,7 +259,7 @@
 
   epot_mg_verbose = 0
   !epot_mg_abs_tol = 0 ! Ignored because we overwrite it based on rel_tol
-  epot_mg_rel_tol = 1.0d-9
+  epot_mg_rel_tol = 1.0d-12
 
 /
 
