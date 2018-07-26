@@ -9,7 +9,7 @@ module write_plotfile_module
   use eos_check_module
   use probin_multispecies_module, only: plot_stag, is_nonisothermal
   use probin_common_module, only: prob_lo, prob_hi, nspecies, plot_base_name, &
-                                  algorithm_type, rho0, plot_umac_tavg, plot_Epot_tavg, & 
+                                  algorithm_type, rho0, plot_umac_tavg, plot_Epot_tavg, &
                                   plot_rho_tavg, plot_avg_gradPhiApprox, plot_shifted_vel
   use probin_charged_module, only: use_charged_fluid
 
@@ -18,18 +18,18 @@ module write_plotfile_module
 contains
   
   subroutine write_plotfile(mla,rho,rho_avg,rhotot,Temp,umac,umac_avg,pres,Epot,Epot_avg, &  
-                              grad_Epot, gradPhiApprox,istep,dx,time)
+                              grad_Epot,gradPhiApprox,istep,dx,time)
 
     type(ml_layout),    intent(in)    :: mla
     type(multifab),     intent(inout) :: rho(:)
-    type(multifab),     intent(inout) :: rho_avg(:) 
+    type(multifab),     intent(inout) :: rho_avg(:)
     type(multifab),     intent(in)    :: rhotot(:)
     type(multifab),     intent(in)    :: Temp(:)
     type(multifab),     intent(in)    :: umac(:,:)
     type(multifab),     intent(in)    :: umac_avg(:,:)
     type(multifab),     intent(in)    :: pres(:)
     type(multifab),     intent(in)    :: Epot(:)
-    type(multifab),     intent(in)    :: Epot_avg(:) 
+    type(multifab),     intent(in)    :: Epot_avg(:)
     type(multifab),     intent(in)    :: grad_Epot(:,:)
     type(multifab),     intent(in)    :: gradPhiApprox(:,:)
     integer,            intent(in)    :: istep
@@ -84,13 +84,15 @@ contains
     if(plot_shifted_vel) then
        nvarsCC = nvarsCC + dm
     end if
-    if (plot_rho_tavg) then 
-       nvarsCC = nvarsCC + 2*dm
+    if (plot_rho_tavg) then  ! time-averaged rho
+       nvarsCC = nvarsCC + nspecies
     end if 
-    if (plot_umac_tavg) then 
-       nvarsCC = nvarsCC + nspecies 
-    end if 
-    !nvarsCC = 3*nspecies + 4*dm + 3
+    if (plot_umac_tavg) then ! time-averaged umac (cc and shifted)
+       nvarsCC = nvarsCC + dm
+       if(plot_shifted_vel) then
+          nvarsCC = nvarsCC + dm
+       end if
+    end if
 
     if (use_charged_fluid) then
        ! charge                   :1
@@ -171,13 +173,15 @@ contains
           counter = counter + 1
        end if
 
-       plot_names(counter) = "tavg_shifted_velx"
-       counter = counter + 1
-       plot_names(counter) = "tavg_shifted_vely"
-       counter = counter + 1
-       if (dm > 2) then
-          plot_names(counter) = "tavg_shifted_velz"
+       if (plot_shifted_vel) then
+          plot_names(counter) = "tavg_shifted_velx"
           counter = counter + 1
+          plot_names(counter) = "tavg_shifted_vely"
+          counter = counter + 1
+          if (dm > 2) then
+             plot_names(counter) = "tavg_shifted_velz"
+             counter = counter + 1
+          end if
        end if
     end if
 
@@ -331,11 +335,12 @@ contains
           call average_face_to_cc(mla,umac_avg(:,i),1,plotdata,counter,1)
           counter = counter + 1
        end do
-
-       do i=1,dm
-          call shift_face_to_cc(mla,umac_avg(:,i),1,plotdata,counter,1)
-          counter = counter + 1
-       end do
+       if (plot_shifted_vel) then
+          do i=1,dm
+             call shift_face_to_cc(mla,umac_avg(:,i),1,plotdata,counter,1)
+             counter = counter + 1
+          end do
+       end if
     end if
 
     ! pressure
