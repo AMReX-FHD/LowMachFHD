@@ -12,28 +12,29 @@ module write_plotfile_module
   use convert_rhoc_to_c_module
   use fluid_charge_module
   use eos_check_module
-  use probin_multispecies_module, only: plot_stag
+  use probin_multispecies_module, only: plot_stag, is_nonisothermal
   use probin_common_module, only: prob_lo, prob_hi, nspecies, plot_base_name, &
-                                  algorithm_type, rho0
+                                  algorithm_type, rho0, plot_umac_tavg, plot_Epot_tavg, & 
+                                  plot_rho_tavg, plot_avg_gradPhiApprox, plot_shifted_vel
   use probin_charged_module, only: use_charged_fluid
 
   implicit none
 
 contains
   
-  subroutine write_plotfile(mla,rho,rho_avg,rhotot,Temp,umac,umac_avg,pres,Epot,Epot_avg, &
-                            grad_Epot,gradPhiApprox,istep,dx,time)
+  subroutine write_plotfile(mla,rho,rho_avg,rhotot,Temp,umac,umac_avg,pres,Epot,Epot_avg, &  
+                              grad_Epot, gradPhiApprox,istep,dx,time)
 
     type(ml_layout),    intent(in)    :: mla
     type(multifab),     intent(inout) :: rho(:)
-    type(multifab),     intent(inout) :: rho_avg(:)
+    type(multifab),     intent(inout) :: rho_avg(:) 
     type(multifab),     intent(in)    :: rhotot(:)
     type(multifab),     intent(in)    :: Temp(:)
     type(multifab),     intent(in)    :: umac(:,:)
     type(multifab),     intent(in)    :: umac_avg(:,:)
     type(multifab),     intent(in)    :: pres(:)
     type(multifab),     intent(in)    :: Epot(:)
-    type(multifab),     intent(in)    :: Epot_avg(:)
+    type(multifab),     intent(in)    :: Epot_avg(:) 
     type(multifab),     intent(in)    :: grad_Epot(:,:)
     type(multifab),     intent(in)    :: gradPhiApprox(:,:)
     integer,            intent(in)    :: istep
@@ -56,9 +57,10 @@ contains
 
     type(multifab) :: cc_temp(mla%nlevel)
 
-    integer :: nvarsCC, nvarsStag, counter
+    integer :: nvarsCC, nvarsStag, counter, nspecies_eff
+    logical :: boussinesq
 
-    real(kind=dp_t) :: x
+    real(kind=dp_t) :: massfrac
     real(kind=dp_t), parameter :: m_Na=3.817540700000000d-023, &	
                                   m_Cl=5.887108600000000d-023, &
                                   m_H =1.673723600000000d-024, &
@@ -67,66 +69,96 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
 
+    boussinesq = (algorithm_type==6).or.(algorithm_type==4)
+
+    ! split HCl NaOH NaCl H2O -> Na Cl H OH H2O
+    if (nspecies .eq. 4) then
+       nspecies_eff = nspecies + 1
+    else
+       nspecies_eff = nspecies
+    end if
+
     ! cell-centered quantities
 
-    ! rho
-    ! rho_i
-    ! c_i
-    ! Temp
-    ! umac averaged
-    ! umac shifted
-    ! umac_avg averaged
-    ! umac_avg shifted
-    ! pressure
-    nvarsCC = 2*nspecies + 4*dm + 3
-
-    ! split HCl NaOH NaCl H2O -> Na Cl H OH H2O (for both c and rho_i)
-    if (nspecies .eq. 4) then
-       nvarsCC = nvarsCC+2
+    ! rho                  :1
+    ! rho_i                :nspecies (partial densities)
+    ! rho_avg_i            :nspecies
+    ! c_i                  :nspecies (mass fractions, only if not Boussinesq)
+    ! Temp                 :1 (temperature, only if non isothermal)
+    ! umac averaged        :dm
+    ! umac shifted         :dm (optional)
+    ! umac_avg averaged    :dm (optional)
+    ! umac_avg shifted     :dm (optional)
+    ! pressure             :1 (pressure)
+    if(boussinesq) then
+       ! For Boussinesq we don't have to write mass fractions since density is constant
+       nvarsCC = nspecies_eff + dm + 2    
+    else 
+       nvarsCC = 2*nspecies_eff + dm + 2
+    end if  
+    if(is_nonisothermal) then ! Add temperature
+       nvarsCC = nvarsCC + 1
+    end if 
+    if(plot_shifted_vel) then
+       nvarsCC = nvarsCC + dm
+    end if
+    if (plot_rho_tavg) then  ! time-averaged rho
+       nvarsCC = nvarsCC + nspecies
+    end if 
+    if (plot_umac_tavg) then ! time-averaged umac (cc and shifted)
+       nvarsCC = nvarsCC + dm
+       if(plot_shifted_vel) then
+          nvarsCC = nvarsCC + dm
+       end if
     end if
 
     if (use_charged_fluid) then
-       ! charge
-       ! Epot
-       ! grad_Epot averaged
-       ! gradPhiApprox averaged
-       nvarsCC = nvarsCC + 2 + 2*dm
+       ! charge                   :1
+       ! Epot                     :1
+       ! Epot_avg                 :1  
+       ! grad_Epot averaged       :dm
+       ! gradPhiApprox averaged   :dm
+
+       nvarsCC = nvarsCC + 2 + dm
+       if (plot_Epot_tavg) then 
+          nvarsCC = nvarsCC + 1
+       end if 
+       if (plot_avg_gradPhiApprox) then
+          nvarsCC = nvarsCC + dm
+       end if
     end if
 
-    if (algorithm_type .eq. 6) then
+    if(boussinesq) then ! Boussinesq
        ! add rho_eos-rho0
        nvarsCC = nvarsCC+1
     end if
 
+    print*,'hack nvarsCC',nvarsCC
+
     allocate(plot_names(nvarsCC))
- 
+
     counter = 1
 
     plot_names(counter) = "rho"
     counter = counter + 1
-    
-    if (nspecies .eq. 4) then
-       do n=1,nspecies+1
-          write(plot_names(counter),'(a,i0)') "rho", n
-          counter = counter + 1
-       enddo
-       do n=1,nspecies+1
-          write(plot_names(counter),'(a,i0)') "c", n
-          counter = counter + 1
-       enddo
-    else
-       do n=1,nspecies
-          write(plot_names(counter),'(a,i0)') "rho", n
-          counter = counter + 1
-       enddo
-       do n=1,nspecies
+    do n=1,nspecies_eff
+       write(plot_names(counter),'(a,i0)') "rho", n
+       counter = counter + 1
+    enddo
+    if (plot_rho_tavg) then
+       call bl_error("this local write_plotfile.f90 does not support plot_rho_tavg")
+    endif
+    if (.not.boussinesq) then
+       do n=1,nspecies_eff
           write(plot_names(counter),'(a,i0)') "c", n
           counter = counter + 1
        enddo
     end if
 
-    plot_names(counter) = "Temp"
-    counter = counter + 1
+    if(is_nonisothermal) then  
+       plot_names(counter) = "Temp"
+       counter = counter + 1
+    end if   
 
     plot_names(counter) = "averaged_velx"
     counter = counter + 1
@@ -137,31 +169,37 @@ contains
        counter = counter + 1
     end if
 
-    plot_names(counter) = "shifted_velx"
-    counter = counter + 1
-    plot_names(counter) = "shifted_vely"
-    counter = counter + 1
-    if (dm > 2) then
-       plot_names(counter) = "shifted_velz"
+    if(plot_shifted_vel) then
+       plot_names(counter) = "shifted_velx"
        counter = counter + 1
+       plot_names(counter) = "shifted_vely"
+       counter = counter + 1
+       if (dm > 2) then
+          plot_names(counter) = "shifted_velz"
+          counter = counter + 1
+       end if
     end if
 
-    plot_names(counter) = "tavg_averaged_velx"
-    counter = counter + 1
-    plot_names(counter) = "tavg_averaged_vely"
-    counter = counter + 1
-    if (dm > 2) then
-       plot_names(counter) = "tavg_averaged_velz"
+    if (plot_umac_tavg) then 
+       plot_names(counter) = "tavg_averaged_velx"
        counter = counter + 1
-    end if
+       plot_names(counter) = "tavg_averaged_vely"
+       counter = counter + 1
+       if (dm > 2) then
+          plot_names(counter) = "tavg_averaged_velz"
+          counter = counter + 1
+       end if
 
-    plot_names(counter) = "tavg_shifted_velx"
-    counter = counter + 1
-    plot_names(counter) = "tavg_shifted_vely"
-    counter = counter + 1
-    if (dm > 2) then
-       plot_names(counter) = "tavg_shifted_velz"
-       counter = counter + 1
+       if (plot_shifted_vel) then
+          plot_names(counter) = "tavg_shifted_velx"
+          counter = counter + 1
+          plot_names(counter) = "tavg_shifted_vely"
+          counter = counter + 1
+          if (dm > 2) then
+             plot_names(counter) = "tavg_shifted_velz"
+             counter = counter + 1
+          end if
+       end if
     end if
 
     plot_names(counter) = "pres"
@@ -174,6 +212,11 @@ contains
        plot_names(counter) = "Epot"
        counter = counter + 1
 
+       if (plot_Epot_tavg) then
+          plot_names(counter) = "tavg_Epot" 
+          counter = counter + 1
+       end if
+
        plot_names(counter) = "averaged_Ex"
        counter = counter + 1
        plot_names(counter) = "averaged_Ey"
@@ -183,17 +226,20 @@ contains
           counter = counter + 1
        end if
 
-       plot_names(counter) = "av_gradPhiApproxx"
-       counter = counter + 1
-       plot_names(counter) = "av_gradPhiApproxy"
-       counter = counter + 1
-       if (dm > 2) then
-          plot_names(counter) = "av_gradPhiApproxz"
+       if (plot_avg_gradPhiApprox) then
+          plot_names(counter) = "av_gradPhiApproxx"
           counter = counter + 1
+          plot_names(counter) = "av_gradPhiApproxy"
+          counter = counter + 1
+          if (dm > 2) then
+             plot_names(counter) = "av_gradPhiApproxz"
+             counter = counter + 1
+          end if
        end if
+
     end if
 
-    if (algorithm_type .eq. 6) then
+    if(boussinesq) then
        plot_names(counter) = "rho_eos"
        counter = counter+1
     end if
@@ -205,7 +251,10 @@ contains
     if (use_charged_fluid) then
        ! electric field (Ex, Ey, Ez)
        ! gradPhiApprox
-       nvarsStag = nvarsStag + 2
+       nvarsStag = nvarsStag + 1
+       if (plot_avg_gradPhiApprox) then 
+          nvarsStag = nvarsStag + 1
+       end if
     end if
 
     allocate(plot_names_stagx(nvarsStag))
@@ -225,10 +274,12 @@ contains
        plot_names_stagz(counter) = "Ez"
        counter = counter + 1
 
-       plot_names_stagx(counter) = "gradPhiApproxx"
-       plot_names_stagy(counter) = "gradPhiApproxy"
-       plot_names_stagz(counter) = "gradPhiApproxz"
-       counter = counter + 1
+       if (plot_avg_gradPhiApprox) then 
+          plot_names_stagx(counter) = "gradPhiApproxx"
+          plot_names_stagy(counter) = "gradPhiApproxy"
+          plot_names_stagz(counter) = "gradPhiApproxz"
+          counter = counter + 1
+       end if
     end if
 
     do n=1,nlevs
@@ -263,11 +314,11 @@ contains
        do n=1,nlevs
           call multifab_setval_c(plotdata(n),0.d0,counter,1,all=.true.)
           ! from NaOH
-          x = m_Na / (m_Na+m_OH)
-          call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),2,1)
+          massfrac = m_Na / (m_Na+m_OH)
+          call multifab_saxpy_3_cc(plotdata(n),counter,massfrac,cc_temp(n),2,1)
           ! from NaCl
-          x = m_Na / (m_Na+m_Cl)
-          call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),3,1)
+          massfrac = m_Na / (m_Na+m_Cl)
+          call multifab_saxpy_3_cc(plotdata(n),counter,massfrac,cc_temp(n),3,1)
        end do
        counter = counter+1
 
@@ -275,11 +326,11 @@ contains
        do n=1,nlevs
           call multifab_setval_c(plotdata(n),0.d0,counter,1,all=.true.)
           ! from HCl
-          x = m_Cl / (m_H+m_Cl)
-          call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),1,1)
+          massfrac = m_Cl / (m_H+m_Cl)
+          call multifab_saxpy_3_cc(plotdata(n),counter,massfrac,cc_temp(n),1,1)
           ! from NaCl
-          x = m_Cl / (m_Na+m_Cl)
-          call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),3,1)
+          massfrac = m_Cl / (m_Na+m_Cl)
+          call multifab_saxpy_3_cc(plotdata(n),counter,massfrac,cc_temp(n),3,1)
        end do
        counter = counter+1
 
@@ -287,8 +338,8 @@ contains
        do n=1,nlevs
           call multifab_setval_c(plotdata(n),0.d0,counter,1,all=.true.)
           ! from HCl
-          x = m_H / (m_H+m_Cl)
-          call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),1,1)
+          massfrac = m_H / (m_H+m_Cl)
+          call multifab_saxpy_3_cc(plotdata(n),counter,massfrac,cc_temp(n),1,1)
        end do
        counter = counter+1
 
@@ -296,8 +347,8 @@ contains
        do n=1,nlevs
           call multifab_setval_c(plotdata(n),0.d0,counter,1,all=.true.)
           ! from NaOH
-          x = m_OH / (m_Na+m_OH)
-          call multifab_saxpy_3_cc(plotdata(n),counter,x,cc_temp(n),2,1)
+          massfrac = m_OH / (m_Na+m_OH)
+          call multifab_saxpy_3_cc(plotdata(n),counter,massfrac,cc_temp(n),2,1)
        end do
        counter = counter+1
 
@@ -307,35 +358,52 @@ contains
        end do
        counter = counter+1
 
-       ! rho
-       do n=1,nlevs
-          call multifab_copy_c(plotdata(n),counter,plotdata(n),counter-5,5,0)
-          do i=1,5
-             call multifab_mult_mult_c(plotdata(n),counter,rhotot(n),1,1,0)
-             counter = counter + 1
+       if (boussinesq) then
+          ! we only want rho's.  multiply c's by rhotot
+          do n=1,nlevs
+             do i=1,5
+                call multifab_mult_mult_c(plotdata(n),counter-i,rhotot(n),1,1,0)
+             end do
           end do
-       end do
+       else
+          ! we want rho's and c's.
+          do n=1,nlevs
+             ! copy c's into next indices
+             call multifab_copy_c(plotdata(n),counter,plotdata(n),counter-5,5,0)
+             ! multiply first set of c's by rhotot
+             do i=1,5
+                call multifab_mult_mult_c(plotdata(n),counter-i,rhotot(n),1,1,0)
+             end do
+             counter = counter+5
+          end do
+       end if
 
     else
+
        ! rho
        do n=1,nlevs
-          call multifab_copy_c(plotdata(n),counter,rho(n),1,nspecies,0)
+          call multifab_copy_c(plotdata(n),counter,rho(n),1,nspecies_eff,0)
        end do
-       counter = counter + nspecies
+       counter = counter + nspecies_eff
 
-       ! compute concentrations
-       call convert_rhoc_to_c(mla,rho,rhotot,cc_temp,.true.)
-       do n=1,nlevs
-          call multifab_copy_c(plotdata(n),counter,cc_temp(n),1,nspecies,0)
-       end do
-       counter = counter + nspecies
+       if(.not.boussinesq) then  
+          ! compute concentrations
+          call convert_rhoc_to_c(mla,rho,rhotot,cc_temp,.true.)
+          do n=1,nlevs
+             call multifab_copy_c(plotdata(n),counter,cc_temp(n),1,nspecies_eff,0)
+          end do
+          counter = counter + nspecies_eff
+       end if
+
     end if
 
     ! Temp
-    do n=1,nlevs
-       call multifab_copy_c(plotdata(n),counter,Temp(n),1,1,0)
-    enddo
-    counter = counter + 1
+    if(is_nonisothermal) then
+       do n=1,nlevs
+          call multifab_copy_c(plotdata(n),counter,Temp(n),1,1,0)
+       enddo
+       counter = counter + 1
+    end if   
 
     ! vel averaged
     do i=1,dm
@@ -343,23 +411,27 @@ contains
        counter = counter + 1
     end do
 
-    ! vel shifted
-    do i=1,dm
-       call shift_face_to_cc(mla,umac(:,i),1,plotdata,counter,1)
-       counter = counter + 1
-    end do
+    if(plot_shifted_vel) then
+       ! vel shifted
+       do i=1,dm
+          call shift_face_to_cc(mla,umac(:,i),1,plotdata,counter,1)
+          counter = counter + 1
+       end do
+    end if   
 
-    ! time-averaged vel averaged
-    do i=1,dm
-       call average_face_to_cc(mla,umac_avg(:,i),1,plotdata,counter,1)
-       counter = counter + 1
-    end do
-
-    ! time-averaged vel shifted
-    do i=1,dm
-       call shift_face_to_cc(mla,umac_avg(:,i),1,plotdata,counter,1)
-       counter = counter + 1
-    end do
+    ! time-averaged vel averaged and time-averaged vel shifted
+    if (plot_umac_tavg) then
+       do i=1,dm
+          call average_face_to_cc(mla,umac_avg(:,i),1,plotdata,counter,1)
+          counter = counter + 1
+       end do
+       if (plot_shifted_vel) then
+          do i=1,dm
+             call shift_face_to_cc(mla,umac_avg(:,i),1,plotdata,counter,1)
+             counter = counter + 1
+          end do
+       end if
+    end if
 
     ! pressure
     do n = 1,nlevs
@@ -382,6 +454,14 @@ contains
        enddo
        counter = counter + 1
 
+       ! time-averaged Epot 
+       if (plot_Epot_tavg) then 
+          do n = 1,nlevs
+             call multifab_copy_c(plotdata(n),counter,Epot_avg(n),1,1,0)
+          enddo
+          counter = counter + 1
+       end if
+
        ! averaged electric field
        do i=1,dm
           call average_face_to_cc(mla,grad_Epot(:,i),1,plotdata,counter,1)
@@ -392,18 +472,22 @@ contains
        end do
 
        ! averaged gradPhiApprox
-       do i=1,dm
-          call average_face_to_cc(mla,gradPhiApprox(:,i),1,plotdata,counter,1)
-          counter = counter + 1
-       end do
+       if (plot_avg_gradPhiApprox) then 
+          do i=1,dm
+             call average_face_to_cc(mla,gradPhiApprox(:,i),1,plotdata,counter,1)
+             counter = counter + 1
+          end do
+       end if 
     end if
 
-    if (algorithm_type .eq. 6) then
+    if(boussinesq) then
        ! rho_eos - rho0
+       print*,'HACK counter',counter
+
        call compute_rhotot_eos(mla,rho,plotdata,counter)
        do n=1,nlevs
-         call multifab_sub_sub_s_c(plotdata(n),counter,rho0,1)
-       end do  
+          call multifab_sub_sub_s_c(plotdata(n),counter,rho0,1)
+       end do
        counter = counter+1
     end if
 
@@ -429,12 +513,14 @@ contains
        counter = counter + 1
 
        ! gradPhiApprox
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_copy_c(plotdata_stag(n,i),counter,gradPhiApprox(n,i),1,1)
+       if (plot_avg_gradPhiApprox) then 
+          do n=1,nlevs
+             do i=1,dm
+                call multifab_copy_c(plotdata_stag(n,i),counter,gradPhiApprox(n,i),1,1)
+             end do
           end do
-       end do
-       counter = counter + 1
+          counter = counter + 1
+       end if
 
     end if
     
