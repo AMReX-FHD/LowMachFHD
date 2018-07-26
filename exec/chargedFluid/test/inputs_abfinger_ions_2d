@@ -251,7 +251,7 @@
 
   epot_mg_verbose = 0
   !epot_mg_abs_tol = 0 ! Ignored because we overwrite it based on rel_tol
-  epot_mg_rel_tol = 1.0d-9
+  epot_mg_rel_tol = 1.0d-12
 
 /
 
@@ -345,7 +345,7 @@
   stag_mg_rel_tol = 1.e-9               ! relative tolerance stopping criteria
 
   ! GMRES solver parameters
-  gmres_rel_tol = 1.e-6                 ! relative tolerance stopping criteria
+  gmres_rel_tol = 1.e-9                 ! relative tolerance stopping criteria
   gmres_abs_tol = 0                 ! absolute tolerance stopping criteria
   gmres_verbose = 0                     ! gmres verbosity; if greater than 1, more residuals will be printed out
   gmres_max_outer = 10                  ! max number of outer iterations
