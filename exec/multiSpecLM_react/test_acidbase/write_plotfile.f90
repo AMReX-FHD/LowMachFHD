@@ -133,8 +133,6 @@ contains
        nvarsCC = nvarsCC+1
     end if
 
-    print*,'hack nvarsCC',nvarsCC
-
     allocate(plot_names(nvarsCC))
 
     counter = 1
@@ -482,8 +480,6 @@ contains
 
     if(boussinesq) then
        ! rho_eos - rho0
-       print*,'HACK counter',counter
-
        call compute_rhotot_eos(mla,rho,plotdata,counter)
        do n=1,nlevs
           call multifab_sub_sub_s_c(plotdata(n),counter,rho0,1)
