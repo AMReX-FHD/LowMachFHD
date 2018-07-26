@@ -7,10 +7,10 @@ module write_plotfile_module
   use convert_rhoc_to_c_module
   use fluid_charge_module
   use eos_check_module
-  use probin_multispecies_module, only: plot_stag
+  use probin_multispecies_module, only: plot_stag, is_nonisothermal
   use probin_common_module, only: prob_lo, prob_hi, nspecies, plot_base_name, &
                                   algorithm_type, rho0, plot_umac_tavg, plot_Epot_tavg, & 
-                                  plot_rho_tavg, plot_avg_gradPhiApprox
+                                  plot_rho_tavg, plot_avg_gradPhiApprox, plot_shifted_vel
   use probin_charged_module, only: use_charged_fluid
 
   implicit none
@@ -53,23 +53,37 @@ contains
     type(multifab) :: cc_temp(mla%nlevel)
 
     integer :: nvarsCC, nvarsStag, counter
+    logical :: boussinesq
 
     nlevs = mla%nlevel
     dm = mla%dim
+    
+    boussinesq = (algorithm_type==6).or.(algorithm_type==4)
 
     ! cell-centered quantities
 
     ! rho                  :1
-    ! rho_i                :nspecies
-    ! rho_avg_i            :nspecies 
-    ! c_i                  :nspecies
-    ! Temp                 :1
+    ! rho_i                :nspecies (partial densities)
+    ! rho_avg_i            :nspecies
+    ! c_i                  :nspecies (mass fractions, only if not Boussinesq)
+    ! Temp                 :1 (temperature, only if non isothermal)
     ! umac averaged        :dm
-    ! umac shifted         :dm
-    ! umac_avg averaged    :dm
-    ! umac_avg shifted     :dm
-    ! pressure             :1
-    nvarsCC = 2*nspecies + 2*dm + 3
+    ! umac shifted         :dm (optional)
+    ! umac_avg averaged    :dm (optional)
+    ! umac_avg shifted     :dm (optional)
+    ! pressure             :1 (pressure)
+    if(boussinesq) then
+       ! For Boussinesq we don't have to write mass fractions since density is constant
+       nvarsCC = nspecies + dm + 2    
+    else 
+       nvarsCC = 2*nspecies + dm + 2
+    end if  
+    if(is_nonisothermal) then ! Add temperature
+       nvarsCC = nvarsCC + 1
+    end if 
+    if(plot_shifted_vel) then
+       nvarsCC = nvarsCC + dm
+    end if
     if (plot_rho_tavg) then 
        nvarsCC = nvarsCC + 2*dm
     end if 
@@ -94,7 +108,7 @@ contains
        end if
     end if
 
-    if (algorithm_type .eq. 6) then
+    if(boussinesq) then ! Boussinesq
        ! add rho_eos-rho0
        nvarsCC = nvarsCC+1
     end if
@@ -114,14 +128,18 @@ contains
           write(plot_names(counter),'(a,i0)') "tavg_rho", n
           counter = counter + 1
        enddo
-    endif 
-    do n=1,nspecies
-       write(plot_names(counter),'(a,i0)') "c", n
-       counter = counter + 1
-    enddo
+    endif
+    if(.not.boussinesq) then
+       do n=1,nspecies
+          write(plot_names(counter),'(a,i0)') "c", n
+          counter = counter + 1
+       enddo
+    end if   
 
-    plot_names(counter) = "Temp"
-    counter = counter + 1
+    if(is_nonisothermal) then  
+       plot_names(counter) = "Temp"
+       counter = counter + 1
+    end if   
 
     plot_names(counter) = "averaged_velx"
     counter = counter + 1
@@ -132,13 +150,15 @@ contains
        counter = counter + 1
     end if
 
-    plot_names(counter) = "shifted_velx"
-    counter = counter + 1
-    plot_names(counter) = "shifted_vely"
-    counter = counter + 1
-    if (dm > 2) then
-       plot_names(counter) = "shifted_velz"
+    if(plot_shifted_vel) then
+       plot_names(counter) = "shifted_velx"
        counter = counter + 1
+       plot_names(counter) = "shifted_vely"
+       counter = counter + 1
+       if (dm > 2) then
+          plot_names(counter) = "shifted_velz"
+          counter = counter + 1
+       end if
     end if
 
     if (plot_umac_tavg) then 
@@ -198,7 +218,7 @@ contains
 
     end if
 
-    if (algorithm_type .eq. 6) then
+    if(boussinesq) then
        plot_names(counter) = "rho_eos"
        counter = counter+1
     end if
@@ -274,18 +294,22 @@ contains
        counter = counter + nspecies
     end if 
 
-    ! compute concentrations
-    call convert_rhoc_to_c(mla,rho,rhotot,cc_temp,.true.)
-    do n=1,nlevs
-       call multifab_copy_c(plotdata(n),counter,cc_temp(n),1,nspecies,0)
-    end do
-    counter = counter + nspecies
+    if(.not.boussinesq) then  
+       ! compute concentrations
+       call convert_rhoc_to_c(mla,rho,rhotot,cc_temp,.true.)
+       do n=1,nlevs
+          call multifab_copy_c(plotdata(n),counter,cc_temp(n),1,nspecies,0)
+       end do
+       counter = counter + nspecies
+    end if   
 
     ! Temp
-    do n=1,nlevs
-       call multifab_copy_c(plotdata(n),counter,Temp(n),1,1,0)
-    enddo
-    counter = counter + 1
+    if(is_nonisothermal) then
+       do n=1,nlevs
+          call multifab_copy_c(plotdata(n),counter,Temp(n),1,1,0)
+       enddo
+       counter = counter + 1
+    end if   
 
     ! vel averaged
     do i=1,dm
@@ -293,11 +317,13 @@ contains
        counter = counter + 1
     end do
 
-    ! vel shifted
-    do i=1,dm
-       call shift_face_to_cc(mla,umac(:,i),1,plotdata,counter,1)
-       counter = counter + 1
-    end do
+    if(plot_shifted_vel) then
+       ! vel shifted
+       do i=1,dm
+          call shift_face_to_cc(mla,umac(:,i),1,plotdata,counter,1)
+          counter = counter + 1
+       end do
+    end if   
 
     ! time-averaged vel averaged and time-averaged vel shifted
     if (plot_umac_tavg) then
@@ -359,7 +385,7 @@ contains
        end if 
     end if
 
-    if (algorithm_type .eq. 6) then
+    if(boussinesq) then
        ! rho_eos - rho0
        call compute_rhotot_eos(mla,rho,plotdata,counter)
        do n=1,nlevs

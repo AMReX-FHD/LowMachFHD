@@ -37,7 +37,8 @@ module probin_common_module
   integer,save    :: rho_eos_form
   real(dp_t),save :: density_weights(0:MAX_SPECIES)
   integer,save    :: shift_cc_to_boundary(MAX_SPACEDIM,2)
-  logical,save    :: plot_umac_tavg, plot_Epot_tavg, plot_rho_tavg, plot_avg_gradPhiApprox 
+  logical,save    :: plot_avg_gradPhiApprox, plot_shifted_vel 
+  logical,save    :: plot_umac_tavg, plot_Epot_tavg, plot_rho_tavg
 
   integer(kind=ll_t)      :: n_cells_long(MAX_SPACEDIM)
   integer(kind=ll_t),save :: total_volume
@@ -93,11 +94,12 @@ module probin_common_module
   !----------------------
   namelist /probin_common/ algorithm_type     ! differs from code to code
                                               ! In low Mach codes:
-                                              ! 0 = Inertial algorithm
-                                              ! 2 = Overdamped with 2 RNGs
+                                              ! 0 = Inertial trapezoidal lowMach
+                                              ! 2 = Overdamped lowMach with 2 RNGs
                                               ! 3 = Iterative w/implicit electrodiffusion
                                               ! 4 = Boussinesq w/implicit electrodiffusion
-                                              ! 5 = Inertial midpoint
+                                              ! 5 = Inertial midpoint lowMach
+                                              ! 6 = Boussinesq inertial midpoint (electroneutral or electro-explicit)
 
   namelist /probin_common/ barodiffusion_type ! 0 = no barodiffusion
                                               ! 1 = fixed gradp from initialization
@@ -109,10 +111,11 @@ module probin_common_module
 
   ! Controls for deciding whether to plot various quantities (eg averaged, time averaged)
   !----------------------
-  namelist /probin_common/ plot_umac_tavg               ! Boolean, time average
-  namelist /probin_common/ plot_Epot_tavg               ! Boolean, time average
-  namelist /probin_common/ plot_rho_tavg                ! Boolean, time average  
-  namelist /probin_common/ plot_avg_gradPhiApprox       ! Boolean, time average  
+  namelist /probin_common/ plot_umac_tavg               ! Write time average velocity or not?
+  namelist /probin_common/ plot_Epot_tavg               ! Write time average electric field or not
+  namelist /probin_common/ plot_rho_tavg                ! Write time average density or not  
+  namelist /probin_common/ plot_shifted_vel             ! Write staggered velocities as shifted ones
+  namelist /probin_common/ plot_avg_gradPhiApprox       ! Write ambipolar approximation to gradPhi or not  
                                               
 
   ! random number seed (for HydroGrid RNGs)
@@ -291,6 +294,7 @@ contains
     plot_umac_tavg = .false.
     plot_Epot_tavg = .false.
     plot_rho_tavg = .false.
+    plot_shifted_vel = .false.
     plot_avg_gradPhiApprox = .false.
 
     barodiffusion_type = 0
@@ -568,6 +572,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) plot_rho_tavg 
+
+       case ('--plot_shifted_vel')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) plot_shifted_vel
 
        case ('--plot_avg_gradPhiApprox')
           farg = farg + 1
