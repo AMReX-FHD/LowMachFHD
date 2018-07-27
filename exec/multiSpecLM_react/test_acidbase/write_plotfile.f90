@@ -15,7 +15,8 @@ module write_plotfile_module
   use probin_multispecies_module, only: plot_stag, is_nonisothermal
   use probin_common_module, only: prob_lo, prob_hi, nspecies, plot_base_name, &
                                   algorithm_type, rho0, plot_umac_tavg, plot_Epot_tavg, & 
-                                  plot_rho_tavg, plot_avg_gradPhiApprox, plot_shifted_vel
+                                  plot_rho_tavg, plot_avg_gradPhiApprox, plot_shifted_vel, &
+                                  plot_gradEpot
   use probin_charged_module, only: use_charged_fluid
 
   implicit none
@@ -115,11 +116,14 @@ contains
     if (use_charged_fluid) then
        ! charge                   :1
        ! Epot                     :1
-       ! Epot_avg                 :1  
-       ! grad_Epot averaged       :dm
-       ! gradPhiApprox averaged   :dm
+       ! Epot_avg                 :1  (optional)
+       ! grad_Epot averaged       :dm (optional)
+       ! gradPhiApprox averaged   :dm (optional)
 
-       nvarsCC = nvarsCC + 2 + dm
+       nvarsCC = nvarsCC + 2
+       if (plot_gradEpot) then
+          nvarsCC = nvarsCC + dm
+       end if
        if (plot_Epot_tavg) then 
           nvarsCC = nvarsCC + 1
        end if 
@@ -215,13 +219,15 @@ contains
           counter = counter + 1
        end if
 
-       plot_names(counter) = "averaged_Ex"
-       counter = counter + 1
-       plot_names(counter) = "averaged_Ey"
-       counter = counter + 1
-       if (dm > 2) then
-          plot_names(counter) = "averaged_Ez"
+       if (plot_gradEpot) then
+          plot_names(counter) = "averaged_Ex"
           counter = counter + 1
+          plot_names(counter) = "averaged_Ey"
+          counter = counter + 1
+          if (dm > 2) then
+             plot_names(counter) = "averaged_Ez"
+             counter = counter + 1
+          end if
        end if
 
        if (plot_avg_gradPhiApprox) then
@@ -248,8 +254,10 @@ contains
     nvarsStag = 1
     if (use_charged_fluid) then
        ! electric field (Ex, Ey, Ez)
+       if (plot_gradEpot) then
+          nvarsStag = nvarsStag + 1
+       end if
        ! gradPhiApprox
-       nvarsStag = nvarsStag + 1
        if (plot_avg_gradPhiApprox) then 
           nvarsStag = nvarsStag + 1
        end if
@@ -267,10 +275,12 @@ contains
     counter = counter + 1
 
     if (use_charged_fluid) then
-       plot_names_stagx(counter) = "Ex"
-       plot_names_stagy(counter) = "Ey"
-       plot_names_stagz(counter) = "Ez"
-       counter = counter + 1
+       if (plot_gradEpot) then
+          plot_names_stagx(counter) = "Ex"
+          plot_names_stagy(counter) = "Ey"
+          plot_names_stagz(counter) = "Ez"
+          counter = counter + 1
+       end if
 
        if (plot_avg_gradPhiApprox) then 
           plot_names_stagx(counter) = "gradPhiApproxx"
@@ -461,13 +471,15 @@ contains
        end if
 
        ! averaged electric field
-       do i=1,dm
-          call average_face_to_cc(mla,grad_Epot(:,i),1,plotdata,counter,1)
-          do n = 1,nlevs
-             call multifab_mult_mult_s_c(plotdata(n),counter,-1.d0,1,0)
+       if (plot_gradEpot) then
+          do i=1,dm
+             call average_face_to_cc(mla,grad_Epot(:,i),1,plotdata,counter,1)
+             do n = 1,nlevs
+                call multifab_mult_mult_s_c(plotdata(n),counter,-1.d0,1,0)
+             end do
+             counter = counter + 1
           end do
-          counter = counter + 1
-       end do
+       end if
 
        ! averaged gradPhiApprox
        if (plot_avg_gradPhiApprox) then 
@@ -500,13 +512,15 @@ contains
     if (use_charged_fluid) then
 
        ! electric field
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_copy_c(plotdata_stag(n,i),counter,grad_Epot(n,i),1,1)
-             call multifab_mult_mult_s_c(plotdata_stag(n,i),counter,-1.d0,1,0)
+       if (plot_gradEpot) then
+          do n=1,nlevs
+             do i=1,dm
+                call multifab_copy_c(plotdata_stag(n,i),counter,grad_Epot(n,i),1,1)
+                call multifab_mult_mult_s_c(plotdata_stag(n,i),counter,-1.d0,1,0)
+             end do
           end do
-       end do
-       counter = counter + 1
+          counter = counter + 1
+       end if
 
        ! gradPhiApprox
        if (plot_avg_gradPhiApprox) then 
