@@ -40,6 +40,7 @@ module probin_common_module
   logical,save    :: plot_avg_gradPhiApprox, plot_gradEpot
   logical,save    :: plot_averaged_vel, plot_shifted_vel 
   logical,save    :: plot_umac_tavg, plot_Epot_tavg, plot_rho_tavg
+  logical,save    :: plot_debug
 
   integer(kind=ll_t)      :: n_cells_long(MAX_SPACEDIM)
   integer(kind=ll_t),save :: total_volume
@@ -118,7 +119,9 @@ module probin_common_module
   namelist /probin_common/ plot_shifted_vel             ! Write staggered velocities as shifted ones
   namelist /probin_common/ plot_averaged_vel            ! Write spatially-averaged velocities
   namelist /probin_common/ plot_avg_gradPhiApprox       ! Write ambipolar approximation to gradPhi or not  
-  namelist /probin_common/ plot_gradEpot                ! Write out gradient of electric potential                                              
+  namelist /probin_common/ plot_gradEpot                ! Write out gradient of electric potential     
+  namelist /probin_common/ plot_debug                   ! for boussinesq, print out rho.  for electroneutral, print out charge
+                                         
 
   ! random number seed (for HydroGrid RNGs)
   ! 0        = unpredictable seed based on clock
@@ -300,6 +303,7 @@ contains
     plot_averaged_vel = .true.
     plot_avg_gradPhiApprox = .false.
     plot_gradEpot = .false.
+    plot_debug = .false.
 
     barodiffusion_type = 0
 
@@ -596,6 +600,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) plot_gradEpot
+
+       case ('--plot_debug')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) plot_debug
 
        case ('--barodiffusion_type')
           farg = farg + 1

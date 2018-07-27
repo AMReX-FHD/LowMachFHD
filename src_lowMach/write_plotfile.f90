@@ -11,8 +11,8 @@ module write_plotfile_module
   use probin_common_module, only: prob_lo, prob_hi, nspecies, plot_base_name, &
                                   algorithm_type, rho0, plot_umac_tavg, plot_Epot_tavg, &
                                   plot_rho_tavg, plot_avg_gradPhiApprox, plot_shifted_vel, &
-                                  plot_gradEpot, plot_averaged_vel
-  use probin_charged_module, only: use_charged_fluid
+                                  plot_gradEpot, plot_averaged_vel, plot_debug
+  use probin_charged_module, only: use_charged_fluid, electroneutral
 
   implicit none
 
@@ -58,12 +58,12 @@ contains
 
     nlevs = mla%nlevel
     dm = mla%dim
-    
+
     boussinesq = (algorithm_type==6).or.(algorithm_type==4)
 
     ! cell-centered quantities
 
-    ! rho                  :1
+    ! rho                  :1 (don't write for boussinesq unless plot_debug=T)
     ! rho_i                :nspecies (partial densities)
     ! rho_avg_i            :nspecies (optional, time-averaged partial densities)
     ! c_i                  :nspecies (mass fractions, only if not Boussinesq)
@@ -73,66 +73,82 @@ contains
     ! umac_avg averaged    :dm (optional)
     ! umac_avg shifted     :dm (optional)
     ! pressure             :1 (pressure)
-    if(boussinesq) then
-       ! For Boussinesq we write rho_i but not c_i since density is constant
-       ! rho and pressure
-       nvarsCC = nspecies + 2    
-    else 
-       ! rho_i and c_i
-       ! rho and pressure
-       nvarsCC = 2*nspecies + 2
-    end if  
-    if(is_nonisothermal) then ! Add temperature
+
+    ! rho_i and pressure
+    nvarsCC = nspecies + 1
+
+    ! rho
+    if (.not. (boussinesq .and. (.not. plot_debug))) then
        nvarsCC = nvarsCC + 1
-    end if 
-    if(plot_averaged_vel) then
-       nvarsCC = nvarsCC + dm
     end if
-    if(plot_shifted_vel) then
-       nvarsCC = nvarsCC + dm
-    end if
-    if (plot_rho_tavg) then  ! time-averaged rho
+    ! c_i
+    if (.not. boussinesq) then
        nvarsCC = nvarsCC + nspecies
-    end if 
-    if (plot_umac_tavg) then ! time-averaged umac (cc and shifted)
-       if(plot_averaged_vel) then
+    end if
+    ! Add temperature
+    if (is_nonisothermal) then
+       nvarsCC = nvarsCC + 1
+    end if
+    if (plot_averaged_vel) then
+       nvarsCC = nvarsCC + dm
+    end if
+    if (plot_shifted_vel) then
+       nvarsCC = nvarsCC + dm
+    end if
+    ! time-averaged rho
+    if (plot_rho_tavg) then
+       nvarsCC = nvarsCC + nspecies
+    end if
+    ! time-averaged umac (cc and shifted)
+    if (plot_umac_tavg) then
+       if (plot_averaged_vel) then
           nvarsCC = nvarsCC + dm
        end if
-       if(plot_shifted_vel) then
+       if (plot_shifted_vel) then
           nvarsCC = nvarsCC + dm
        end if
     end if
 
     if (use_charged_fluid) then
-       ! charge                   :1
+       ! charge                   :1 (don't write for electroneutral unless plot_debug=T)
        ! Epot                     :1
        ! Epot_avg                 :1  (optional)
        ! grad_Epot averaged       :dm (optional)
        ! gradPhiApprox averaged   :dm (optional)
 
-       nvarsCC = nvarsCC + 2
+       ! charge
+       if (.not. (electroneutral .and. (.not. plot_debug))) then
+          nvarsCC = nvarsCC + 1
+       end if
+       ! Epot
+       nvarsCC = nvarsCC + 1
+       ! averaged electric field
        if (plot_gradEpot) then
           nvarsCC = nvarsCC + dm
        end if
+       ! time-averaraged electric field
        if (plot_Epot_tavg) then 
           nvarsCC = nvarsCC + 1
-       end if 
+       end if
+       ! ambipolar approximation to gradPhi
        if (plot_avg_gradPhiApprox) then
           nvarsCC = nvarsCC + dm
        end if
     end if
 
-    if(boussinesq) then ! Boussinesq
+    if (boussinesq) then ! Boussinesq
        ! add rho_eos-rho0
        nvarsCC = nvarsCC+1
     end if
 
     allocate(plot_names(nvarsCC))
- 
+
     counter = 1
 
-    plot_names(counter) = "rho"
-    counter = counter + 1
+    if (.not. (boussinesq .and. (.not. plot_debug))) then
+       plot_names(counter) = "rho"
+       counter = counter + 1
+    end if
     do n=1,nspecies
        write(plot_names(counter),'(a,i0)') "rho", n
        counter = counter + 1
@@ -143,19 +159,19 @@ contains
           counter = counter + 1
        enddo
     endif
-    if(.not.boussinesq) then
+    if (.not.boussinesq) then
        do n=1,nspecies
           write(plot_names(counter),'(a,i0)') "c", n
           counter = counter + 1
        enddo
-    end if   
+    end if
 
-    if(is_nonisothermal) then  
+    if (is_nonisothermal) then  
        plot_names(counter) = "Temp"
        counter = counter + 1
-    end if   
+    end if
 
-    if(plot_averaged_vel) then
+    if (plot_averaged_vel) then
        plot_names(counter) = "averaged_velx"
        counter = counter + 1
        plot_names(counter) = "averaged_vely"
@@ -166,7 +182,7 @@ contains
        end if
     end if
 
-    if(plot_shifted_vel) then
+    if (plot_shifted_vel) then
        plot_names(counter) = "shifted_velx"
        counter = counter + 1
        plot_names(counter) = "shifted_vely"
@@ -205,8 +221,10 @@ contains
     counter = counter + 1
 
     if (use_charged_fluid) then
-       plot_names(counter) = "charge_density"
-       counter = counter + 1
+       if (.not. (electroneutral .and. (.not. plot_debug))) then
+          plot_names(counter) = "charge_density"
+          counter = counter + 1
+       end if
 
        plot_names(counter) = "Epot"
        counter = counter + 1
@@ -240,7 +258,7 @@ contains
 
     end if
 
-    if(boussinesq) then
+    if (boussinesq) then
        plot_names(counter) = "rho_eos"
        counter = counter+1
     end if
@@ -301,10 +319,12 @@ contains
     counter = 1
     
     ! rhotot
-    do n = 1,nlevs
-       call multifab_copy_c(plotdata(n),counter,rhotot(n),1,1,0)
-    end do
-    counter = counter + 1
+    if (.not. (boussinesq .and. (.not. plot_debug))) then
+       do n = 1,nlevs
+          call multifab_copy_c(plotdata(n),counter,rhotot(n),1,1,0)
+       end do
+       counter = counter + 1
+    end if
 
     ! rho
     do n=1,nlevs
@@ -318,24 +338,24 @@ contains
           call multifab_copy_c(plotdata(n),counter,rho_avg(n),1,nspecies,0)
        end do
        counter = counter + nspecies
-    end if 
+    end if
 
-    if(.not.boussinesq) then  
-       ! compute concentrations
+    ! compute concentrations
+    if (.not.boussinesq) then  
        call convert_rhoc_to_c(mla,rho,rhotot,cc_temp,.true.)
        do n=1,nlevs
           call multifab_copy_c(plotdata(n),counter,cc_temp(n),1,nspecies,0)
        end do
        counter = counter + nspecies
-    end if   
+    end if
 
     ! Temp
-    if(is_nonisothermal) then
+    if (is_nonisothermal) then
        do n=1,nlevs
           call multifab_copy_c(plotdata(n),counter,Temp(n),1,1,0)
        enddo
        counter = counter + 1
-    end if   
+    end if
 
     ! vel averaged
     if (plot_averaged_vel) then
@@ -346,16 +366,16 @@ contains
     end if
 
     ! vel shifted
-    if(plot_shifted_vel) then
+    if (plot_shifted_vel) then
        do i=1,dm
           call shift_face_to_cc(mla,umac(:,i),1,plotdata,counter,1)
           counter = counter + 1
        end do
-    end if   
+    end if
 
     ! time-averaged vel averaged and time-averaged vel shifted
     if (plot_umac_tavg) then
-       if(plot_averaged_vel) then
+       if (plot_averaged_vel) then
           do i=1,dm
              call average_face_to_cc(mla,umac_avg(:,i),1,plotdata,counter,1)
              counter = counter + 1
@@ -378,11 +398,13 @@ contains
     if (use_charged_fluid) then
 
        ! compute total charge, then copy into the correct component
-       call dot_with_z(mla,rho,cc_temp)
-       do n=1,nlevs
-          call multifab_copy_c(plotdata(n),counter,cc_temp(n),1,1,0)
-       end do
-       counter = counter + 1
+       if (.not. (electroneutral .and. (.not. plot_debug))) then
+          call dot_with_z(mla,rho,cc_temp)
+          do n=1,nlevs
+             call multifab_copy_c(plotdata(n),counter,cc_temp(n),1,1,0)
+          end do
+          counter = counter + 1
+       end if
 
        ! Epot
        do n = 1,nlevs
@@ -415,10 +437,10 @@ contains
              call average_face_to_cc(mla,gradPhiApprox(:,i),1,plotdata,counter,1)
              counter = counter + 1
           end do
-       end if 
+       end if
     end if
 
-    if(boussinesq) then
+    if (boussinesq) then
        ! rho_eos - rho0
        call compute_rhotot_eos(mla,rho,plotdata,counter)
        do n=1,nlevs
