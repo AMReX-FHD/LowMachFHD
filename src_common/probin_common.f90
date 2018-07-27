@@ -37,7 +37,8 @@ module probin_common_module
   integer,save    :: rho_eos_form
   real(dp_t),save :: density_weights(0:MAX_SPECIES)
   integer,save    :: shift_cc_to_boundary(MAX_SPACEDIM,2)
-  logical,save    :: plot_avg_gradPhiApprox, plot_gradEpot, plot_shifted_vel 
+  logical,save    :: plot_avg_gradPhiApprox, plot_gradEpot
+  logical,save    :: plot_averaged_vel, plot_shifted_vel 
   logical,save    :: plot_umac_tavg, plot_Epot_tavg, plot_rho_tavg
 
   integer(kind=ll_t)      :: n_cells_long(MAX_SPACEDIM)
@@ -115,6 +116,7 @@ module probin_common_module
   namelist /probin_common/ plot_Epot_tavg               ! Write time average electric field or not
   namelist /probin_common/ plot_rho_tavg                ! Write time average density or not  
   namelist /probin_common/ plot_shifted_vel             ! Write staggered velocities as shifted ones
+  namelist /probin_common/ plot_averaged_vel            ! Write spatially-averaged velocities
   namelist /probin_common/ plot_avg_gradPhiApprox       ! Write ambipolar approximation to gradPhi or not  
   namelist /probin_common/ plot_gradEpot                ! Write out gradient of electric potential                                              
 
@@ -295,6 +297,7 @@ contains
     plot_Epot_tavg = .false.
     plot_rho_tavg = .false.
     plot_shifted_vel = .false.
+    plot_averaged_vel = .true.
     plot_avg_gradPhiApprox = .false.
     plot_gradEpot = .false.
 
@@ -578,6 +581,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) plot_shifted_vel
+
+       case ('--plot_averaged_vel')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) plot_averaged_vel
 
        case ('--plot_avg_gradPhiApprox')
           farg = farg + 1

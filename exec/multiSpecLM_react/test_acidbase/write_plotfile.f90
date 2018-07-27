@@ -16,7 +16,7 @@ module write_plotfile_module
   use probin_common_module, only: prob_lo, prob_hi, nspecies, plot_base_name, &
                                   algorithm_type, rho0, plot_umac_tavg, plot_Epot_tavg, & 
                                   plot_rho_tavg, plot_avg_gradPhiApprox, plot_shifted_vel, &
-                                  plot_gradEpot
+                                  plot_gradEpot, plot_averaged_vel
   use probin_charged_module, only: use_charged_fluid
 
   implicit none
@@ -83,23 +83,29 @@ contains
 
     ! rho                  :1
     ! rho_i                :nspecies (partial densities)
-    ! rho_avg_i            :nspecies
+    ! rho_avg_i            :nspecies (optional, time-averaged partial densities)
     ! c_i                  :nspecies (mass fractions, only if not Boussinesq)
     ! Temp                 :1 (temperature, only if non isothermal)
-    ! umac averaged        :dm
+    ! umac averaged        :dm (default on, optional)
     ! umac shifted         :dm (optional)
     ! umac_avg averaged    :dm (optional)
     ! umac_avg shifted     :dm (optional)
     ! pressure             :1 (pressure)
     if(boussinesq) then
-       ! For Boussinesq we don't have to write mass fractions since density is constant
-       nvarsCC = nspecies_eff + dm + 2    
+       ! For Boussinesq we write rho_i but not c_i since density is constant
+       ! rho and pressure
+       nvarsCC = nspecies_eff + 2    
     else 
-       nvarsCC = 2*nspecies_eff + dm + 2
+       ! rho_i and c_i
+       ! rho and pressure
+       nvarsCC = 2*nspecies_eff + 2
     end if  
     if(is_nonisothermal) then ! Add temperature
        nvarsCC = nvarsCC + 1
     end if 
+    if(plot_averaged_vel) then
+       nvarsCC = nvarsCC + dm
+    end if
     if(plot_shifted_vel) then
        nvarsCC = nvarsCC + dm
     end if
@@ -107,7 +113,9 @@ contains
        nvarsCC = nvarsCC + nspecies
     end if 
     if (plot_umac_tavg) then ! time-averaged umac (cc and shifted)
-       nvarsCC = nvarsCC + dm
+       if(plot_averaged_vel) then
+          nvarsCC = nvarsCC + dm
+       end if
        if(plot_shifted_vel) then
           nvarsCC = nvarsCC + dm
        end if
@@ -162,13 +170,15 @@ contains
        counter = counter + 1
     end if   
 
-    plot_names(counter) = "averaged_velx"
-    counter = counter + 1
-    plot_names(counter) = "averaged_vely"
-    counter = counter + 1
-    if (dm > 2) then
-       plot_names(counter) = "averaged_velz"
+    if (plot_averaged_vel) then
+       plot_names(counter) = "averaged_velx"
        counter = counter + 1
+       plot_names(counter) = "averaged_vely"
+       counter = counter + 1
+       if (dm > 2) then
+          plot_names(counter) = "averaged_velz"
+          counter = counter + 1
+       end if
     end if
 
     if(plot_shifted_vel) then
@@ -183,13 +193,15 @@ contains
     end if
 
     if (plot_umac_tavg) then 
-       plot_names(counter) = "tavg_averaged_velx"
-       counter = counter + 1
-       plot_names(counter) = "tavg_averaged_vely"
-       counter = counter + 1
-       if (dm > 2) then
-          plot_names(counter) = "tavg_averaged_velz"
+       if (plot_averaged_vel) then
+          plot_names(counter) = "tavg_averaged_velx"
           counter = counter + 1
+          plot_names(counter) = "tavg_averaged_vely"
+          counter = counter + 1
+          if (dm > 2) then
+             plot_names(counter) = "tavg_averaged_velz"
+             counter = counter + 1
+          end if
        end if
 
        if (plot_shifted_vel) then
@@ -414,13 +426,15 @@ contains
     end if   
 
     ! vel averaged
-    do i=1,dm
-       call average_face_to_cc(mla,umac(:,i),1,plotdata,counter,1)
-       counter = counter + 1
-    end do
+    if(plot_averaged_vel) then
+       do i=1,dm
+          call average_face_to_cc(mla,umac(:,i),1,plotdata,counter,1)
+          counter = counter + 1
+       end do
+    end if
 
+    ! vel shifted
     if(plot_shifted_vel) then
-       ! vel shifted
        do i=1,dm
           call shift_face_to_cc(mla,umac(:,i),1,plotdata,counter,1)
           counter = counter + 1
@@ -429,10 +443,12 @@ contains
 
     ! time-averaged vel averaged and time-averaged vel shifted
     if (plot_umac_tavg) then
-       do i=1,dm
-          call average_face_to_cc(mla,umac_avg(:,i),1,plotdata,counter,1)
-          counter = counter + 1
-       end do
+       if(plot_averaged_vel) then
+          do i=1,dm
+             call average_face_to_cc(mla,umac_avg(:,i),1,plotdata,counter,1)
+             counter = counter + 1
+          end do
+       end if
        if (plot_shifted_vel) then
           do i=1,dm
              call shift_face_to_cc(mla,umac_avg(:,i),1,plotdata,counter,1)
