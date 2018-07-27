@@ -1,5 +1,8 @@
 &probin_common
 
+! convergence numbers for c1-c5, vx, vy, vz using these parameters
+! 1.9038818216 1.9642604427 1.9614897775 1.9476076498 1.9077904257 1.9461757069	1.9665260681 1.9529660917
+
   smoothing_width = 1.d0               ! scale factor for smoothing initial profile
   n_cells(1:3) = 32 32 32              ! number of cells in domain
   max_grid_size(1:3) = 16 16 16        ! max number of cells in a box
