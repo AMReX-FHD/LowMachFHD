@@ -559,7 +559,9 @@ end if
      if (print_debye_len) then ! NOTE: we are using rho = 1 here, so the below is a close approximation to debye len
         debye_len =sqrt(dielectric_const*k_B*T_init(1)/(1.0*(c_init(1,1)*molmass(1)*charge_per_mass(1)*charge_per_mass(1) &
                         + c_init(1,2)*molmass(2)*charge_per_mass(2)*charge_per_mass(2)))) 
-        print*, 'Debye length $\lambda_D$ is approx: ', debye_len
+        if (parallel_IOprocessor()) then 
+           print*, 'Debye length $\lambda_D$ is approx: ', debye_len
+        endif 
      endif
 
      total_charge = multifab_sum_c(charge_old(1),1,1)*product(dx(1,1:3))    
