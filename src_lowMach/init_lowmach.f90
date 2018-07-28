@@ -855,12 +855,11 @@ contains
     real(kind=dp_t)  :: time 
 
     ! These are only used if prob_type = 16...
-    ! indexing chosen to match c(...) (without ghost cells)
-    real(kind=dp_t)  :: c1_file(lo(2):lo(2)+n_cells(2))
-    real(kind=dp_t)  :: c2_file(lo(2):lo(2)+n_cells(2))
-    real(kind=dp_t)  :: c3_file(lo(2):lo(2)+n_cells(2))
-    real(kind=dp_t)  :: u_file(lo(2):lo(2)+n_cells(2))
- 
+    real(kind=dp_t)  :: c1_file(0:n_cells(2)-1)
+    real(kind=dp_t)  :: c2_file(0:n_cells(2)-1)
+    real(kind=dp_t)  :: c3_file(0:n_cells(2)-1)
+    real(kind=dp_t)  :: u_file(0:n_cells(2)-1) 
+
     ! local variables
     integer          :: i,j,k,n
     real(kind=dp_t)  :: x,y,z,rad,L(3),sumtot,c_loc,y1,r,r1,r2,m_e,gradToverT

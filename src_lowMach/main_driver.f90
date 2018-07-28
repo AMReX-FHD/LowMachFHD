@@ -704,14 +704,28 @@ end if
            un = unit_new()
            open(unit=un, file = fname, status = 'old', action = 'read')
            
-           ! We will also pass temperature here but no additional scalars
-           call initialize_hydro_grid(mla,rho_old,dt,dx,namelist_file=un, &
-                                      nspecies_in=nspecies, &
-                                      nscal_in=0, &
-                                      exclude_last_species_in=.false., &
-                                      analyze_velocity=.true., &
-                                      analyze_density=.true., &
-                                      analyze_temperature=.true.) 
+           ! We will also pass temperature and Epot     !SC
+           if (use_charged_fluid) then
+              call initialize_hydro_grid(mla,rho_old,dt,dx,namelist_file=un, & 
+                                         nspecies_in=nspecies, &
+                                         nscal_in=0, &
+                                         exclude_last_species_in=.false., &
+                                         analyze_velocity=.true., &
+                                         analyze_density=.true., &
+                                         analyze_temperature=.true., &
+                                         analyze_Epot=.true.) 
+           else
+              ! We will also pass temperature here but no additional scalars
+              call initialize_hydro_grid(mla,rho_old,dt,dx,namelist_file=un, &
+                                         nspecies_in=nspecies, &
+                                         nscal_in=0, &
+                                         exclude_last_species_in=.false., &
+                                         analyze_velocity=.true., &
+                                         analyze_density=.true., &
+                                         analyze_temperature=.true., &
+                                         analyze_Epot=.false. ) 
+          
+           endif 
            
            close(unit=un)
            
@@ -1064,7 +1078,12 @@ end if
      if ( (stats_int > 0) .and. &
           (mod(istep,stats_int) .eq. 0) ) then
         ! Compute vertical and horizontal averages (hstat and vstat files)   
-        call print_stats(mla,dx,istep,time,umac=umac,rho=rho_new,temperature=Temp)
+        !call print_stats(mla,dx,istep,time,umac=umac_avg,rho=rho_avg,temperature=Temp)
+        if (use_charged_fluid) then
+           call print_stats(mla,dx,istep,time,umac=umac_avg,rho=rho_avg,temperature=Temp,Epot=Epot_avg)    ! SC attempt
+        else 
+           call print_stats(mla,dx,istep,time,umac=umac_avg,rho=rho_avg,temperature=Temp)
+        end if 
      end if
 
      if (istep .ge. n_steps_skip) then
