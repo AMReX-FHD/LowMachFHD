@@ -1,46 +1,37 @@
 &probin_common
  
-  smoothing_width = 2.d0                ! scale factor for smoothing initial profile
-  n_cells(1:3) = 128 128 1              ! number of cells in domain
-  max_grid_size(1:3) = 64 64 1          ! max number of cells in a box
-  fixed_dt = 0.00125                    ! time step
-  max_step = 800                        ! maximum number of time steps
-  plot_int = 800                        ! Interval for writing a plotfile (for visit/amrvis)
-
-!  smoothing_width = 4.d0               ! scale factor for smoothing initial profile
-!  n_cells(1:3) = 256 256 1             ! number of cells in domain
-!  max_grid_size(1:3) = 128 128 1       ! max number of cells in a box
-!  fixed_dt = 0.000625                  ! time step
-!  max_step = 1600                      ! maximum number of time steps
-!  plot_int = 1600                      ! Interval for writing a plotfile (for visit/amrvis)
-
-!  smoothing_width = 8.d0               ! scale factor for smoothing initial profile
-!  n_cells(1:3) = 512 512 1             ! number of cells in domain
-!  max_grid_size(1:3) = 256 256 1       ! max number of cells in a box
-!  fixed_dt = 0.0003125                 ! time step
-!  max_step = 3200                      ! maximum number of time steps
-!  plot_int = 3200                      ! Interval for writing a plotfile (for visit/amrvis)
-
   ! Problem specification
   !----------------------
   dim_in = 2                            ! 2D or 3D
-  prob_type = 10                        ! see src_lowMach/init_lowmach.f90
+  prob_type = 3                         ! see src_lowMach/init_lowmach.f90
 
   prob_lo(1:3) = 0. 0. 0.               ! physical lo coordinate
   ! 4 times smaller domain that Changho's paper:
   !prob_hi(1:3) = 0.4 0.4 0.005 ! Changho=1.6 1.6 0.05           ! physical hi coordinate
   !n_cells(1:3) = 128 128 1 ! Changho=8              ! number of cells in domain
   ! 2 times smaller domain than Changho's paper:
-  prob_hi(1:3) = 0.4 0.4 0.005 ! Changho=1.6 1.6 0.05           ! physical hi coordinate
+  prob_hi(1:3) = 0.8 0.8 0.005 ! Changho=1.6 1.6 0.05           ! physical hi coordinate
+  n_cells(1:3) = 256 256 1 ! 8              ! number of cells in domain
+  ! As in Changho's paper:
+  !prob_hi(1:3) = 1.6 1.6 0.005 ! Changho=1.6 1.6 0.05           ! physical hi coordinate
+  !n_cells(1:3) = 512 512 1 ! 8              ! number of cells in domain
+  ! Parallelization:
+  max_grid_size(1:3) = 128 128 1 ! max number of cells in a box
 
+  fixed_dt = 0.01                       ! time step =0.01 with reactions, 0.05 without
   cfl = 0.1                             ! cfl number (used if fixed_dt<0) to determine time step
 
+  max_step = 800                      ! maximum number of time steps
+  plot_int = 20                          ! Interval for writing a plotfile (for visit/amrvis)
   plot_base_name = "plt"                ! prefix for plotfile name
   chk_int = -1                          ! Interval for writing a checkpoint
   check_base_name = "chk"               ! prefix for checkpoint name
   restart = -1                          ! checkpoint restart number
-  print_int = 1                          ! how often to output EOS drift and sum of conserved quantities
+  print_int = 20                         ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 0                  ! how often to call project_onto_eos
+  
+  ! Control what to plot
+  plot_shifted_vel = F
 
   ! Physical properties
   !----------------------
@@ -50,10 +41,10 @@
   molmass(1:5) = 3.817540700000000E-023	5.887108600000000E-023	1.673723600000000E-024	2.824068560000000E-023 2.991440920000000E-023
   rhobar(1:5) = 3.349d0 3.349d0 0.1278330278d0 -1.561089817d0 1.d0
   rho0 = 1.0                            ! reference density
-  rho_eos_form = 2 ! Use linearized EOS to ensure matching densities
+  rho_eos_form = 2 ! Use linearized EOS to ensure matching densities with ion simulations
   
   ! stochastic properties
-  variance_coef_mom = 0.                ! global scaling epsilon for stochastic momentum forcing
+  variance_coef_mom = 1.                ! global scaling epsilon for stochastic momentum forcing
   variance_coef_mass = 0.               ! global scaling epsilon for stochastic mass forcing
   k_B = 1.3806488e-16                   ! Boltzmann's constant
   Runiv = 8.314462175e7                 ! Universal gas constant (not used)
@@ -90,7 +81,7 @@
   visc_type = 2
   visc_coef = 0.01002                   ! momentum diffusion coefficient 'eta'   
 
-  advection_type = 1                    ! 0 = centered explicit
+  advection_type = 2                    ! 0 = centered explicit
                                         ! 1 = unlimited bilinear bds in space and time
                                         ! 2 = limited bilinear bds in space and time
                                         ! 3 = unlimited quadratic bds in space and time
@@ -110,6 +101,7 @@
   ! between 0 and -1 is random perturbation where rand = abs(smoothing_width)*rand() and then
   !  c = rand*c_init(1,:) + (1-rand)*c_init(2,:)
   ! -2 is sinusoidal
+  smoothing_width = 0.0                  ! scale factor for smoothing initial profile
 
   initial_variance_mom = 0.             ! multiplicative factor for initial momentum fluctuations
                                         ! (if negative, total momentum is set to zero -- relevant for periodic)
@@ -149,7 +141,7 @@
   ! It is better to use the conserved variables but it does not quite work for staggered
 
   max_grid_projection(1:2) = 256 256      ! parallelization parameters
-  stats_int = 0                         ! Project grid for analysis
+  stats_int = 20                      ! Project grid for analysis
                                         ! If positive, how often to compute mean and 
                                         ! standard deviation over reduced dimensions
   n_steps_save_stats = 0             ! How often to dump HydroGrid output files
@@ -259,7 +251,7 @@
 
   epot_mg_verbose = 0
   !epot_mg_abs_tol = 0 ! Ignored because we overwrite it based on rel_tol
-  epot_mg_rel_tol = 1.0d-9
+  epot_mg_rel_tol = 1.0d-12
 
 /
 
@@ -280,7 +272,7 @@
   ! using rate_multiplier, reaction rates can be changed by the same factor
   ! if include_discrete_LMA_correction, n^2 and n^3 in rate expressions become
   ! n*(n-1/dv) and n*(n-1/dv)*(n-2/dv).
-  rate_const(1:1) = 1.d-20 ! Reduced one order of magnitude relative to Changho's paper
+  rate_const(1:1) = 1.d-19 ! Reduced one order of magnitude relative to Changho's paper
   !rate_const(1:1) = 1.d-20 ! Reduced two orders of magnitude relative to Changho's paper
   rate_multiplier = 1.
   include_discrete_LMA_correction = T

@@ -564,7 +564,8 @@ end if
 
      total_charge = multifab_sum_c(charge_old(1),1,1)*product(dx(1,1:3))    
      if (parallel_IOProcessor().and.electroneutral) then
-        print*,'Initial total charge',total_charge, " Rel max charge=", max_charge/max_charge_abs
+        print*,'Initial total charge',total_charge
+        print*," Rel max charge=", max_charge/max_charge_abs
      else if (parallel_IOProcessor()) then
         print*,'Initial total charge',total_charge          
      end if
@@ -805,7 +806,7 @@ end if
      ! write initial plotfile
      if (plot_int .gt. 0) then
         if (parallel_IOProcessor()) then
-           write(*,*), 'writing initial plotfile 0'
+           write(*,*) 'writing initial plotfile 0'
         end if
         call write_plotfile(mla,rho_old,rho_avg,rhotot_old,Temp,umac,umac_avg,pi,Epot, & 
                             Epot_avg,grad_Epot_old,gradPhiApprox,0,dx,time)
@@ -814,7 +815,7 @@ end if
      ! write initial checkpoint
      if (chk_int .gt. 0) then
         if (parallel_IOProcessor()) then
-           write(*,*), 'writing initial checkpoint 0'
+           write(*,*) 'writing initial checkpoint 0'
         end if
         call checkpoint_write(mla,rho_old,rho_sum,rhotot_old,pi,umac,umac_sum,Epot,Epot_sum,grad_Epot_old,time,dt,0) 
      end if
@@ -1040,7 +1041,8 @@ end if
               max_charge = multifab_norm_inf(charge_new(1))
            end if
            if (parallel_IOProcessor().and.electroneutral) then
-              print*,'Total charge',total_charge, " Rel max charge=", max_charge/max_charge_abs
+              print*,'Total charge',total_charge
+              print*," Rel max charge=", max_charge/max_charge_abs
            else if (parallel_IOProcessor()) then
               print*,'Total charge',total_charge          
               if (print_debye_len) then
@@ -1055,7 +1057,7 @@ end if
      ! write plotfile at specific intervals
      if (plot_int.gt.0 .and. ( (mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) ) then
         if (parallel_IOProcessor()) then
-           write(*,*), 'writing plotfiles after timestep =', istep 
+           write(*,*) 'writing plotfiles after timestep =', istep 
         end if
         call write_plotfile(mla,rho_new,rho_avg,rhotot_new,Temp,umac,umac_avg,pi,Epot, & 
                             Epot_avg,grad_Epot_new,gradPhiApprox,istep,dx,time)
@@ -1065,7 +1067,7 @@ end if
      if ((chk_int.gt.0 .and. mod(istep,chk_int).eq.0)) then
 
         if (parallel_IOProcessor()) then
-           write(*,*), 'writing checkpoint after timestep =', istep 
+           write(*,*) 'writing checkpoint after timestep =', istep 
         end if
         call checkpoint_write(mla,rho_new,rho_sum,rhotot_new,pi,umac,umac_sum,Epot,Epot_sum,grad_Epot_new,time,dt,istep)
      end if

@@ -1,37 +1,36 @@
 &probin_common
 
-  smoothing_width = 2.d0               ! scale factor for smoothing initial profile
-  n_cells(1:3) = 128 128 1             ! number of cells in domain
-  max_grid_size(1:3) = 64 64 1         ! max number of cells in a box
+! convergence numbers for c1-c5, vx, vy, vz using these parameters
+! 1.9038818216 1.9642604427 1.9614897775 1.9476076498 1.9077904257 1.9461757069	1.9665260681 1.9529660917
+
+  smoothing_width = 1.d0               ! scale factor for smoothing initial profile
+  n_cells(1:3) = 32 32 32              ! number of cells in domain
+  max_grid_size(1:3) = 16 16 16        ! max number of cells in a box
   fixed_dt = 0.00125                   ! time step
   max_step = 800                       ! maximum number of time steps
   plot_int = 800                       ! Interval for writing a plotfile (for visit/amrvis)
 
-!  smoothing_width = 4.d0               ! scale factor for smoothing initial profile
-!  n_cells(1:3) = 256 256 1             ! number of cells in domain
-!  max_grid_size(1:3) = 128 128 1       ! max number of cells in a box
+!  smoothing_width = 2.d0               ! scale factor for smoothing initial profile
+!  n_cells(1:3) = 64 64 64              ! number of cells in domain
+!  max_grid_size(1:3) = 32 32 32        ! max number of cells in a box
 !  fixed_dt = 0.000625                  ! time step
 !  max_step = 1600                      ! maximum number of time steps
 !  plot_int = 1600                      ! Interval for writing a plotfile (for visit/amrvis)
 
-!  smoothing_width = 8.d0               ! scale factor for smoothing initial profile
-!  n_cells(1:3) = 512 512 1             ! number of cells in domain
-!  max_grid_size(1:3) = 256 256 1       ! max number of cells in a box
+!  smoothing_width = 4.d0               ! scale factor for smoothing initial profile
+!  n_cells(1:3) = 128 128 128           ! number of cells in domain
+!  max_grid_size(1:3) = 64 64 64        ! max number of cells in a box
 !  fixed_dt = 0.0003125                 ! time step
 !  max_step = 3200                      ! maximum number of time steps
 !  plot_int = 3200                      ! Interval for writing a plotfile (for visit/amrvis)
 
   ! Problem specification
   !----------------------
-  dim_in = 2                            ! 2D or 3D
+  dim_in = 3                            ! 2D or 3D
   prob_type = 10                        ! see src_lowMach/init_lowmach.f90
 
   prob_lo(1:3) = 0. 0. 0.               ! physical lo coordinate
-  ! 4 times smaller domain that Changho's paper:
-  !prob_hi(1:3) = 0.4 0.4 0.005 ! Changho=1.6 1.6 0.05           ! physical hi coordinate
-  !n_cells(1:3) = 128 128 1 ! Changho=8              ! number of cells in domain
-  ! 2 times smaller domain than Changho's paper:
-  prob_hi(1:3) = 0.4 0.4 0.005 ! Changho=1.6 1.6 0.05           ! physical hi coordinate
+  prob_hi(1:3) = 0.1d0 0.1d0 0.1d0
 
   cfl = 0.1                             ! cfl number (used if fixed_dt<0) to determine time step
 
@@ -45,10 +44,10 @@
   ! Physical properties
   !----------------------
   grav(1:3) = 0. -981. 0.               ! gravity vector (negative is downwards)
-  nspecies = 4                          ! number of species (HCl, NaOH, NaCl, H2O) 
-  molmass(1:4) = 6.054480960000000E-023	6.641609260000000E-023	9.704649300000000E-023	2.991440920000000E-023
-                                        ! molecular masses for nspecies
-  rhobar(1:4) = 1.97396 -9.92571 3.349 1.0               ! rhobar for nspecies
+  nspecies = 5                          ! number of species Na+ Cl- H+ OH- H2O 
+
+  molmass(1:5) = 3.817540700000000E-023	5.887108600000000E-023	1.673723600000000E-024	2.824068560000000E-023 2.991440920000000E-023
+  rhobar(1:5) = 3.349d0 3.349d0 0.1278330278d0 -1.561089817d0 1.d0
   rho0 = 1.0                            ! reference density
   rho_eos_form = 2 ! Use linearized EOS to ensure matching densities
   
@@ -148,7 +147,7 @@
   ! -dim=analyze 3D and then project along dim so we also analyze 2D data
   ! It is better to use the conserved variables but it does not quite work for staggered
 
-  max_grid_projection(1:2) = 256 256      ! parallelization parameters
+  max_grid_projection(1:2) = 32 32        ! parallelization parameters
   stats_int = 0                         ! Project grid for analysis
                                         ! If positive, how often to compute mean and 
                                         ! standard deviation over reduced dimensions
@@ -174,7 +173,7 @@
   correct_flux = T                      ! Manually ensure mass is conserved to roundoff 
   print_error_norms = T
   chi_iterations = 10                   ! number of iterations used in Dbar2chi_iterative
-  plot_stag = F                         ! plot staggered velocities in separate plotfile
+  plot_stag = T                         ! plot staggered velocities in separate plotfile
   
   ! Physical properties:
   !----------------------
@@ -188,13 +187,15 @@
   ! These are lower-triangules of symmetric matrices represented as vectors
   ! Number of elements is (nspecies*(nspecies-1)/2)
   ! The values are red row by row starting from top going down (this allows easy addition/deletion of new species/rows)
-  ! So D_12; D_13, D_23; D_14, D_24, D_34; ...
+  ! So D_12; D_13, D_23; D_14, D_24, D_34; D_15, D_25, D_35, D_45
+  ! True values:
+  Dbar(1:10) = 0.1173869565e-4, 0.5408879652e-4, 0.8255658417e-4, 0.3083589699e-4, 0.4706531648e-4, 0.2168644968e-3, 0.133e-4, 0.203e-4, 0.9353701657e-4, 0.5332523540e-4
   ! Binary ambipolar coefficients for HCl, NaOH, NaCl: 3.336000e-05 2.129000e-05 1.611000e-05
-  Dbar(1:6) = 3.087976e-05 2.336650e-05 1.491226e-05 3.336000e-05 2.129000e-05 1.611000e-05
-  ! Fake ambipolar values: D_NaCl=0.2599210978e-4=harm_av(D_NaOH, D_HCl)
-  !Dbar(1:6) = 3.087976e-05 2.336650e-05 1.491226e-05 3.336000e-05 2.129000e-05 0.2599210978e-4
+  ! Now we need Na+ Cl- H+ OH-
+  ! Fake ambipolar values: D_NaCl=0.2599210978e-4
+  !Dbar(1:10) = 0.1173869565e-4, 0.5408879652e-4, 0.8255658417e-4, 0.3083589699e-4, 0.4706531648e-4, 0.2168644968e-3, 2.129000e-05, 3.336000e-05, 3.336000e-05, 2.129000e-05
   ! All diffusion coefficients equal:
-  !Dbar(1:6) = 3e-5, 3e-5, 3e-5, 3e-5, 3e-5, 3e-5
+  !Dbar(1:10) = 3e-5, 3e-5, 3e-5, 3e-5, 3e-5, 3e-5, 3e-5, 3e-5, 3e-5, 3e-5
                                         
   H_offdiag(1:1) = 0.                   ! Off diagonal elements of H=d^2F/dx^2  
 
@@ -210,15 +211,15 @@
   ! initial values for c
   ! The last value for water will be overwritten to enforce the EOS
   ! These are MASS FRACTIONS (concentrations), not partial densities
-  c_init(1,1:4) = 0.035847 0. 0. 0.964153
-  c_init(2,1:4) = 0. 0.015737 0. 0.984263       ! Double diffusion
+  c_init(1,1:4) = 0.000000000000000d0	3.485603198332630d-2 9.909680166737200d-4 0.000000000000000d0
+  c_init(2,1:4) = 9.045494193360600d-3	0.000000000000000d0  0.000000000000000d0  6.691505806639400d-3
 
   ! c_i boundary conditions (dir,lohi,species)
   ! These are MASS FRACTIONS (concentrations), not partial densities
 
   ! use this set for reservoir (Dirichlet Values)
-  c_bc(2,1,1:4) = 0.035847 0. 0. 0.964153 
-  c_bc(2,2,1:4) = 0. 0.015737 0. 0.984263       ! Double diffusion
+  c_bc(2,1,1:4) = 0.000000000000000d0	3.485603198332630d-2 9.909680166737200d-4 0.000000000000000d0
+  c_bc(2,2,1:4) = 9.045494193360600d-3	0.000000000000000d0  0.000000000000000d0  6.691505806639400d-3
 
   ! use this set for walls (Neumann Values)
   !c_bc(2,1,1:4) = 0. 0. 0. 0.
@@ -233,21 +234,46 @@
 /
 
 &probin_charged
+  use_charged_fluid  = T
+  dielectric_const   = 6.91d-19    ! relative permitivity ~ 78, vacuum permitivity ~ 8.854d-21
+  dielectric_type    = 0      ! 0 = assumes constant epsilon
+                              ! 1 = (1+c1)*dielectric_const
+                              ! see fluid_charge.f90:compute_permittivity()
+  charge_per_mass(1:5) = 4.196881568282950d3 -2.721500024647070d3 9.572528104401470d4 -5.673292223472080d3 0.d0
+
+  ! 1 = Dirichlet (fixed potential)
+  ! 2 = Neumann (fixed charge density)
+  Epot_wall_bc_type(1,2) = 2
+  Epot_wall_bc_type(2,2) = 2
+  Epot_wall_bc_type(1,3) = 2
+  Epot_wall_bc_type(2,3) = 2
+
+  ! Dirichlet or Neumann condition
+  Epot_wall(1,2)         = 0.d0
+  Epot_wall(2,2)         = 0.d0
+  Epot_wall(1,3)         = 0.d0
+  Epot_wall(2,3)         = 0.d0
+
+  electroneutral = T
+
+  epot_mg_verbose = 0
+  !epot_mg_abs_tol = 0 ! Ignored because we overwrite it based on rel_tol
+  epot_mg_rel_tol = 1.0d-12
 
 /
 
 &probin_chemistry
-  ! Species = HCl, NaOH, NaCl, H2O  
+  ! Species = Na+ Cl- H+ OH- H2O
 
-  nreactions = 1                        ! number of reactions  
-
+  nreactions = 1                        ! number of reactions
+  
   ! stoichiometric factors for each reaction (species,LHS(1)/RHS(2),reaction)
   ! Example: For N1 + 2*N2 -> N3 use
   ! stoichiometric_factors(1:3,1,1) = 1 2 0
   ! stoichiometric_factors(1:3,2,1) = 0 0 1
-  ! NaOH + HCl -> NaCl + H20 
-  stoichiometric_factors(1:4,1,1) = 1 1 0 0 
-  stoichiometric_factors(1:4,2,1) = 0 0 1 1
+  ! H+ (3) + OH- (4) -> H2O (5)
+  stoichiometric_factors(1:5,1,1) = 0 0 1 1 0
+  stoichiometric_factors(1:5,2,1) = 0 0 0 0 1
 
   ! reaction rate constant for each reaction (assuming Law of Mass Action holds)
   ! using rate_multiplier, reaction rates can be changed by the same factor

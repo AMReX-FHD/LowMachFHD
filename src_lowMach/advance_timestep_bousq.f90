@@ -35,7 +35,7 @@ module advance_timestep_bousq_module
                                   molmass, use_bl_rng, nspecies, plot_int, max_step
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: midpoint_stoch_mass_flux_type, is_ideal_mixture
-  use probin_charged_module, only: use_charged_fluid, electroneutral
+  use probin_charged_module, only: use_charged_fluid, electroneutral, relxn_param_charge
   use probin_chemistry_module, only: nreactions, use_Poisson_rng, include_discrete_LMA_correction, &
                                      exclude_solvent_comput_rates, use_mole_frac_LMA
 
@@ -126,7 +126,7 @@ contains
 
     integer :: i,dm,n,nlevs,proj_type
     
-    real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
+    real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in, relxn_param_charge_in
     real(kind=dp_t) :: weights(2)
 
     real(kind=dp_t), parameter :: mattingly_lin_comb_coef(1:2) = (/-1.d0, 2.d0/)
@@ -297,6 +297,9 @@ contains
     ! this computes "-F = rho W chi [Gamma grad x... ]"
     weights(1) = 1.d0
     weights(2) = 0.d0
+    ! For electroneutral, we only have to do charge relaxation in the corrector
+    relxn_param_charge_in=relxn_param_charge
+    relxn_param_charge=0.0 ! Don't correct in predictor
     call compute_mass_fluxdiv(mla,rho_old,rhotot_old,gradp_baro,Temp, &
                               diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                               diff_mass_flux,stoch_mass_flux, &
@@ -593,6 +596,8 @@ contains
     ! Step 4: compute mass fluxes and reactions at t^{n+1/2}
 
     ! compute mass fluxes and reactions at t^{n+1/2}
+    ! For electroneutral, enable charge correction in the corrector
+    relxn_param_charge=relxn_param_charge_in ! Default value is 1  
     if (midpoint_stoch_mass_flux_type .eq. 1) then
        ! strato
 

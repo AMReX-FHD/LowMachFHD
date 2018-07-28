@@ -866,7 +866,7 @@ contains
 
     real(kind=dp_t) :: random
 
-    real(kind=dp_t)  :: rho_total
+    real(kind=dp_t)  :: rho_total, sinx, sinz
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
     
@@ -1098,6 +1098,7 @@ contains
 
        u = 0.d0
        v = 0.d0
+       w = 0.d0
 
        ! note: c(:,:,:,3) will be computed below to enforce sumtot(c)=1
        c(:,:,:,2) = 0.2d0
@@ -1114,6 +1115,51 @@ contains
              enddo
           enddo
        enddo
+
+    case (10)
+
+       !=============================================================
+       ! 1 fluid on top of another; tanh smoothed in y, sinusoidal pertrubation in x and z
+       ! c = c_init(1,:) on bottom; c = c_init(2,:) on top
+       ! smoothing_width > 0 is a tanh smoothed interface where smoothing width is approx the # of grid 
+       ! 
+       ! x-vel = u_init(1) below centerline, u_init(2) above centerline
+       !=============================================================
+
+       u = 0.d0
+       v = 0.d0
+       w = 0.d0
+
+       ! middle of domain
+       y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
+
+       ! x-velocity = u_init(1) below centerline
+       !              u_init(2) above centerline
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+          if (y .lt. y1) then
+             u(:,j,:) = u_init(1)
+          else
+             u(:,j,:) = u_init(2)
+          end if
+       end do
+
+       ! tanh smoothed in y, sinusoidal pertrubation in x
+       do k=lo(3),hi(3)
+          z = prob_lo(3) + dx(3)*(dble(k)+0.5d0)
+          do i=lo(1),hi(1)
+             x = prob_lo(1) + dx(1)*(dble(i)+0.5d0)
+             sinx = 0.1*(prob_hi(2)-prob_lo(2)) * sin(2.d0*M_PI*x/(prob_hi(1)-prob_lo(1)))
+             sinz = 0.1*(prob_hi(2)-prob_lo(2)) * sin(2.d0*M_PI*z/(prob_hi(3)-prob_lo(3)))
+             do j=lo(2),hi(2)
+                y = prob_lo(2) + dx(2)*(dble(j)+0.5d0) - y1 + sinx + sinz
+                do n=1,nspecies
+                   c_loc = c_init(1,n) + (c_init(2,n)-c_init(1,n))*0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)
+                   c(i,j,k,n) = c_loc
+                end do
+             end do
+          end do
+       end do
 
     case (11)
 
