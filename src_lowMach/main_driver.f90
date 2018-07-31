@@ -294,7 +294,6 @@ subroutine main_driver()
         call multifab_build(rho_old(n)   ,mla%la(n),nspecies,ng_s)
         call multifab_build(rho_sum(n)   ,mla%la(n),nspecies,ng_s) 
         call setval(rho_sum(n),0.d0) 
-        call setval(rho_avg(n),0.d0) 
         call multifab_build(rhotot_old(n),mla%la(n),1       ,ng_s)
         call multifab_build(pi(n)        ,mla%la(n),1       ,1)
         do i=1,dm
@@ -426,6 +425,7 @@ end if
   do n=1,nlevs 
      call multifab_build(rho_new(n)          ,mla%la(n),nspecies,ng_s)
      call multifab_build(rho_avg(n)          ,mla%la(n),nspecies,ng_s) 
+     call setval(rho_avg(n),0.d0) 
      call multifab_build(rhotot_new(n)       ,mla%la(n),1       ,ng_s) 
      call multifab_build(Temp(n)             ,mla%la(n),1       ,ng_s)
      call multifab_build(diff_mass_fluxdiv(n),mla%la(n),nspecies,0) 
