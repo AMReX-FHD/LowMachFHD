@@ -447,9 +447,10 @@ contains
 
     if (E_ext_type .ne. 0) then
        ! add external electric field
+       ! since E = -grad(Epot), we have to subtract the external field from grad_Epot
        do n=1,nlevs
           do i=1,dm
-             call multifab_plus_plus_c(grad_Epot(n,i),1,E_ext(n,i),1,1,0)
+             call multifab_sub_sub_c(grad_Epot(n,i),1,E_ext(n,i),1,1,0)
           end do
        end do
     end if

@@ -526,10 +526,10 @@ contains
        end do
     end do
 
-    ! subtract t^{n+1,*} Lorentz force
+    ! add t^{n+1,*} Lorentz force
     do n=1,nlevs
        do i=1,dm
-          call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,-1.d0,Lorentz_force_new(n,i),1,1)
+          call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,1.d0,Lorentz_force_new(n,i),1,1)
        end do
     end do
 
@@ -943,10 +943,10 @@ contains
        end do
     end do
 
-    ! subtract t^{n+1,*} Lorentz force
+    ! add t^{n+1,*} Lorentz force
     do n=1,nlevs
        do i=1,dm
-         call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,-1.d0,Lorentz_force_new(n,i),1,1)
+         call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,1.d0,Lorentz_force_new(n,i),1,1)
        end do
     end do
 
