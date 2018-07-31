@@ -43,7 +43,7 @@ subroutine main_driver()
                                   algorithm_type, variance_coef_mom, initial_variance_mom, &
                                   variance_coef_mass, barodiffusion_type, use_bl_rng, &
                                   density_weights, rhobar, rho0, analyze_conserved, rho_eos_form, &
-                                  molmass, k_B, reset_tavg_vals, reset_tavg_step
+                                  molmass, k_B, reset_tavg_vals, reset_tavg_step, stat_save_type
 
   use probin_multispecies_module, only: Dbar, start_time, probin_multispecies_init, c_init, T_init, c_bc
 
@@ -1078,13 +1078,23 @@ end if
      ! print out projection (average) and variance
      if ( (stats_int > 0) .and. &
           (mod(istep,stats_int) .eq. 0) ) then
-        ! Compute vertical and horizontal averages (hstat and vstat files)   
-        !call print_stats(mla,dx,istep,time,umac=umac_avg,rho=rho_avg,temperature=Temp)
-        if (use_charged_fluid) then
-           call print_stats(mla,dx,istep,time,umac=umac_avg,rho=rho_avg,temperature=Temp,Epot=Epot_avg)    ! SC attempt
-        else 
-           call print_stats(mla,dx,istep,time,umac=umac_avg,rho=rho_avg,temperature=Temp)
-        end if 
+
+        if (stat_save_type.eq.0) then  ! compute vertical/horizontal averages of instantaneous fields
+           if (use_charged_fluid) then 
+              call print_stats(mla,dx,istep,time,umac=umac,rho=rho_new,temperature=Temp,Epot=Epot) 
+           else 
+              call print_stats(mla,dx,istep,time,umac=umac,rho=rho_new,temperature=Temp) 
+           endif 
+        else                           ! compute vertical/horizontal averages of time averaged fields
+           if (istep.lt.n_steps_skip) then 
+              call bl_error("If stat_save_type is \ne 0, you cannot call print_stats until n_steps_skip has passed.")
+           end if 
+           if (use_charged_fluid) then 
+              call print_stats(mla,dx,istep,time,umac=umac_avg,rho=rho_avg,temperature=Temp,Epot=Epot_avg) 
+           else 
+              call print_stats(mla,dx,istep,time,umac=umac_avg,rho=rho_avg,temperature=Temp) 
+           endif 
+        end if  
      end if
 
      if (istep .ge. n_steps_skip) then

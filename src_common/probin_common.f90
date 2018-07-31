@@ -25,7 +25,7 @@ module probin_common_module
   real(dp_t),save :: wallspeed_lo(MAX_SPACEDIM-1,MAX_SPACEDIM)
   real(dp_t),save :: wallspeed_hi(MAX_SPACEDIM-1,MAX_SPACEDIM)
   integer,save    :: hydro_grid_int,project_dir,max_grid_projection(2)
-  integer,save    :: stats_int,n_steps_save_stats,n_steps_skip,histogram_unit,reset_tavg_step
+  integer,save    :: stats_int,n_steps_save_stats,n_steps_skip,histogram_unit,reset_tavg_step,stat_save_type
   logical,save    :: analyze_conserved,center_snapshots,reset_tavg_vals
   real(dp_t),save :: variance_coef_mom,variance_coef_mass,initial_variance_mom,initial_variance_mass
   real(dp_t),save :: k_B,Runiv,visc_coef
@@ -213,6 +213,8 @@ module probin_common_module
   namelist /probin_common/ stats_int           ! Project grid for analysis
                                                ! If positive, how often to compute mean and 
                                                ! standard deviation over reduced dimensions
+  namelist /probin_common/ stat_save_type      ! This determines the argument to the print_stats function call; if 
+                                               ! it's set to 0, we save instantaneous fields; else, we save time averaged fields
   namelist /probin_common/ n_steps_save_stats  ! How often to dump HydroGrid output files
   namelist /probin_common/ n_steps_skip        ! How many steps to skip
   namelist /probin_common/ reset_tavg_vals     ! Boolean to indicate if we want to reset the time averaged vals or not
@@ -340,6 +342,7 @@ contains
 
     max_grid_projection = 128
     stats_int = -1
+    stat_save_type = 0 ! by default, vstat/hstat files contain instantaneous fields, not time-averaged ones. 
     n_steps_save_stats = -1
     n_steps_skip = 0
     reset_tavg_vals = .false.
@@ -799,6 +802,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) stats_int
+
+       case ('--stat_save_type')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) stat_save_type
 
        case ('--n_steps_save_stats')
           farg = farg + 1
