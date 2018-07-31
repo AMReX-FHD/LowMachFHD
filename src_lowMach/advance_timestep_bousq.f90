@@ -313,10 +313,10 @@ contains
        call compute_Lorentz_force(mla,Lorentz_force,grad_Epot_old,permittivity, &
                                   charge_old,dx,the_bc_tower)
 
-       ! subtract Lorentz force from gmres_rhs_v
+       ! add Lorentz force to gmres_rhs_v
        do n=1,nlevs
           do i=1,dm
-             call multifab_saxpy_3(gmres_rhs_v(n,i),-1.d0,Lorentz_force(n,i))
+             call multifab_saxpy_3(gmres_rhs_v(n,i),1.d0,Lorentz_force(n,i))
           end do
        end do
 
@@ -854,10 +854,10 @@ contains
 
     if (use_charged_fluid) then
 
-       ! subtract Lorentz force from gmres_rhs_v
+       ! add Lorentz force to gmres_rhs_v
        do n=1,nlevs
           do i=1,dm
-             call multifab_saxpy_3(gmres_rhs_v(n,i),-1.d0,Lorentz_force(n,i))
+             call multifab_saxpy_3(gmres_rhs_v(n,i),1.d0,Lorentz_force(n,i))
           end do
        end do
 

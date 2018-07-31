@@ -605,12 +605,12 @@ contains
           end do
        end if
 
-       ! subtract momentum charge force
+       ! add momentum charge force
        if (use_charged_fluid) then
           do n=1,nlevs
              do i=1,dm
-                call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,-(1.d0-theta_pot),Lorentz_force_old(n,i),1,1)
-                call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,      -theta_pot ,Lorentz_force_new(n,i),1,1)
+                call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,(1.d0-theta_pot),Lorentz_force_old(n,i),1,1)
+                call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,      theta_pot ,Lorentz_force_new(n,i),1,1)
              end do
           end do
        end if

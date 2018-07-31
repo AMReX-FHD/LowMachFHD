@@ -384,11 +384,11 @@ contains
        call compute_Lorentz_force(mla,Lorentz_force_new,grad_Epot_new,permittivity, &
                                   charge_new,dx,the_bc_tower)
 
-       ! subtract (1/2) old and (1/2) new from gmres_rhs_v
+       ! add (1/2) old and (1/2) new to gmres_rhs_v
        do n=1,nlevs
           do i=1,dm
-             call multifab_saxpy_3(gmres_rhs_v(n,i),-0.5d0,Lorentz_force_old(n,i))
-             call multifab_saxpy_3(gmres_rhs_v(n,i),-0.5d0,Lorentz_force_new(n,i))
+             call multifab_saxpy_3(gmres_rhs_v(n,i),0.5d0,Lorentz_force_old(n,i))
+             call multifab_saxpy_3(gmres_rhs_v(n,i),0.5d0,Lorentz_force_new(n,i))
           end do
        end do
 
@@ -743,11 +743,11 @@ contains
        call compute_Lorentz_force(mla,Lorentz_force_new,grad_Epot_new,permittivity, &
                                   charge_new,dx,the_bc_tower)
 
-       ! subtract (1/2) old and (1/2) new from gmres_rhs_v
+       ! add (1/2) old and (1/2) new to gmres_rhs_v
        do n=1,nlevs
           do i=1,dm
-             call multifab_saxpy_3(gmres_rhs_v(n,i),-0.5d0,Lorentz_force_old(n,i))
-             call multifab_saxpy_3(gmres_rhs_v(n,i),-0.5d0,Lorentz_force_new(n,i))
+             call multifab_saxpy_3(gmres_rhs_v(n,i),0.5d0,Lorentz_force_old(n,i))
+             call multifab_saxpy_3(gmres_rhs_v(n,i),0.5d0,Lorentz_force_new(n,i))
           end do
        end do
 
