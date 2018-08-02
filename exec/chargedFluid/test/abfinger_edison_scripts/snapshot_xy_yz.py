@@ -395,8 +395,16 @@ DrawPlots()
 SetActiveWindow(1)
 ToggleCameraViewMode()
 
+drawThePlots = 0
 for ts in range(TimeSliderGetNStates()):
-  SetTimeSliderState(ts)
+  if SetTimeSliderState(ts) == 0:
+    drawThePlots = 1
+  if drawThePlots == 1:
+    if DrawPlots() == 0:
+      print "VisIt could not draw plots for state: %d" % ts
+    else:
+      drawThePlots = 0
+
   RenderingAtts = RenderingAttributes()
   RenderingAtts.antialiasing = 0
   RenderingAtts.multiresolutionMode = 0
