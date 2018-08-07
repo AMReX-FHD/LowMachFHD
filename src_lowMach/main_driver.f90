@@ -825,7 +825,11 @@ end if
      
      if (stats_int .gt. 0) then
         ! write initial vertical and horizontal averages (hstat and vstat files)   
-        call print_stats(mla,dx,0,time,umac=umac,rho=rho_old,temperature=Temp)
+        if (use_charged_fluid) then
+           call print_stats(mla,dx,0,time,umac=umac,rho=rho_old,temperature=Temp,Epot=Epot)
+        else
+           call print_stats(mla,dx,0,time,umac=umac,rho=rho_old,temperature=Temp)
+        end if
      end if
 
      ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0
