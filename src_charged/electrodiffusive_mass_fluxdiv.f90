@@ -455,6 +455,12 @@ contains
        end do
     end if
 
+    if (zero_eps_on_wall_type .gt. 0) then
+       ! Set E-field ie grad_Epot to be zero on certain boundary faces.
+       ! This enforces dphi/dn = 0 on the parts of the (Dirichlet) wall we want. 
+       call zero_eps_on_wall(mla,grad_Epot,dx)
+    end if
+
     do n=1,nlevs
        do i=1,dm
           call multifab_fill_boundary(grad_Epot(n,i))
