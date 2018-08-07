@@ -8,7 +8,7 @@ module inhomogeneous_bc_val_module
   use probin_common_module, only: prob_lo, prob_hi, wallspeed_lo, wallspeed_hi, prob_type, &
                                   nspecies, algorithm_type, rho0, n_cells
   use probin_charged_module, only: Epot_wall, Epot_wall_bc_type, zero_charge_on_wall_type, bc_function_type, &
-                                   L_pos, L_trans, L_zero
+                                   L_pos, L_trans, L_zero, induced_charge_eo, E_ext_value
 
   implicit none
 
@@ -192,7 +192,19 @@ contains
           else if (x .eq. prob_hi(1)) then
              val = Epot_wall(2,1)
           else if (y .eq. prob_lo(2)) then
-             val = Epot_wall(1,2)
+
+             !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+             ! if we're doing ICEO, we want to phi_tot = phi_periodic + phi_ext = 0 on the boundary 
+             ! Since phi_ext = -x*E_0 + B, where E_0 is the magnitude of the external field and 
+             ! B is some (irrelevant) constant, we can rig phi_tot to vanish on the portion of the 
+             ! boundary we want (the metallic strip aka a conductor) by prescribing that
+             ! phi_periodic = x*E_0. 
+             !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+             if (induced_charge_eo) then 
+                val = 1.d0*(x-(prob_lo(1)+prob_hi(1))/2.d0)*E_ext_value(1)  
+             else 
+                val = Epot_wall(1,2) 
+             end if 
 
              if (zero_charge_on_wall_type .eq. 1) then
                 Lx = prob_hi(1)-prob_lo(1)
