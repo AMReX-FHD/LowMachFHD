@@ -51,6 +51,8 @@ contains
     real(kind=dp_t), allocatable :: dx(:)
     real(kind=dp_t), pointer :: sp(:,:,:,:)
 
+    real(kind=dp_t) :: time
+
     type(bl_prof_timer),save :: bpt
 
     call build(bpt,"multifab_physbc")
@@ -64,6 +66,12 @@ contains
        dx(1:dm) = dx_in(1:dm)
     else
        dx = 1.d0
+    end if
+
+    if (present(time_in)) then
+       time = time_in
+    else
+       time = 0.d0
     end if
 
     increment_bccomp = .true.
@@ -84,10 +92,10 @@ contains
           select case (dm)
           case (2)
              call physbc_2d(sp(:,:,1,scomp), lo, hi, ng, &
-                            the_bc_level%adv_bc_level_array(i,:,:,bccomp),bccomp, dx)
+                            the_bc_level%adv_bc_level_array(i,:,:,bccomp),bccomp, dx, time)
           case (3)
              call physbc_3d(sp(:,:,:,scomp), lo, hi, ng, &
-                            the_bc_level%adv_bc_level_array(i,:,:,bccomp),bccomp, dx)
+                            the_bc_level%adv_bc_level_array(i,:,:,bccomp),bccomp, dx, time)
           end select
        end do
     end do
@@ -98,13 +106,13 @@ contains
 
   end subroutine multifab_physbc
 
-  subroutine physbc_2d(s,lo,hi,ng,bc,bccomp,dx)
+  subroutine physbc_2d(s,lo,hi,ng,bc,bccomp,dx,time)
 
     integer        , intent(in   ) :: lo(:),hi(:),ng
     real(kind=dp_t), intent(inout) ::    s(lo(1)-ng:,lo(2)-ng:)
     integer        , intent(in   ) :: bc(:,:)
     integer        , intent(in   ) :: bccomp
-    real(kind=dp_t), intent(in   ) :: dx(:)
+    real(kind=dp_t), intent(in   ) :: dx(:), time
 
     ! Local variables
     integer :: i,j
@@ -138,14 +146,14 @@ contains
        x = prob_lo(1)
        do j=lo(2)-ngylo,hi(2)+ngyhi
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-          s(lo(1)-ng:lo(1)-1,j) = s(lo(1),j) - 0.5d0*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y)
+          s(lo(1)-ng:lo(1)-1,j) = s(lo(1),j) - 0.5d0*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y,time)
        end do
     else if (bc(1,1) .eq. HOEXTRAP) then
        ! quadratric extrapolation using two interior points and Neumann bc
        x = prob_lo(1)
        do j=lo(2)-ngylo,hi(2)+ngyhi
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-          s(lo(1)-ng:lo(1)-1,j) = -(threeEighths)*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y) &
+          s(lo(1)-ng:lo(1)-1,j) = -(threeEighths)*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y,time) &
                + (nineEighths)*s(lo(1),j) - (oneEighth)*s(lo(1)+1,j)
        end do
     else if (bc(1,1) .eq. EXT_DIR) then
@@ -153,7 +161,7 @@ contains
        x = prob_lo(1)
        do j=lo(2)-ngylo,hi(2)+ngyhi
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-          s(lo(1)-ng:lo(1)-1,j) = inhomogeneous_bc_val_2d(bccomp,x,y)
+          s(lo(1)-ng:lo(1)-1,j) = inhomogeneous_bc_val_2d(bccomp,x,y,time)
        end do
     else if (bc(1,1) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
@@ -171,14 +179,14 @@ contains
        x = prob_hi(1)
        do j=lo(2)-ngylo,hi(2)+ngyhi
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-          s(hi(1)+1:hi(1)+ng,j) = s(hi(1),j) - 0.5d0*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y)
+          s(hi(1)+1:hi(1)+ng,j) = s(hi(1),j) - 0.5d0*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y,time)
        end do
     else if (bc(1,2) .eq. HOEXTRAP) then
        ! quadratric extrapolation using two interior points and Neumann bc
        x = prob_hi(1)
        do j=lo(2)-ngylo,hi(2)+ngyhi
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-          s(hi(1)+1:hi(1)+ng,j) = -(threeEighths)*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y) &
+          s(hi(1)+1:hi(1)+ng,j) = -(threeEighths)*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y,time) &
                + (nineEighths)*s(hi(1),j) - (oneEighth)*s(hi(1)-1,j)
        end do
     else if (bc(1,2) .eq. EXT_DIR) then
@@ -186,7 +194,7 @@ contains
        x = prob_hi(1)
        do j=lo(2)-ngylo,hi(2)+ngyhi
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-          s(hi(1)+1:hi(1)+ng,j) = inhomogeneous_bc_val_2d(bccomp,x,y)
+          s(hi(1)+1:hi(1)+ng,j) = inhomogeneous_bc_val_2d(bccomp,x,y,time)
        end do
     else if (bc(1,2) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
@@ -204,14 +212,14 @@ contains
        y = prob_lo(2)
        do i=lo(1)-ng,hi(1)+ng
           x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-          s(i,lo(2)-ng:lo(2)-1) = s(i,lo(2)) - 0.5d0*dx(2)*inhomogeneous_bc_val_2d(bccomp,x,y)
+          s(i,lo(2)-ng:lo(2)-1) = s(i,lo(2)) - 0.5d0*dx(2)*inhomogeneous_bc_val_2d(bccomp,x,y,time)
        end do
     else if (bc(2,1) .eq. HOEXTRAP) then
        ! quadratric extrapolation using two interior points and Neumann bc
        y = prob_lo(2)
        do i=lo(1)-ng,hi(1)+ng
           x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-          s(i,lo(2)-ng:lo(2)-1) = -(threeEighths)*dx(2)*inhomogeneous_bc_val_2d(bccomp,x,y) &
+          s(i,lo(2)-ng:lo(2)-1) = -(threeEighths)*dx(2)*inhomogeneous_bc_val_2d(bccomp,x,y,time) &
                + (nineEighths)*s(i,lo(2)) - (oneEighth)*s(i,lo(2)+1)
        end do
     else if (bc(2,1) .eq. EXT_DIR) then
@@ -219,7 +227,7 @@ contains
        y = prob_lo(2)
        do i=lo(1)-ng,hi(1)+ng
           x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-          s(i,lo(2)-ng:lo(2)-1) = inhomogeneous_bc_val_2d(bccomp,x,y)
+          s(i,lo(2)-ng:lo(2)-1) = inhomogeneous_bc_val_2d(bccomp,x,y,time)
        end do
     else if (bc(2,1) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
@@ -237,14 +245,14 @@ contains
        y = prob_hi(2)
        do i=lo(1)-ng,hi(1)+ng
           x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-          s(i,hi(2)+1:hi(2)+ng) = s(i,hi(2)) - 0.5d0*dx(2)*inhomogeneous_bc_val_2d(bccomp,x,y)
+          s(i,hi(2)+1:hi(2)+ng) = s(i,hi(2)) - 0.5d0*dx(2)*inhomogeneous_bc_val_2d(bccomp,x,y,time)
        end do
     else if (bc(2,2) .eq. HOEXTRAP) then
        ! quadratric extrapolation using two interior points and Neumann bc
        y = prob_hi(2)
        do i=lo(1)-ng,hi(1)+ng
           x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-          s(i,hi(2)+1:hi(2)+ng) = -(threeEighths)*dx(2)*inhomogeneous_bc_val_2d(bccomp,x,y) &
+          s(i,hi(2)+1:hi(2)+ng) = -(threeEighths)*dx(2)*inhomogeneous_bc_val_2d(bccomp,x,y,time) &
                + (nineEighths)*s(i,hi(2)) - (oneEighth)*s(i,hi(2)-1)
        end do
     else if (bc(2,2) .eq. EXT_DIR) then
@@ -252,7 +260,7 @@ contains
        y = prob_hi(2)
        do i=lo(1)-ng,hi(1)+ng
           x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-          s(i,hi(2)+1:hi(2)+ng) = inhomogeneous_bc_val_2d(bccomp,x,y)
+          s(i,hi(2)+1:hi(2)+ng) = inhomogeneous_bc_val_2d(bccomp,x,y,time)
        end do
     else if (bc(2,2) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
@@ -263,13 +271,13 @@ contains
 
   end subroutine physbc_2d
 
-  subroutine physbc_3d(s,lo,hi,ng,bc,bccomp,dx)
+  subroutine physbc_3d(s,lo,hi,ng,bc,bccomp,dx,time)
 
     integer        , intent(in   ) :: lo(:),hi(:),ng
     real(kind=dp_t), intent(inout) ::    s(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)
     integer        , intent(in   ) :: bc(:,:)
     integer        , intent(in   ) :: bccomp
-    real(kind=dp_t), intent(in   ) :: dx(:)
+    real(kind=dp_t), intent(in   ) :: dx(:), time
 
     ! Local variables
     integer :: i,j,k
@@ -319,7 +327,7 @@ contains
           do j=lo(2)-ngylo,hi(2)+ngyhi
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              s(lo(1)-ng:lo(1)-1,j,k) = s(lo(1),j,k) &
-                  - 0.5d0*dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                  - 0.5d0*dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z,time)
           end do
        end do
     else if (bc(1,1) .eq. HOEXTRAP) then
@@ -330,7 +338,7 @@ contains
           do j=lo(2)-ngylo,hi(2)+ngyhi
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              s(lo(1)-ng:lo(1)-1,j,k) = &
-                  -(threeEighths)*dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
+                  -(threeEighths)*dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z,time) &
                   + (nineEighths)*s(lo(1),j,k) - (oneEighth)*s(lo(1)+1,j,k)
           end do
        end do
@@ -341,7 +349,7 @@ contains
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do j=lo(2)-ngylo,hi(2)+ngyhi
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-             s(lo(1)-ng:lo(1)-1,j,k) = inhomogeneous_bc_val_3d(bccomp,x,y,z)
+             s(lo(1)-ng:lo(1)-1,j,k) = inhomogeneous_bc_val_3d(bccomp,x,y,z,time)
           end do
        end do
     else if (bc(1,1) .eq. INTERIOR) then
@@ -363,7 +371,7 @@ contains
           do j=lo(2)-ngylo,hi(2)+ngyhi
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              s(hi(1)+1:hi(1)+ng,j,k) = s(hi(1),j,k) &
-                  - 0.5d0*dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                  - 0.5d0*dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z,time)
           end do
        end do
     else if (bc(1,2) .eq. HOEXTRAP) then
@@ -374,7 +382,7 @@ contains
           do j=lo(2)-ngylo,hi(2)+ngyhi
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              s(hi(1)+1:hi(1)+ng,j,k) = &
-                  -(threeEighths)*dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
+                  -(threeEighths)*dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z,time) &
                   + (nineEighths)*s(hi(1),j,k) - (oneEighth)*s(hi(1)-1,j,k)
           end do
        end do
@@ -385,7 +393,7 @@ contains
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do j=lo(2)-ngylo,hi(2)+ngyhi
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-             s(hi(1)+1:hi(1)+ng,j,k) = inhomogeneous_bc_val_3d(bccomp,x,y,z)
+             s(hi(1)+1:hi(1)+ng,j,k) = inhomogeneous_bc_val_3d(bccomp,x,y,z,time)
           end do
        end do
     else if (bc(1,2) .eq. INTERIOR) then
@@ -407,7 +415,7 @@ contains
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              s(i,lo(2)-ng:lo(2)-1,k) = s(i,lo(2),k) &
-                  - 0.5d0*dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                  - 0.5d0*dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z,time)
           end do
        end do
     else if (bc(2,1) .eq. HOEXTRAP) then
@@ -418,7 +426,7 @@ contains
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              s(i,lo(2)-ng:lo(2)-1,k) = &
-                  -(threeEighths)*dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
+                  -(threeEighths)*dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z,time) &
                   + (nineEighths)*s(i,lo(2),k) - (oneEighth)*s(i,lo(2)+1,k)
           end do
        end do
@@ -429,7 +437,7 @@ contains
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-             s(i,lo(2)-ng:lo(2)-1,k) = inhomogeneous_bc_val_3d(bccomp,x,y,z)
+             s(i,lo(2)-ng:lo(2)-1,k) = inhomogeneous_bc_val_3d(bccomp,x,y,z,time)
           end do
        end do
     else if (bc(2,1) .eq. INTERIOR) then
@@ -451,7 +459,7 @@ contains
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              s(i,hi(2)+1:hi(2)+ng,k) = s(i,hi(2),k) &
-                  - 0.5d0*dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                  - 0.5d0*dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z,time)
           end do
        end do
     else if (bc(2,2) .eq. HOEXTRAP) then
@@ -462,7 +470,7 @@ contains
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              s(i,hi(2)+1:hi(2)+ng,k) = &
-                  -(threeEighths)*dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
+                  -(threeEighths)*dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z,time) &
                   + (nineEighths)*s(i,hi(2),k) - (oneEighth)*s(i,hi(2)-1,k)
           end do
        end do
@@ -473,7 +481,7 @@ contains
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-             s(i,hi(2)+1:hi(2)+ng,k) = inhomogeneous_bc_val_3d(bccomp,x,y,z)
+             s(i,hi(2)+1:hi(2)+ng,k) = inhomogeneous_bc_val_3d(bccomp,x,y,z,time)
           end do
        end do
     else if (bc(2,2) .eq. INTERIOR) then
@@ -495,7 +503,7 @@ contains
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              s(i,j,lo(3)-ng:lo(3)-1) = s(i,j,lo(3)) &
-                  - 0.5d0*dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                  - 0.5d0*dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z,time)
           end do
        end do
     else if (bc(3,1) .eq. HOEXTRAP) then
@@ -506,7 +514,7 @@ contains
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              s(i,j,lo(3)-ng:lo(3)-1) = &
-                  -(threeEighths)*dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
+                  -(threeEighths)*dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z,time) &
                   + (nineEighths)*s(i,j,lo(3)) - (oneEighth)*s(i,j,lo(3)+1)
           end do
        end do
@@ -517,7 +525,7 @@ contains
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-             s(i,j,lo(3)-ng:lo(3)-1) = inhomogeneous_bc_val_3d(bccomp,x,y,z)
+             s(i,j,lo(3)-ng:lo(3)-1) = inhomogeneous_bc_val_3d(bccomp,x,y,z,time)
           end do
        end do
     else if (bc(3,1) .eq. INTERIOR) then
@@ -539,7 +547,7 @@ contains
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              s(i,j,hi(3)+1:hi(3)+ng) = s(i,j,hi(3)) &
-                  - 0.5d0*dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                  - 0.5d0*dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z,time)
           end do
        end do
     else if (bc(3,2) .eq. HOEXTRAP) then
@@ -550,7 +558,7 @@ contains
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              s(i,j,hi(3)+1:hi(3)+ng) = &
-                  -(threeEighths)*dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
+                  -(threeEighths)*dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z,time) &
                   + (nineEighths)*s(i,j,hi(3)) - (oneEighth)*s(i,j,hi(3)-1)
           end do
        end do
@@ -561,7 +569,7 @@ contains
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-             s(i,j,hi(3)+1:hi(3)+ng) = inhomogeneous_bc_val_3d(bccomp,x,y,z)
+             s(i,j,hi(3)+1:hi(3)+ng) = inhomogeneous_bc_val_3d(bccomp,x,y,z,time)
           end do
        end do
     else if (bc(3,2) .eq. INTERIOR) then
