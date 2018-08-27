@@ -6,7 +6,7 @@ module advance_reaction_module
   use bc_module
   use chemical_rates_module
   use probin_common_module, only: nspecies
-  use probin_reactdiff_module, only: reaction_type
+  use probin_reactdiff_module, only: reaction_type, volume_factor
   use probin_chemistry_module, only: nreactions
 
   implicit none
@@ -78,7 +78,7 @@ contains
 
       ! calculate rates
       ! rates could be deterministic or stochastic depending on use_Poisson_rng
-      call chemical_rates(mla,n_old,rate,dx,dt)
+      call chemical_rates(mla,n_old,rate,dx,dt,vol_fac_in=volume_factor)
 
       ! update
       do n=1,nlevs
@@ -98,7 +98,7 @@ contains
       !!!!!!!!!!!!!!!
 
       ! calculate rates from a(n_old)
-      call chemical_rates(mla,n_old,rate,dx,theta*dt)
+      call chemical_rates(mla,n_old,rate,dx,theta*dt,vol_fac_in=volume_factor)
 
       do n=1,nlevs
         call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
@@ -121,7 +121,7 @@ contains
       mattingly_lin_comb_coef(2) = alpha1 
 
       ! calculate rates from 2*a(n_pred)-a(n_old)
-      call chemical_rates(mla,n_old,rate,dx,(1.d0-theta)*dt,n_new,mattingly_lin_comb_coef)
+      call chemical_rates(mla,n_old,rate,dx,(1.d0-theta)*dt,n_new,mattingly_lin_comb_coef,vol_fac_in=volume_factor)
 
       ! update
       do n=1,nlevs

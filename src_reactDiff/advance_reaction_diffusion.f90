@@ -11,7 +11,7 @@ module advance_reaction_diffusion_module
   use implicit_diffusion_module
   use probin_common_module, only: nspecies, variance_coef_mass
   use probin_reactdiff_module, only: D_Fick, temporal_integrator, &
-                                     midpoint_stoch_flux_type
+                                     midpoint_stoch_flux_type, volume_factor
   use probin_chemistry_module, only: use_Poisson_rng
 
   implicit none
@@ -83,7 +83,7 @@ contains
 
        ! calculate rates
        ! rates could be deterministic or stochastic depending on use_Poisson_rng
-       call chemical_rates(mla,n_old,rate1,dx,dt)
+       call chemical_rates(mla,n_old,rate1,dx,dt,vol_fac_in=volume_factor)
 
        ! advance multinomial diffusion
        call multinomial_diffusion(mla,n_old,n_new,diff_coef_face,dx,dt,the_bc_tower)
@@ -136,7 +136,7 @@ contains
 
       ! calculate rates
       ! rates could be deterministic or stochastic depending on use_Poisson_rng
-      call chemical_rates(mla,n_old,rate1,dx,dt)
+      call chemical_rates(mla,n_old,rate1,dx,dt,vol_fac_in=volume_factor)
 
       ! n_k^{n+1} = n_k^n + dt div (D_k grad n_k)^n
       !                   + dt div (sqrt(2 D_k n_k^n dt) Z) ! Gaussian noise
@@ -178,7 +178,7 @@ contains
          end do
          
          ! computing rate1 = R(n^{**},dt/2) / (dt/2)
-         call chemical_rates(mla,n_new,rate1,dx,dt/2.d0)
+         call chemical_rates(mla,n_new,rate1,dx,dt/2.d0,vol_fac_in=volume_factor)
 
          ! n_k^* = n_k^{**} + R(n^{**},dt/2)
          do n=1,nlevs
@@ -196,7 +196,7 @@ contains
          call diffusive_n_fluxdiv(mla,n_new,diff_coef_face,diff_fluxdiv,dx,the_bc_tower)
          
          ! computing rate2 = R(n^*,dt/2) / (dt/2)
-         call chemical_rates(mla,n_new,rate2,dx,dt/2.d0)
+         call chemical_rates(mla,n_new,rate2,dx,dt/2.d0,vol_fac_in=volume_factor)
 
          ! compute stochastic flux divergence and add to the ones from the predictor stage
          if (variance_coef_mass .gt. 0.d0) then
@@ -238,7 +238,7 @@ contains
          !!!!!!!!!!!!!!!
 
          ! calculate rates from a(n_old)
-         call chemical_rates(mla,n_old,rate1,dx,dt/2.d0)
+         call chemical_rates(mla,n_old,rate1,dx,dt/2.d0,vol_fac_in=volume_factor)
 
          ! n_k^{n+1/2} = n_k^n + (dt/2)       div (D_k grad n_k)^n
          !                     + (dt/sqrt(2)) div sqrt(2 D_k n_k^n / (dt*dV)) Z_1 ! Gaussian noise
@@ -270,7 +270,7 @@ contains
          call diffusive_n_fluxdiv(mla,n_new,diff_coef_face,diff_fluxdiv,dx,the_bc_tower)
 
          ! calculate rates from 2*a(n_pred)-a(n_old)
-         call chemical_rates(mla,n_old,rate2,dx,dt/2.d0,n_new,mattingly_lin_comb_coef)
+         call chemical_rates(mla,n_old,rate2,dx,dt/2.d0,n_new,mattingly_lin_comb_coef,vol_fac_in=volume_factor)
 
          ! compute stochastic flux divergence and add to the ones from the predictor stage
          if (variance_coef_mass .gt. 0.d0) then
@@ -342,7 +342,7 @@ contains
          ! corrector
 
          ! compute R(n^*,dt) / dt
-         call chemical_rates(mla,n_new,rate1,dx,dt)
+         call chemical_rates(mla,n_new,rate1,dx,dt,vol_fac_in=volume_factor)
 
          ! compute stochastic flux divergence and add to the ones from the predictor stage
          if (variance_coef_mass .gt. 0.d0) then
@@ -408,7 +408,7 @@ contains
 
          ! calculate rates
          ! rates could be deterministic or stochastic depending on use_Poisson_rng
-         call chemical_rates(mla,n_old,rate1,dx,dt/2.d0)
+         call chemical_rates(mla,n_old,rate1,dx,dt/2.d0,vol_fac_in=volume_factor)
 
          do n=1,nlevs
             call multifab_setval(rhs(n),0.d0)
@@ -423,7 +423,7 @@ contains
          ! corrector
 
          ! calculate rates from 2*a(n_pred)-a(n_old)
-         call chemical_rates(mla,n_old,rate2,dx,dt/2.d0,n_new,mattingly_lin_comb_coef)
+         call chemical_rates(mla,n_old,rate2,dx,dt/2.d0,n_new,mattingly_lin_comb_coef,vol_fac_in=volume_factor)
 
          ! compute stochastic flux divergence and add to the ones from the predictor stage
          if (variance_coef_mass .gt. 0.d0) then

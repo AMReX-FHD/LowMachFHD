@@ -40,6 +40,9 @@ module probin_reactdiff_module
 
   logical, save :: inhomogeneous_bc_fix = .false.   ! use the Einkemmer boundary condition fix (split schemes only)
 
+  real(kind=dp_t), save :: volume_factor = 1.d0     ! volume multiplier (dv = product(dx(1:MAX_SPACEDIM))*volume_factor
+                                                    ! only really intended for 3D since in 2D one can control the cell depth
+
   ! Initial and boundary conditions
   !----------------------
   real(kind=dp_t), save    :: n_init_in(2,MAX_SPECIES) = 1.d0  ! initial values to be used in init_n.f90
@@ -74,7 +77,7 @@ module probin_reactdiff_module
                                          ! If negative, it writes the total number of molecules in the system
   
   namelist /probin_reactdiff/ temporal_integrator, diffusion_type, reaction_type
-  namelist /probin_reactdiff/ midpoint_stoch_flux_type, avg_type, inhomogeneous_bc_fix
+  namelist /probin_reactdiff/ midpoint_stoch_flux_type, avg_type, inhomogeneous_bc_fix, volume_factor
   namelist /probin_reactdiff/ n_init_in, model_file_init, model_file, integer_populations, n_bc
   namelist /probin_reactdiff/ D_Fick, diffusion_stencil_order, mg_verbose, cg_verbose
   namelist /probin_reactdiff/ implicit_diffusion_rel_eps, implicit_diffusion_abs_eps
@@ -152,6 +155,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) inhomogeneous_bc_fix
+
+       case ('--volume_factor')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) volume_factor
 
        case ('--n_init_in1_1')
           farg = farg + 1

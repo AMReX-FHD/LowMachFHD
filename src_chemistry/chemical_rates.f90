@@ -31,7 +31,7 @@ contains
   !  where f(nn) is the average reaction rate of reaction r for state nn.
   ! hence, for the second stage of Mattingly's midpoint scheme (with theta=1/2), lin_comb_coef_in=(-1,2).
 
-  subroutine chemical_rates(mla,n_cc,chem_rate,dx,dt,n_interm,lin_comb_coef_in)
+  subroutine chemical_rates(mla,n_cc,chem_rate,dx,dt,n_interm,lin_comb_coef_in,vol_fac_in)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: n_cc(:)
@@ -39,6 +39,7 @@ contains
     real(kind=dp_t), intent(in   ) :: dx(:,:), dt
     type(multifab) , intent(in   ), optional :: n_interm(:)
     real(kind=dp_t), intent(in   ), optional :: lin_comb_coef_in(:)
+    real(kind=dp_t), intent(in   ), optional :: vol_fac_in
 
     ! local
     integer         :: nlevs, dm, n, i
@@ -57,8 +58,9 @@ contains
     type(bl_prof_timer), save :: bpt
     
     logical         :: lin_comb_avg_react_rate  ! whether to use linearly combined average reaction rates
-    real(kind=dp_t) :: lin_comb_coef(1:2)       ! coefficients for the linear combination 
-
+    real(kind=dp_t) :: lin_comb_coef(1:2)       ! coefficients for the linear combination
+    
+    real(kind=dp_t) :: vol_fac
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -91,7 +93,12 @@ contains
       end if
     end if
 
-    dv = product(dx(1,1:MAX_SPACEDIM))
+    vol_fac = 1.d0
+    if (present(vol_fac_in)) then
+       vol_fac = vol_fac_in
+    end if
+    
+    dv = product(dx(1,1:MAX_SPACEDIM))*vol_fac
 
     !!!!! omp tiling
 

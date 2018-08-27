@@ -9,6 +9,7 @@ module multinomial_diffusion_module
   use bl_rng_module
   use bl_random_module
   use probin_common_module, only: n_cells, use_bl_rng, nspecies
+  use probin_reactdiff_module, only: volume_factor
 
   implicit none
 
@@ -30,7 +31,7 @@ contains
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! local
-    integer :: n,nlevs,i,dm,spec
+    integer :: n,nlevs,dm
 
     type(bl_prof_timer),save :: bpt
 
@@ -93,7 +94,7 @@ contains
     ng_n = n_new(1)%ng
     ng_d = diff_coef_face(1,1)%ng
 
-    dv = product(dx(1,1:MAX_SPACEDIM))
+    dv = product(dx(1,1:MAX_SPACEDIM)*volume_factor)
 
     ! cannot use OpenMP with tiling since each cell is responsible for updating
     ! cells possibly outside of its file.  OpenMP could be added at the k loop level
@@ -137,7 +138,7 @@ contains
     real(kind=dp_t), intent(in   ) :: dx,dt,dv
 
     ! local
-    integer :: i,j,comp,n_total,n_sum,n_change
+    integer :: i,comp
     integer, allocatable :: cell_update(:,:) ! Avoid stack overflows and put this on the heap instead
     
     integer, parameter :: n_faces=2
@@ -194,7 +195,7 @@ contains
     real(kind=dp_t), intent(in   ) :: dx(:),dt,dv
 
     ! local
-    integer :: i,j,comp,n_total,n_sum,n_change
+    integer :: i,j,comp
     integer, allocatable :: cell_update(:,:,:) ! Avoid stack overflows and put this on the heap instead
     
     integer, parameter :: n_faces=4
@@ -267,7 +268,7 @@ contains
     real(kind=dp_t), intent(in   ) :: dx(:),dt,dv
 
     ! local
-    integer :: i,j,k,comp,n_total,n_sum,n_change
+    integer :: i,j,k,comp
     integer, allocatable :: cell_update(:,:,:,:) ! Avoid stack overflows and put this on the heap instead
     
     integer, parameter :: n_faces=6
