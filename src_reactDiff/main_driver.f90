@@ -60,7 +60,6 @@ subroutine main_driver()
    integer :: narg, farg, un
    character(len=128) :: fname
    logical :: lexist
-   real(kind=dp_t) :: structFactMult
 
    ! to test "conservation"
    real(kind=dp_t), allocatable :: n_sum(:)
@@ -341,7 +340,6 @@ subroutine main_driver()
    !=====================================================================
    ! Initialize HydroGrid for analysis
    !=====================================================================
-   structFactMult = 1.d0 ! No need for structure factor multiplier since dx(1:3) is passed
    if((hydro_grid_int>0) .or. (stats_int>0)) then
       narg = command_argument_count()
       farg = 1
@@ -361,7 +359,7 @@ subroutine main_driver()
                                        analyze_density=.true., &
                                        analyze_temperature=.false., &
                                        analyze_Epot=.false., &
-                                       structFactMultiplier = structFactMult)
+                                       structFactMultiplier = volume_factor)
 
             close(unit=un)
          end if
