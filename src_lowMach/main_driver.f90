@@ -116,7 +116,7 @@ subroutine main_driver()
   type(multifab), allocatable :: Epot_avg(:) 
 
   ! For HydroGrid
-  integer :: narg, farg, un, n_rngs_mass, n_rngs_mom
+  integer :: narg, farg, un, n_rngs_mass, n_rngs_mom, nscal
   character(len=128) :: fname
   logical :: lexist
   logical :: nodal_temp(3)
@@ -705,28 +705,21 @@ end if
            un = unit_new()
            open(unit=un, file = fname, status = 'old', action = 'read')
            
-           ! We will also pass temperature and Epot     !SC
+           ! analyze electric potential (will pass in as a scalar)
            if (use_charged_fluid) then
-              call initialize_hydro_grid(mla,rho_old,dt,dx,namelist_file=un, & 
-                                         nspecies_in=nspecies, &
-                                         nscal_in=0, &
-                                         exclude_last_species_in=.false., &
-                                         analyze_velocity=.true., &
-                                         analyze_density=.true., &
-                                         analyze_temperature=.true., &
-                                         analyze_Epot=.true.) 
+              nscal = 1
            else
-              ! We will also pass temperature here but no additional scalars
-              call initialize_hydro_grid(mla,rho_old,dt,dx,namelist_file=un, &
-                                         nspecies_in=nspecies, &
-                                         nscal_in=0, &
-                                         exclude_last_species_in=.false., &
-                                         analyze_velocity=.true., &
-                                         analyze_density=.true., &
-                                         analyze_temperature=.true., &
-                                         analyze_Epot=.false. ) 
-          
-           endif 
+              nscal = 0
+           end if
+
+           ! We will also pass temperature
+           call initialize_hydro_grid(mla,rho_old,dt,dx,namelist_file=un, & 
+                                      nspecies_in=nspecies, &
+                                      nscal_in=nscal, &
+                                      exclude_last_species_in=.false., &
+                                      analyze_velocity=.true., &
+                                      analyze_density=.true., &
+                                      analyze_temperature=.true.) 
            
            close(unit=un)
            
@@ -826,7 +819,7 @@ end if
      if (stats_int .gt. 0) then
         ! write initial vertical and horizontal averages (hstat and vstat files)   
         if (use_charged_fluid) then
-           call print_stats(mla,dx,0,time,umac=umac,rho=rho_old,temperature=Temp,Epot=Epot)
+           call print_stats(mla,dx,0,time,umac=umac,rho=rho_old,temperature=Temp,scalars=Epot)
         else
            call print_stats(mla,dx,0,time,umac=umac,rho=rho_old,temperature=Temp)
         end if
@@ -1085,7 +1078,7 @@ end if
 
         if (stat_save_type.eq.0) then  ! compute vertical/horizontal averages of instantaneous fields
            if (use_charged_fluid) then 
-              call print_stats(mla,dx,istep,time,umac=umac,rho=rho_new,temperature=Temp,Epot=Epot) 
+              call print_stats(mla,dx,istep,time,umac=umac,rho=rho_new,temperature=Temp,scalars=Epot) 
            else 
               call print_stats(mla,dx,istep,time,umac=umac,rho=rho_new,temperature=Temp) 
            endif 
@@ -1094,7 +1087,7 @@ end if
               call bl_error("If stat_save_type is \ne 0, you cannot call print_stats until n_steps_skip has passed.")
            end if 
            if (use_charged_fluid) then 
-              call print_stats(mla,dx,istep,time,umac=umac_avg,rho=rho_avg,temperature=Temp,Epot=Epot_avg) 
+              call print_stats(mla,dx,istep,time,umac=umac_avg,rho=rho_avg,temperature=Temp,scalars=Epot_avg) 
            else 
               call print_stats(mla,dx,istep,time,umac=umac_avg,rho=rho_avg,temperature=Temp) 
            endif 

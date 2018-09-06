@@ -59,8 +59,8 @@ contains
   ! Pass nspecies_in=0 if there are no compositional variables
   subroutine initialize_hydro_grid(mla,s_in,dt,dx,namelist_file, &
                                    nspecies_in, nscal_in, exclude_last_species_in, &
-                                   analyze_velocity, analyze_density, analyze_temperature, analyze_Epot, &
-                                   heat_capacity_in,structFactMultiplier) ! SC
+                                   analyze_velocity, analyze_density, analyze_temperature, &
+                                   heat_capacity_in,structFactMultiplier)
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: s_in(:) ! A cell-centered multifab on the desired grid (to grab layout and grid size from)
     real(dp_t)     , intent(inout) :: dt
@@ -70,7 +70,7 @@ contains
        ! Note: Pass nspecies_in=0 if there are no compositional variables
     integer        , intent(in   ) :: nscal_in
       ! Additional number of scalar fields if any
-    logical, intent(in) :: exclude_last_species_in, analyze_velocity, analyze_density, analyze_temperature, analyze_Epot !SC
+    logical, intent(in) :: exclude_last_species_in, analyze_velocity, analyze_density, analyze_temperature
         ! Pass exclude_last_species=.false. if you want to analyze all nspecies densities/concentrations
         ! Or pass exclude_last_species=.true. if you want to pass total density rho as the first scalar and 
         !    then only include only n_species-1 additional partial densities/concentrations
@@ -106,7 +106,6 @@ contains
     nvar=nscal_in ! nvar holds the total number of variables to analyze (scalar and vector)
     if(analyze_density)  nvar = nvar + nspecies_analysis + 1 ! We always store total density
     if(analyze_temperature) nvar = nvar + 1
-    if(analyze_Epot) nvar = nvar + 1
     nscal_analysis = nvar ! Total number of scalar variables to analyze
     if(analyze_velocity) nvar = nvar + dm
     if ( parallel_IOprocessor() ) then
@@ -381,14 +380,13 @@ contains
 
   ! This routines collects a bunch of different variables into a single multifab for easier analysis
   ! The components are ordered as, whenever present:
-  ! umac, rho, rho_k (analyze_conserved=T) or c_k=rho_k/rho, T, scalars, Epot !SC
-
-  subroutine gather_hydro_grid(mla,la_s,s_hydro,umac,rho,temperature,Epot,scalars, variable_names)
+  ! umac, rho, rho_k (analyze_conserved=T) or c_k=rho_k/rho, T, scalars
+  subroutine gather_hydro_grid(mla,la_s,s_hydro,umac,rho,temperature,scalars, variable_names)
     type(ml_layout), intent(in   ) :: mla ! Layout of hydrodynamic arrays
     type(layout)   , intent(in   ) :: la_s ! Layout of s_hydro (changes depending on context)
     type(multifab) , intent(inout) :: s_hydro ! Output: collected grid data for analysis
     type(multifab) , intent(in), optional :: umac(:,:)
-    type(multifab) , intent(in), dimension(:), optional :: rho, temperature, Epot, scalars !SC
+    type(multifab) , intent(in), dimension(:), optional :: rho, temperature, scalars
     character(len=20), intent(out), optional :: variable_names(nvar)
   
     ! Local
@@ -494,19 +492,6 @@ contains
        call copy(s_hydro,comp,temperature(1),1,1)
        if(present(variable_names)) then
          variable_names(comp)="T"
-       end if
-       comp=comp+1    
-       n_passive_scals=n_passive_scals-1
-    end if
-
-    ! SC
-    if(present(Epot)) then
-       if(n_passive_scals<1) then
-         call parallel_abort("Insufficient nscal_analysis to store Epot")
-       end if
-       call copy(s_hydro,comp,Epot(1),1,1)
-       if(present(variable_names)) then
-         variable_names(comp)="Epot"
        end if
        comp=comp+1    
        n_passive_scals=n_passive_scals-1
@@ -835,13 +820,13 @@ contains
   !
   ! Next, it writes out "horizontal" averages.
   ! Thus, in both 2D and 3D, it writes out a 1D text file called "hstatXXXXXX"
-  subroutine print_stats(mla,dx,step,time,umac,rho,temperature,Epot,scalars) 
+  subroutine print_stats(mla,dx,step,time,umac,rho,temperature,scalars)
     type(ml_layout), intent(in   ) :: mla
     real(dp_t)     , intent(in   ) :: dx(:,:)
     integer        , intent(in   ) :: step
     real(kind=dp_t), intent(in   ) :: time
     type(multifab) , intent(in), optional :: umac(:,:)
-    type(multifab) , intent(in), dimension(:), optional :: rho,temperature,Epot,scalars
+    type(multifab) , intent(in), dimension(:), optional :: rho,temperature,scalars
   
     ! Local
     integer nlevs,dm,pdim,qdim,qdim2,i,n,comp
@@ -884,7 +869,8 @@ contains
     ! Re-distribute the full grid into a grid of "tall skinny boxes"
     ! These boxes are not distributed along project_dim so we can do local analysis easily
     ! -------------------------
-    call gather_hydro_grid(mla,la_dir,s_dir,umac,rho,temperature,Epot,scalars,variable_names(1:nvar)) 
+    call gather_hydro_grid(mla,la_dir,s_dir,umac,rho,temperature,scalars, variable_names(1:nvar))
+
     ! Compute s_projected (average) and s_var (variance)
     ! -------------------------
     do i=1,nfabs(s_dir)
