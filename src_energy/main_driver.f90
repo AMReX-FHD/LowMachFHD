@@ -382,8 +382,7 @@ subroutine main_driver()
                                       exclude_last_species_in=.false., &
                                       analyze_velocity=.true., &
                                       analyze_density=.true., &
-                                      analyze_temperature=.true., &
-                                      analyze_Epot=.false.) 
+                                      analyze_temperature=.true.) 
            
            close(unit=un)
         end if
