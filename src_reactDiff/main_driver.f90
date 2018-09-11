@@ -456,7 +456,7 @@ subroutine main_driver()
           do spec=1,nspecies
              n_sum(spec) = multifab_sum_c(n_old(1),spec,1)
           end do
-          cellvolume=product(dx(1,1:MAX_SPACEDIM)*volume_factor) ! Total system volume
+          cellvolume=product(dx(1,1:MAX_SPACEDIM))*volume_factor ! Total system volume
           if (parallel_IOProcessor()) then
           !!if (n_steps_write_avg==2) then ! Write *only* the first species number density
           !!   ! Useful to save space in files where there is only one independent reaction
