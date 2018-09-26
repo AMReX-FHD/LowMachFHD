@@ -12,11 +12,9 @@ MKVERBOSE := t
 
 #COMP := gfortran
 #CCOMP     := gcc
-#LAPACK95_DIR = ./LAPACK95
 
 COMP := gfortran63
 CCOMP     := gcc63
-LAPACK95_DIR = ./LAPACK95.gcc63
 
 # need this to compile bl_rng.f90 (module to store random number engines and distributions)
 CXX11 = t
