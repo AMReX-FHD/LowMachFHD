@@ -983,12 +983,12 @@ contains
       end do
    enddo
    
-   if(variance<0) then ! Ensure zero total momentum
+   if(variance<0) then ! Ensure stochastic contribution sums to zero
       if (parallel_IOProcessor()) then
          !write(*,"(A,100G17.9)") "Randomly INITIALized momenta"
       end if
       
-      call sum_momenta(mla, m_face, av_mom)
+      call sum_momenta(mla, mactemp, av_mom)
       do i=1,dm
          call setval(mactemp(1,i), -av_mom(i))
          call saxpy(m_face(1,i), 1.0_dp_t, mactemp(1,i))
