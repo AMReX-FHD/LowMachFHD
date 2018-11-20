@@ -52,7 +52,7 @@
 
   ! Random number generator
   !----------------------
-  use_bl_rng = F                        ! if T, use F_BaseLib/bl_random RNGs
+  use_bl_rng = T                        ! if T, use F_BaseLib/bl_random RNGs
                                         ! if F, use HydroGrid RNGs
 
   ! random number seed (for HydroGrid RNGs)
@@ -64,11 +64,11 @@
   ! for positive value, the value is assigned as seed value
   ! for 0, a positive value is randomly chosen
   ! if -1 (only for restart), RNGs status is restored from checkpoint data
-  seed_momentum = 0
-  seed_diffusion = 0
-  seed_reaction = 0
-  seed_init_mass = 0
-  seed_init_momentum = 0
+  seed_momentum = 1
+  seed_diffusion = 1
+  seed_reaction = 1
+  seed_init_mass = 1
+  seed_init_momentum = 1
 
   ! Viscous friction L phi operator
   ! if abs(visc_type) = 1, L = div beta grad
