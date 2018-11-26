@@ -245,7 +245,13 @@ subroutine main_driver()
      ! build the ml_layout
      ! read in time and dt from checkpoint
      ! build and fill rho, rhotot, pi, umac, and umac_sum
-     call initialize_from_restart(mla,time,dt,rho_old,rho_sum,rhotot_old,pi,umac,umac_sum,pmask,Epot,Epot_sum,grad_Epot_old) 
+     call initialize_from_restart(mla,time,dt,rho_old,rho_sum,rhotot_old,pi,umac,umac_sum,pmask, &
+                                  Epot,Epot_sum,grad_Epot_old) 
+
+     ! enabled a fixed_dt that is different from the previous run
+     if (fixed_dt .gt. 0.d0) then
+        dt = fixed_dt
+     end if
 
   else
 
