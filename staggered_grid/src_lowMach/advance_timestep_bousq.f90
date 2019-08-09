@@ -55,7 +55,7 @@ contains
                                     stoch_mass_flux,chem_rate, &
                                     dx,dt,time,the_bc_tower,istep, &
                                     grad_Epot_old,grad_Epot_new,charge_old,charge_new, &
-                                    Epot,permittivity)
+                                    Epot,permittivity,total_mass_flux)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)             ! enters as t^n, leaves as t^{n+1}
@@ -69,7 +69,9 @@ contains
     type(multifab) , intent(inout) :: eta_ed(:,:)           ! enters as t^n, leaves as t^{n+1}
     type(multifab) , intent(inout) :: kappa(:)              ! enters as t^n, leaves as t^{n+1}
     type(multifab) , intent(inout) :: Temp(:)
-    type(multifab) , intent(inout) :: Temp_ed(:,:)          
+    type(multifab) , intent(inout) :: Temp_ed(:,:)  
+    ! We only really pass these non-persistent multifabs in since we have them in main so we don't want to rebuild them
+    ! But the values returned are not actually the correct total flux divergencies and these arrays should not be used        
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)  ! not persistent
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:) ! not persistent
     type(multifab) , intent(inout) :: stoch_mass_flux(:,:)  ! not persistent
@@ -81,8 +83,11 @@ contains
     type(multifab) , intent(inout) :: grad_Epot_new(:,:)
     type(multifab) , intent(inout) :: charge_old(:)
     type(multifab) , intent(inout) :: charge_new(:)
+    ! These should not be relied upon to have consistent values
     type(multifab) , intent(inout) :: Epot(:)               ! not persistent
     type(multifab) , intent(inout) :: permittivity(:)       ! not persistent
+    ! Donev FLUXES: If desired we can return the total fluxes for all species for purposes of computing total currents etc.
+    type(multifab) , intent(inout), optional :: total_mass_flux(:,:)  ! Total fluxes consistent with update from time n to n+1
 
     ! local
     type(multifab) :: adv_mass_fluxdiv(mla%nlevel)
@@ -123,7 +128,7 @@ contains
     type(multifab) ::  bds_force(mla%nlevel)
     type(multifab) ::     rho_nd(mla%nlevel)
     type(multifab) ::   umac_tmp(mla%nlevel,mla%dim)
-
+    
     integer :: i,dm,n,nlevs,proj_type
     
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in, relxn_param_charge_in
@@ -218,7 +223,9 @@ contains
        end do
     end do    
 
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 1: solve for v^{n+1,*} and pi^{n+1/2,*} using GMRES
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! average rho_i^n and rho^n to faces
     call average_cc_to_face(nlevs,   rho_old,   rho_fc    ,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
@@ -452,7 +459,9 @@ contains
        end do
     end do
 
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 2: compute reactions and mass fluxes at t^n
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! compute chemical rates m_i*R^n_i
     if (nreactions > 0) then
@@ -547,7 +556,9 @@ contains
 
     end if
 
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 3: density prediction to t^{n+1/2}
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     if (advection_type .ge. 1) then
 
@@ -593,7 +604,9 @@ contains
     call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot_new,Temp,dx, &
                            the_bc_tower%bc_tower_array)
 
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 4: compute mass fluxes and reactions at t^{n+1/2}
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! compute mass fluxes and reactions at t^{n+1/2}
     ! For electroneutral, enable charge correction in the corrector
@@ -611,9 +624,27 @@ contains
                                  dt,time,dx,weights,the_bc_tower, &
                                  charge_new,grad_Epot_new,Epot, &
                                  permittivity,zero_initial_Epot_in=.false.)
+                                 
+       ! Donev FLUXES: Seems to me here we have already computed diff_mass_flux and stoch_mass_flux
+       ! and we can just add them and then later add the advective flux also
+       if(present(total_mass_flux)) then
+          do n=1,nlevs
+             do i=1,dm
+                call multifab_copy_c(total_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
+                if (variance_coef_mass .ne. 0.d0) then
+                   call multifab_plus_plus_c(total_mass_flux(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
+                end if
+             end do
+          end do       
+       end if                          
 
     else if (midpoint_stoch_mass_flux_type .eq. 2) then
        ! ito
+ 
+       ! Donev FLUXES: As a first step we can just not support this if we need to compute total fluxes
+       if(present(total_mass_flux)) then
+          call bl_error('Code cannot presently return total_mass_flux if midpoint_stoch_mass_flux_type!=1')
+       end if
 
        if (variance_coef_mass .ne. 0.d0) then
           ! for ito interpretation we need to save stoch_mass_fluxdiv_old here
@@ -693,6 +724,11 @@ contains
     end if
 
     if (advection_type .ge. 1) then
+       ! Donev FLUXES: I think we should not even try to get fluxes if using BDS, just abort
+       ! Seems too complicated to add flux arguments for BDS
+       if(present(total_mass_flux)) then
+          call bl_error('Code cannot presently return total_mass_flux if using BDS advection')
+       end if   
 
        ! add the diff/stoch/react terms to rho_update
        do n=1,nlevs
@@ -735,12 +771,40 @@ contains
 
        ! compute adv_mass_fluxdiv = -rho_i^{n+1/2} * v^n and
        ! increment adv_mass_fluxdiv by -rho_i^{n+1/2} * v^{n+1,*}
+       ! Donev FLUXES: Seems to me would need to this routine an argument adv_mass_flux to return the actual advective fluxes
+       ! Or the other option is to just recompute them here, since it is simple, as Sean did in his code
        call mk_advective_s_fluxdiv(mla,umac_old,rho_fc,adv_mass_fluxdiv,.false.,dx,1,nspecies)
        call mk_advective_s_fluxdiv(mla,umac    ,rho_fc,adv_mass_fluxdiv,.true. ,dx,1,nspecies)
+       
+       ! Donev FLUXES: Add advective fluxes to total fluxes and fix sign for fluxes to be actual fluxes not negative of flux ;-)
+       if(present(total_mass_flux)) then   
+          ! compute advective mass flux to be added to total_mass_flux
+          ! Donev: UNFINISHED: We need to multiply by 1/2 both rho_fc*umac and rho_fc*umac_old and add them to increment total_mass_flux
+          ! So this needs some multifab saxpy calls here...
+          
+          do n=1,nlevs 
+             do i=1,dm
+                do comp=1,nspecies
+                   call multifab_copy_c(total_mass_flux(n,i),comp,umac(n,i),1,1,0)
+                end do 
+                call multifab_mult_mult_c(total_mass_flux(n,i),1,rho_fc(n,i),1,nspecies,0)
+             enddo
+          enddo
+                          
+          ! multiply the total mass flux w adv by -1, so that we take the convention that
+          ! the mass flux has the same sign as the fluid flow 
+          do n=1,nlevs
+             do i=1,dm
+                   call multifab_mult_mult_s_c(total_mass_flux(n,i),1,-1.d0,nspecies+1,0)
+             enddo
+          enddo   
+       end if        
 
     end if
 
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 5: density integration to t^{n+1}
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     if (advection_type .ge. 1) then
 
@@ -794,7 +858,9 @@ contains
     call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot_new,Temp,dx, &
                            the_bc_tower%bc_tower_array)
 
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 6: solve for v^{n+1} and pi^{n+1/2} using GMRES
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! compute mtemp = (rho*v)^n
     call convert_m_to_umac(mla,rhotot_fc_old,mtemp,umac_old,.false.)
