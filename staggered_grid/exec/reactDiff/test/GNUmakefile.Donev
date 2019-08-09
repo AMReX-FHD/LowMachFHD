@@ -1,0 +1,51 @@
+# FBOXLIB_HOME defines the directory in which we will find all the amrex code
+# If you set FBOXLIB_HOME as an environment variable, this line will be ignored
+FBOXLIB_HOME := ${HPC_SRC}/FluctHydro/FBoxLib
+HYDROLIB_HOME := ${HPC_SRC}/FluctHydro/HydroGrid
+STAGGERED_HOME := ${HPC_SRC}/FluctHydro/FluctHydro/staggered_grid
+
+NDEBUG    := t
+MPI       := t
+OMP       :=
+PROF      :=
+MKVERBOSE := t
+
+#COMP := gfortran
+#CCOMP     := gcc
+
+COMP := gfortran63
+CCOMP     := gcc63
+
+# need this to compile bl_rng.f90 (module to store random number engines and distributions)
+CXX11 = t
+
+include $(FBOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
+
+# For CIMS donev machine:
+#xtr_libraries += -Wl,-rpath=/usr/local/pkg/gcc/4.8.2/lib64 # RedHat
+xtr_libraries += -Wl,-rpath=/usr/local/stow/gcc-6.3.0/lib64 # CentOS
+
+include $(FBOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
+
+include $(STAGGERED_HOME)/src_reactDiff/GPackage.mak
+VPATH_LOCATIONS += $(STAGGERED_HOME)/src_reactDiff
+
+include $(STAGGERED_HOME)/src_chemistry/GPackage.mak
+VPATH_LOCATIONS += $(STAGGERED_HOME)/src_chemistry
+
+include $(STAGGERED_HOME)/src_common/GPackage.mak
+VPATH_LOCATIONS += $(STAGGERED_HOME)/src_common
+
+include $(HYDROLIB_HOME)/GPackage.mak
+VPATH_LOCATIONS += $(HYDROLIB_HOME)
+
+include $(FBOXLIB_HOME)/Src/BaseLib/GPackage.mak
+VPATH_LOCATIONS += $(FBOXLIB_HOME)/Src/BaseLib
+
+include $(FBOXLIB_HOME)/Src/MultiGrid/GPackage.mak
+VPATH_LOCATIONS += $(FBOXLIB_HOME)/Src/MultiGrid
+
+main.$(suf).exe: $(objects) 
+	$(LINK.f90) -o main.$(suf).exe $(objects) $(libraries)
+
+include $(FBOXLIB_HOME)/Tools/F_mk/GMakerules.mak

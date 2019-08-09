@@ -1,0 +1,31 @@
+Building the code on edison or cori-haswell with Intel or gnu compilers
+
+Make sure you are using the correct programming environment 
+(type module list to see, and if you need to switch, 
+use, e.g., "module swap PrgEnv-gnu PrgEnv-intel")
+
+Make sure your copies of FluctHydro and FBoxLib are at the same level in 
+your filesystem.  Pull both codes on the master branch.
+
+>> module load cray-fftw (or put this in your shell script)
+
+>> cd ./FluctHydro/staggered_grid/src_multiSpec/LAPACK95
+
+>> make clean
+
+>> make (don't use -j here)
+
+>> cd ./FluctHydro/staggered_grid/exec/multiSpecLM_implicit/test 
+(or whatever directory you want to compile)
+
+Edit the GNUmakefile as follows:
+
+COMP      := Intel
+CCOMP     := Intel
+
+or
+
+COMP      := gfortran
+CCOMP     := gcc
+
+>> make -j8

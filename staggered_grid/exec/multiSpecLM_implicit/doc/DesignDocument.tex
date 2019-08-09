@@ -1,0 +1,650 @@
+\documentclass[final]{siamltex}
+
+% for red MarginPars
+\usepackage{color}
+
+% for \boldsymbol
+\usepackage{amsmath}
+\usepackage{latexsym}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{hyperref}
+
+% total number of floats allowed on a page
+\setcounter{totalnumber}{100}
+
+% float page fractions
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.9}
+\renewcommand{\textfraction}{0.2}
+
+% MarginPar
+\setlength{\marginparwidth}{0.75in}
+\newcommand{\MarginPar}[1]{\marginpar{\vskip-\baselineskip\raggedright\tiny\sffamily\hrule\smallskip{\color{red}#1}\par\smallskip\hrule}}
+
+% for non-stacked fractions
+\newcommand{\sfrac}[2]{\mathchoice
+  {\kern0em\raise.5ex\hbox{\the\scriptfont0 #1}\kern-.15em/
+   \kern-.15em\lower.25ex\hbox{\the\scriptfont0 #2}}
+  {\kern0em\raise.5ex\hbox{\the\scriptfont0 #1}\kern-.15em/
+   \kern-.15em\lower.25ex\hbox{\the\scriptfont0 #2}}
+  {\kern0em\raise.5ex\hbox{\the\scriptscriptfont0 #1}\kern-.2em/
+   \kern-.15em\lower.25ex\hbox{\the\scriptscriptfont0 #2}}
+  {#1\!/#2}}
+
+\def\1b {{\bf 1}}
+\def\bb {{\bf b}}
+\def\Fb {{\bf F}}
+\def\gb {{\bf g}}
+\def\mb {{\bf m}}
+\def\vb {{\bf v}}
+\def\wb {{\bf w}}
+\def\Wb {{\bf W}}
+\def\xb {{\bf x}}
+
+\def\chib   {\boldsymbol{\chi}}
+\def\deltab {\boldsymbol{\delta}}
+\def\Gammab {\boldsymbol{\Gamma}}
+\def\phib   {\boldsymbol{\phi}}
+\def\Psib   {\boldsymbol{\Psi}}
+\def\Sigmab {\boldsymbol{\Sigma}}
+\def\taub   {\boldsymbol{\tau}}
+\def\zetab  {\boldsymbol{\zeta}}
+
+\def\half   {\frac{1}{2}}
+\def\myhalf {\sfrac{1}{2}}
+
+\begin{document}
+
+%==========================================================================
+% Title
+%==========================================================================
+\title{Implicit Low Mach Number Multispecies Mixing Notes}
+
+\maketitle
+
+\section{Equations}
+The equations for the momentum and densities:
+\begin{eqnarray}
+\frac{\partial\rho\vb}{\partial t} &=& - \nabla\cdot(\rho\vb\vb) - \nabla\pi + \nabla\cdot\taub + \rho\gb,\\
+\frac{\partial\rho_i}{\partial t} &=& -\nabla\cdot(\rho_i\vb) - \nabla\cdot\Fb_i,
+\end{eqnarray}
+with $\Fb_i$ containing both the diffusive and stochastic mass fluxes.  The equation of state is:
+\begin{equation}
+\nabla\cdot\vb = -\nabla\cdot\left(\sum_i\frac{\Fb_i}{\bar\rho_i}\right) \equiv S\label{eq:S}.
+\end{equation}
+The deterministic part of the mass fluxes, $\overline{F}$, contains contributions from compositional
+gradients, barodiffusion, temperature gradients, and electric fields induced by charged species,
+\begin{equation}
+\overline{F} = -\rho\Wb\chib\left[\Gammab\nabla\xb + (\phib-\wb)\frac{\nabla P}{n k_B T} + \zetab\frac{\nabla T}{T}\right].
+\end{equation}
+
+\clearpage
+
+\section{Inertial Algorithm}
+Inertial algorithm description:\\ \\
+{\bf Step 0: Initialization:}\\ \\
+Begin with an initial guess for velocity, $\vb^{\rm init}$, and pressure, $p^0$.
+Then, perform a projection to obtain an initial velocity field, $\vb^0$ that satisfies
+\begin{equation}
+\nabla\cdot\vb^0 = S^0 \equiv S(\Fb^0),
+\end{equation}
+where $\Fb_i^0$ and $\nabla\cdot\Fb_i^0$ are computed from $(\rho_i^0,T^0)$ using the 
+supplied {\tt compute\_mass\_fluxdiv} subroutine.
+For the projection, we solve for $\phi$ and update $\vb^{\rm init}$ as follows:
+\begin{equation}
+\nabla\cdot\frac{1}{\rho^0}\nabla\phi = \nabla\cdot\vb^{\rm init} - S^0,
+\end{equation}
+\begin{equation}
+\vb^0 = \vb^{\rm init} - \frac{1}{\rho}\nabla\phi.
+\end{equation}
+{\bf Step 1: Calculate Predictor Diffusive and Stochastic Fluxes}\\ \\
+Compute $\Fb_i^n$ and $\nabla\cdot\Fb_i^n$ from $(\rho_i^n,T^n)$ using the supplied 
+{\tt compute\_mass\_fluxdiv} subroutine.  Construct $S^n$ using equation (\ref{eq:S}).
+Note this step is functionally a null-op since we reuse the result from 
+either {\bf Step 0} or {\bf Step 6} from the previous time step.\\ \\
+{\bf Step 2: Predictor Euler Step}\\ \\
+Using the velocity field from either {\bf Step 0} or {\bf Step 7} from the previous
+time step, take a predictor forward Euler step for $\rho_i$:
+\begin{equation}
+\rho_i^{*,n+1} = \rho_i^n + \Delta t\nabla\cdot\left(-\rho_i^n\vb^n - \Fb^n\right).
+\end{equation}
+{\bf Step 3: Calculate Corrector Diffusive and Stochastic Fluxes}\\ \\
+We reuse the same random numbers, but evaluate the diffusive fluxes and the noise amplitude from the predictor
+to compute $\Fb^{*,n+1}$ and $S^{*,n+1}$.\\ \\
+{\bf Step 4: Predictor Crank-Nicolson Step}\\ \\
+Define $\vb^{*,n+1} = \overline\vb^n + \deltab\vb, p^{*,n+1} = p^n + \delta p$ (in these notes the overline
+indicates the the velocity field has been modified to incorporate the boundary conditions on the
+full velocity field after the solve) and solve
+for $\deltab\vb$ and $\delta p$:
+\begin{eqnarray}
+\frac{\rho^{*,n+1}(\overline\vb^n + \deltab\vb) - \rho^n\vb^n}{\Delta t} + \nabla(p^n+\delta p) &=&\nonumber\\
+&&\hspace{-1in}\nabla\cdot(-\rho^n\vb^n\vb^n) + \half\left[\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{*,n+1}(\overline\vb^n + \deltab\vb)\right] + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\overline\Wb^n}_{\Sigmab^n} + \rho^n\gb\nonumber\\
+\end{eqnarray}
+\begin{equation}
+\nabla\cdot(\overline\vb^n+\deltab\vb) = S^{*,n+1}.
+\end{equation}
+We rewrite this system as
+\begin{eqnarray}
+\left(\frac{\rho^{*,n+1}}{\Delta t} - \half\mathcal{A}_0^{*,n+1}\right)\deltab\vb + \nabla\delta p &=& \frac{\rho^n\vb^n-\rho^{*,n+1}\overline\vb^n}{\Delta t} -\nabla p^n\nonumber\\
+&&+ \nabla\cdot(-\rho^n\vb^n\vb^n) + \half\mathcal{A}_0^n\vb^n + \half\mathcal{A}_0^{*,n+1}\overline\vb^n + \nabla\cdot\Sigmab^n + \rho^n\gb,\nonumber\\
+\label{eq:CN Vel Pred}
+\end{eqnarray}
+\begin{equation}
+-\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^n - S^{*,n+1}.
+\end{equation}
+Relating this to the GMRES solver, we can see that we are solving for 
+$(\xb_\vb,x_p) = (\deltab\vb,\delta p)$ with $b_p = \nabla\cdot\overline\vb^n-S^{*,n+1}$ (note the change in sign!) 
+and $\bb_\vb$ equal to the right-hand-side of (\ref{eq:CN Vel Pred}).  For the Helmholtz-like operator, 
+$\mathcal{A}=\Theta\alpha\mathcal{I} - \mathcal{A}_0$, we have $\Theta=1/\Delta t, \alpha=\rho^{*,n+1}, 
+\beta=\eta/2$, and $\gamma=\kappa/2$.
+Next, define $\vb^{*,n+1} = \overline\vb^n + \deltab\vb$ and $p^{*,n+1} = p^n + \delta p$.\\ \\
+{\bf Step 5: Trapezoidal Scalar Corrector}\\ \\
+Update the densities:
+\begin{equation}
+\rho_i^{n+1} = \half\rho_i^n + \half\left[\rho_i^{*,n+1} + \Delta t\nabla\cdot(-\rho_i^{*,n+1}\vb^{*,n+1} - \Fb^{*,n+1})\right].
+\end{equation}
+{\bf Step 6: Calculate Diffusive and Stochastic Fluxes}\\ \\
+Calculate the fluxes for the next time level using a new set of random numbers to obtain $\Fb^{n+1}$ and $S^{n+1}$.
+{\bf Step 7: Corrector Crank-Nicolson Step}\\ \\
+Take a corrector step for velocity, using the same random numbers as for the predictor
+stage, but average the amplitude of the stochastic flux between time $n$ and $n+1$:
+Define $\vb^{n+1} = \overline\vb^{*,n+1} + \deltab\vb$ and $p^{n+1} = p^{*,n+1} + \delta p$ and
+solve the following system for $(\deltab\vb,\delta p)$:
+\begin{eqnarray}
+\frac{\rho^{n+1}(\overline\vb^{*,n+1} + \deltab\vb) - \rho^n\vb^n}{\Delta t} + \nabla(p^{*,n+1}+\delta p) &=& \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{*,n+1}\vb^{*,n+1}\vb^{*,n+1})\nonumber\\
+&&\hspace{-1.5in}+ \half\left[\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{n+1}(\overline\vb^{*,n+1} + \deltab\vb)\right]\nonumber\\
+&&\hspace{-1.5in}+ \nabla\cdot\underbrace{\half\left(\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}} + \sqrt{\frac{2\eta^{n+1} k_B T}{\Delta t\Delta V}}\right)\overline\Wb^n}_{\Sigmab^{n'}} + \half\left(\rho^n+\rho^{n+1}\right)\gb,
+\end{eqnarray}
+\begin{equation}
+\nabla\cdot(\overline\vb^{*,n+1} + \deltab\vb) = S^{n+1}.
+\end{equation}
+We rewrite this system as:
+\begin{eqnarray}
+\left(\frac{\rho^{n+1}}{\Delta t} - \half\mathcal{A}_0^{n+1}\right)\deltab\vb + \nabla\delta p &=& \frac{\rho^n\vb^n-\rho^{n+1}\overline\vb^{*,n+1}}{\Delta t} -\nabla p^n\nonumber\\
+&&+ \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{*,n+1}\vb^{*,n+1}\vb^{*,n+1}) + \half(\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{n+1}\overline\vb^{*,n+1} )\nonumber\\
+&&+ \nabla\cdot\Sigmab^{n'} + \half\left(\rho^n+\rho^{n+1}\right)\gb,
+\end{eqnarray}
+\begin{equation}
+-\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{*,n+1} - S^{n+1}.
+\end{equation}
+
+\clearpage
+
+\section{Overdamped 1RNG Algorithm}
+This algorithm is of limited use since it is not formally second-order accurate.  It was
+an early test algorithm, and it so happens that the second Stokes solve is a null-op
+for the constant-coefficient, incompressible, no gravity case.  But anyway, here it
+is for the record.\\ \\
+{\bf Step 0: Initialization:}\\ \\
+Begin with an initial guess for velocity, $\vb^{-\myhalf}$ (note this only used as a reference state for the GMRES
+solve and for computing the right-hand-side for pressure, so it does not have to satisfy any constraint),
+and pressure, $p^{-\myhalf}$.\\ \\
+{\bf Step 1: Predictor Stochastic/Diffusive Fluxes:}\\ \\
+Compute $\Fb_i^n$ and $\nabla\cdot\Fb_i^n$ from $(\rho_i^n,T^n)$
+using the supplied {\tt compute\_mass\_fluxdiv} subroutine.
+Pass in $\Delta t$ as the scaling factor for the random fluxes.
+Construct $S^n$ using equation (\ref{eq:S}).\\ \\
+{\bf Step 2: Predictor Stokes Solve:}
+Generate a random advection velocity by solving the steady Stokes equation with random forcing.
+Define $p^* = p^{n-\myhalf} + \delta p$ and $\vb^* = \overline\vb^{n-\myhalf} + \delta\vb$ 
+(in these notes the overline indicates the the velocity field has been modified to incorporate
+the boundary conditions on the full velocity field after the solve) and solve:
+\begin{equation}
+\nabla(p^{n-\myhalf} + \delta p) = \mathcal A_0^n(\overline\vb^{n-\myhalf} + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\overline\Wb^n}_{\Sigmab^{(1)}} + \rho^n\gb,
+\end{equation}
+\begin{equation}
+\nabla\cdot(\overline\vb^{n-\myhalf} + \delta\vb) = S^n,
+\end{equation}
+which can be written as
+\begin{equation}
+-\mathcal{A}_0^n\deltab\vb + \nabla\delta p = -\nabla p^{n-\myhalf} + \mathcal{A}_0^n\overline\vb^{n-\myhalf}
++ \nabla\cdot\Sigmab^{(1)}  + \rho^n\gb,
+\end{equation}
+\begin{equation}
+-\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{n-\myhalf} - S^n.
+\end{equation}
+{\bf Step 3: Scalar Predictor Midpoint Euler Step}\\ \\
+Take a midpoint predictor forward Euler step for $\rho_i$:
+\begin{equation}
+\rho_i^{*,n+\myhalf} = \rho_i^n + \frac{\Delta t}{2}\nabla\cdot(-\rho_i^n\vb^* - \Fb_i^n).
+\end{equation}
+Set $\rho^{*,n+\myhalf} = \sum_i\rho_i^{*,n+\myhalf}$.\\ \\
+{\bf Step 4: Corrector Stochastic/Diffusive Fluxes:}\\ \\
+Compute $\Fb_i^{*,n+\myhalf}$ and 
+$\nabla\cdot\Fb_i^{*,n+\myhalf}$ from $(\rho_i^{*,n+\myhalf},T^{*,n+\myhalf})$ using the supplied 
+{\tt compute\_mass\_fluxdiv} subroutine.
+Pass in $\Delta t/2$ as the scaling factor for the random fluxes.
+Construct $S^{*,n+\myhalf}$ using equation (\ref{eq:S}).\\ \\
+{\bf Step 5: Corrector Stokes Solve:}\\ \\
+Solve a steady Stokes system with $p^{n+\myhalf} = p^* + \delta p$ and $\vb^{n+\myhalf} = \overline\vb^* + \delta\vb$:
+\begin{equation}
+\nabla(p^* + \delta p) = \mathcal A_0^{*,n+\myhalf}(\overline\vb^* + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\overline\Wb^n}_{\Sigmab^{(2)}} + \rho^{*,n+\myhalf}\gb,
+\end{equation}
+\begin{equation}
+\nabla\cdot(\overline\vb^* + \delta\vb) = S^{*,n+\myhalf},
+\end{equation}
+which can be written as
+\begin{equation}
+-\mathcal{A}_0^{*,n+\myhalf}\deltab\vb + \nabla\delta p = -\nabla p^* + \mathcal{A}_0^{*,n+\myhalf}\overline\vb^*
++ \nabla\cdot\Sigmab^{(2)} + \rho^{*,n+\myhalf}\gb,
+\end{equation}
+\begin{equation}
+-\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^* - S^{*,n+\myhalf}.
+\end{equation}
+Next, define $\vb^{n+\myhalf} = \overline\vb^* + \deltab\vb$ and $p^{n+\myhalf} = p^* + \delta p$.\\ \\
+{\bf Step 6: Midpoint Scalar Corrector:}\\ \\
+Update the densities and concentrations
+\begin{eqnarray}
+\rho_i^{n+1} &=& \rho_i^n + \Delta t\left(-\rho_i^{*,n+\myhalf}\vb^{n+\myhalf} - \Fb_i^{*,n+\myhalf}\right).
+\end{eqnarray}
+Set $\rho^{n+1} = \sum_i\rho_i^{n+1}$.
+
+\clearpage
+
+\section{Overdamped 2RNG Algorithm}
+This is our preferred algorithm.\\ \\
+{\bf Step 0: Initialization:}\\ \\
+Begin with an initial guess for velocity, $\vb^{-\myhalf}$ (note this only used as a reference state for the GMRES
+solve and for computing the right-hand-side for pressure, so it does not have to satisfy any constraint),
+and pressure, $p^{-\myhalf}$.\\ \\
+{\bf Step 1: Predictor Stochastic/Diffusive Fluxes:}\\ \\
+Compute $\Fb_i^n$ and $\nabla\cdot\Fb_i^n$ from $(\rho_i^n,T^n)$ using the supplied {\tt compute\_mass\_fluxdiv} subroutine.
+Pass in $\Delta t/2$ as the scaling factor for the random fluxes.
+Construct $S^n$ using equation (\ref{eq:S}).\\ \\
+{\bf Step 2: Predictor Stokes Solve:}
+Generate a random advection velocity by solving the steady Stokes equation with random forcing.
+Define $p^* = p^{n-\myhalf} + \delta p$ and $\vb^* = \overline\vb^{n-\myhalf} + \delta\vb$ 
+(in these notes the overline indicates the the velocity field has been modified to incorporate
+the boundary conditions on the full velocity field after the solve) and solve:
+\begin{equation}
+\nabla(p^{n-\myhalf} + \delta p) = \mathcal A_0^n(\overline\vb^{n-\myhalf} + \deltab\vb) 
++ \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\overline\Wb_A^n}_{\Sigmab^{(1)}} + \rho^n\gb,
+\end{equation}
+\begin{equation}
+\nabla\cdot(\overline\vb^{n-\myhalf} + \delta\vb) = S^n,
+\end{equation}
+which can be written as
+\begin{equation}
+-\mathcal{A}_0^n\deltab\vb + \nabla\delta p = -\nabla p^{n-\myhalf} + \mathcal{A}_0^n\overline\vb^{n-\myhalf}
++ \nabla\cdot\Sigmab^{(1)} + \rho^n\gb,
+\end{equation}
+\begin{equation}
+-\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{n-\myhalf} - S^n.
+\end{equation}
+{\bf Step 3: Scalar Predictor Midpoint Euler Step}\\ \\
+Take a midpoint predictor forward Euler step for $\rho_i$:
+\begin{equation}
+\rho_i^{*,n+\myhalf} = \rho_i^n + \frac{\Delta t}{2}\nabla\cdot(-\rho_i^n\vb^* - \Fb_i^n).
+\end{equation}
+Set $\rho^{*,n+\myhalf} = \sum_i\rho_i^{*,n+\myhalf}$.\\ \\
+{\bf Step 4: Corrector Stochastic/Diffusive Fluxes:}\\ \\
+Compute $\Fb_i^{*,n+\myhalf}$ and 
+$\nabla\cdot\Fb_i^{*,n+\myhalf}$ from $(\rho_i^{*,n+\myhalf},T^{*,n+\myhalf})$ using the supplied 
+{\tt compute\_mass\_fluxdiv} subroutine.
+Pass in $\Delta t/2$ as the scaling factor for the random fluxes.
+Construct $S^{*,n+\myhalf}$ using equation (\ref{eq:S}).\\ \\
+{\bf Step 5: Corrector Stokes Solve:}\\ \\
+Solve a steady Stokes system with $p^{n+\myhalf} = p^* + \delta p$ and $\vb^{n+\myhalf} = \overline\vb^* + \delta\vb$:
+\begin{equation}
+\nabla(p^* + \delta p) = \mathcal A_0^{*,n+\myhalf}(\overline\vb^* + \deltab\vb) 
++ \nabla\cdot\underbrace{\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\left(\frac{\overline\Wb_A^n + \overline\Wb_B^n}{\sqrt{2}}\right)}_{\Sigmab^{(2)}} + \rho^{*,n+\myhalf}\gb,
+\end{equation}
+\begin{equation}
+\nabla\cdot(\overline\vb^* + \delta\vb) = S^{*,n+\myhalf},
+\end{equation}
+which can be written as
+\begin{equation}
+-\mathcal{A}_0^{*,n+\myhalf}\deltab\vb + \nabla\delta p = -\nabla p^* + \mathcal{A}_0^{*,n+\myhalf}\overline\vb^*
++ \nabla\cdot\Sigmab^{(2)} + \rho^{*,n+\myhalf}\gb,
+\end{equation}
+\begin{equation}
+-\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^* - S^{*,n+\myhalf}.
+\end{equation}
+Next, define $\vb^{n+\myhalf} = \overline\vb^* + \deltab\vb$ and $p^{n+\myhalf} = p^* + \delta p$.\\ \\
+{\bf Step 6: Midpoint Scalar Corrector:}\\ \\
+Update the densities and concentrations
+\begin{eqnarray}
+\rho_i^{n+1} &=& \rho_i^n + \Delta t\left(-\rho_i^{*,n+\myhalf}\vb^{n+\myhalf} - \Fb_i^{*,n+\myhalf}\right).
+\end{eqnarray}
+Set $\rho^{n+1} = \sum_i\rho_i^{n+1}$.
+
+\clearpage
+
+\section{Mixed-Mode Instability}
+We validate our model and algorithm by performing mixed mode instability (MMI) simulations to compare to experiments 
+(Figures 1(d)-(f) in Carballido-Landieira et al., Physics of Fluids, 2013).  In this ternary mixture
+we initially have a heavier solution ``A'' consisting of a salt solute (KCl) diluted with water sitting upon
+a lighter solution ``B'' consisting of a sucrose solute diluated with water.  
+Thus, fluid ``1'' is salt solute, fluid ``2'' is sucrose solute, and fluid ``3'' is water.
+The mixture sits between two glass plates separated by 0.25 mm (refer to Figure \ref{fig:mmi}).
+The initial interface is either flat or slightly perturbed (depending
+on the simulation).  The buoyancy ratio between the two solutions combined with 
+differential diffusion effects characterize this instability to be in the mixed mode
+regime.  In this case the rate at which the salt solute diffusives into pure water is $\sim$4 times greater 
+than the rate at which the sucrose solute diffuses into water.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[hb]
+\centering
+\includegraphics[width=2in]{mmi}
+\label{fig:mmi}
+\caption{Initial configuration of the MMI experiment for diffusively mixing solutions.}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+In our simulation we model a 0.8 cm $\times$ 0.8 cm $\times$ 0.25mm domain (very similar to the experimental
+images shown over a 1.1 cm $\times$ 0.9 cm $\times$ 0.25mm domain).  We divide our domain into 
+256 $\times$ 256 $\times$ 8 cubic grid cells.  We impose periodic boundary conditions in $x$,
+a slip-reservoir boundary condition to match the initial configuration in $y$, and no-slip walls in $z$.
+Gravity has a magnitude of 981cm/s$^2$ in the downward $y$ direction.  The characteristic velocities in
+this simulation are sufficiently small that a diffusive CFL time step restriction needs to be imposed, i.e.,
+$\Delta t = 6.39 \times 10^{-2}$s $= \sigma\Delta x^2/(2*d*D_{\rm max})$, with $\sigma=0.75$, 
+dimensionality $d=3$, and $D_{\rm max}$ the maximum Maxwell-Stefan diffusion coefficient between any two pure
+fluids.  We note that using this time step, the overdamped algorithm gives qualitatively
+similar results by takes a factor of $\sim$4 more GMRES iterations to converge.  We use a limited trilinear
+BDS advection scheme (Nonaka et al., J. Sci. Comput, 2011) and a viscous stress tensor formulation that 
+ignores bulk viscosity effects.
+
+The fluid parameters are $(\overline\rho_1, \overline\rho_2, \overline\rho_3) = (2.81, 1.55, 1.0)$ g/cm$^3$
+with molecular masses of $(1.238\times 10^{-22}, 5.684\times 10^{-22}, 2.99\times 10^{-23})$ g/molecule.
+The Maxwell-Stefan diffusion coefficients are
+$D_{12} = 4.31826\times 10^{-6}, D_{13} = 1.91\times 10^{-5}$, and $D_{23} = 5.2\times 10^{-6}$.
+We assume constant viscosity, $\eta = 0.01002$ P.  The initial mass fractions (concentrations) in the 
+lower half of the domain are $c_{\rm lo} = (0, 0.1368, 0.8632)$ and in the upper half of the domain
+are $c_{\rm hi} = (0.0864, 0, 0.9136)$.  This gives an initial density of 1.058932 g/cm$^3$ on top 
+and 1.051018 g/cm$^3$ on bottom.  The ambient temperature is 293 K.
+
+We perform two different simulations, both to $t\approx 63.9$ s (1000 time steps).
+The first simulation uses a flat initial interface, but allows for thermal fluctuations in the mass
+and momentum equations (we note that mass fluctuations are very small and do not cause any measureable
+changes in any results).  The second simulation uses a randomly perturbed initial interface with one $xz$ plane 
+of cells at the centerline randomly perturbed using $c = r c_{\rm lo} + (1-r) c_{\rm hi}$, with $r$ being a 
+random number between 0.9 and 1.0 in each cell.  The scaling of this perturbation was chosen
+so that the timescales of the pattern/spectra development match a flat initial interface with thermal fluctuations.
+
+-Show figures of spectra for early time.  Comment how the 13 mm wavelength appears to be the dominant mode,
+ as also reported by expterimentalists.
+
+-Show images of structure development.
+
+
+\section{Diffusive Layer Convection}
+We modify the initial configuration of the MMI problem so we instead model
+diffusive layer convection (DLC; see  Carballido-Landieira et al., Physics of Fluids, 2013).  
+The setup remains similar to the MMI setup in that a salt-water solution sits on top
+of a sucrose-water solution, but the concentrations of salt and sucrose solutes are modified 
+so that we initially have a {\it light} salt-water solution ``A'' sitting upon a {\it heavier} 
+sucrose-water solution ``B''.  We analyze the spectra of the vertically-averaged density, as 
+is done in shadowgraph experiments.
+
+As before, fluid ``1'' is salt solute, fluid ``2'' is sucrose solute, and fluid ``3'' is water.
+The dimensions of the experiement are now 1 cm $\times$ 0.5 cm $\times$ 1 cm, with
+periodic boundary conditions in $x$ and $z$, and a slip-reservoir boundary condition to match 
+the initial configuration in $y$ (refer to Figure \ref{fig:dlc}).
+The initial interface is either flat or slightly perturbed (depending on the simulation).
+The buoyancy ratio between the two solutions combined with 
+differential diffusion effects characterize this instability to be in the diffusive layer convection regime.
+As in the MMI experiment, the rate at which the salt solute diffusives into pure water is $\sim$4 times greater 
+than the rate at which the sucrose solute diffuses into water.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[hb]
+\centering
+\includegraphics[width=2in]{dlc}
+\label{fig:dlc}
+\caption{Initial configuration of the DLC experiment for diffusively mixing solutions.}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+We divide our domain into 256 $\times$ 128 $\times$ 256 grid cells.  Gravity has a magnitude of 
+981cm/s$^2$ in the downward $y$ direction.  We used a fixed time step of $\Delta t = 0.025$ s which
+corresponds to an advective CFL of $\sigma\sim 0.5$.  We use an unlimited trilinear
+BDS advection scheme (Nonaka et al., J. Sci. Comput, 2011) and a viscous stress tensor formulation that 
+ignores bulk viscosity effects.  The fluid parameters are the same as the MMI experiement.
+The initial mass fractions (concentrations) in the 
+lower half of the domain are $c_{\rm lo} = (0, 0.05, 0.95)$ and in the upper half of the domain
+are $c_{\rm hi} = (0.022, 0, 0.978)$.  This gives an initial density of 1.014375 g/cm$^3$ on top 
+and 1.018062 g/cm$^3$ on bottom.  The ambient temperature is 293 K.
+
+We perform two different simulations, both to $t=19$ s (760 time steps).
+The first simulation uses a flat initial interface, but allows for thermal fluctuations in the mass
+and momentum equations.  The second simulation uses a randomly perturbed initial interface with one $xz$ plane 
+of cells at the centerline randomly perturbed using $c = r c_{\rm lo} + (1-r) c_{\rm hi}$, with $r$ being a 
+random number between 0 and 1.0 in each cell.  The scaling of this perturbation was chosen
+so that the timescales of the pattern/spectra development match a flat initial interface with thermal fluctuations.
+
+Figure \ref{fig:dlc_images} illustrates vertically averaged densities and planar slices
+of density for two different simulations.  The first simulation uses a randomly perturbed
+initial interface without thermal fluctuations.  The second simulation uses a flat initial
+interface with thermal fluctuations.  The vertical averaged densities are representative
+of features visible using shadowgraph experimental techniques.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[hb]
+\centering
+\includegraphics[width=2.75in]{DLC_pert_t15}
+\includegraphics[width=2.75in]{DLC_pert_t19}\\
+\includegraphics[width=2.75in]{DLC_therm_t15}
+\includegraphics[width=2.75in]{DLC_therm_t19}
+\label{fig:dlc_images}
+\caption{Vertically averaged $\rho$ (illustrated on the $y$-planes) and planar
+slices of $\rho$ ($x-$ and $z-$planes).  The top-left and top-right panes correspond
+to $t=15$ and $19$ s from a simulation with a perturbed initial interface and no thermal
+fluctuations.  The bottom-left and bottom-right panes correspond to $t=15$ and $19$ s
+from a simulation with a flat initial interface with thermal fluctuations.}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{2D Lid-Driven Cavity Convergence Testing}
+The problem is a deterministic lid-driven cavity in two dimensions.
+All units are cgs.
+The domain is 1 $\times$ 1 divided into $64^2, 128^2, 256^2$, and $512^2$ grid cells.
+The lo-y and hi-y walls are no-slip walls moving in equal and opposite directions,
+setting up a circular flow pattern.  The hi-y wall speed is given by:
+\begin{equation}
+u(x,t) =
+\begin{cases}
+\frac{1}{4}\left[1 + \sin{(2\pi x - \frac{\pi}{2}})\right]
+           \left[1 + \sin{(2\pi t - \frac{\pi}{2}})\right], & t < 0.5\\
+\frac{1}{2}\left[1 + \sin{(2\pi x - \frac{\pi}{2}})\right], & t \ge 0.5
+\end{cases}.
+\end{equation}
+The x-boundaries are stationary no-slip walls.
+The time step for the coarsest simulation is $\Delta t=5\times 10^{-3}$ 
+and is reduced by a factor of 2 as the resolution increases by a factor of 2.
+This corresponds to an advective CFL number of $\sim 0.3$ for each simulation, and
+a mass diffusion CFL of $\sim 0.67$ for the finest simulation.
+We run each simulation to $t=2$.
+We use $\bar\rho = (3,2,1)$ and molecular masses $\mb = (2,3,1)$.
+The initial conditions are $\vb=0$ and $p=0$ with
+a Gaussian bump of high density centered at $(x,y) = (0.5, 0.5)$ such that
+\begin{eqnarray}
+c_1 &=& 0.5e^{-75r^2}; \quad r = \sqrt{(x-0.5)^2 + (y-0.5)^2}, \\
+c_2 &=& 0.5e^{-75r^2}, \\
+c_3 &=& 1 - c_1 - c_2.
+\end{eqnarray}
+The viscosity varies linearly as a function of concentration, such that $\mu=0.1$
+when $\rho=1$ and $\mu=1$ when $\rho=2.5$.  We use mass diffusion coefficients
+$(D_{12},D_{13},D_{32}) = (10^{-4},5\times 10^{-4},10^{-3})$.
+Gravity acts downward with $\gb=(0,-1)$, and we use
+the viscous stress tensor formulation, $\taub = \eta[\nabla\vb + (\nabla\vb)^T]$.
+
+In Table \ref{tab:Linf} we present convergence results in $L^\infty$ for the 
+following test problems:
+\begin{itemize}
+\item Test 1: Inertial algorithm, centered scalar advection
+\item Test 2: Inertial algorithm, unlimited bilinear BDS scalar advection.
+\item Test 3: Inertial algorithm, unlimited quadratic BDS scalar advection.
+\item Test 4: Inertial algorithm, unlimited bilinear BDS scalar advection, $\chi=0$.
+\item Test 5: Overdamped algorithm, centered scalar advection
+\item Test 6: Overdamped algorithm, unlimited bilinear BDS scalar advection.
+\item Test 7: Overdamped algorithm, unlimited quadratic BDS scalar advection.
+\item Test 8: Overdamped algorithm, unlimited bilinear BDS scalar advection, $\chi=0$.
+\end{itemize}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{table}[h]
+\begin{center}
+\caption{Refining in space and time.  Errors and convergence rates in $L^\infty$.}
+\label{tab:Linf}
+\begin{tabular}{ccccccc}
+& & 64-128 & Rate & 128-256 & Rate & 256-512 \\
+\hline
+Test 1              & $u$      & 1.83e-03 & 1.91 & 4.88e-04 & 1.95 & 1.26e-04 \\
+                    & $v$      & 7.01e-04 & 1.88 & 1.90e-04 & 1.94 & 4.95e-05 \\
+                    & $\rho_1$ & 4.04e-03 & 2.00 & 1.01e-03 & 2.00 & 2.53e-04 \\
+                    & $\rho_2$ & 3.97e-03 & 2.00 & 9.94e-04 & 2.00 & 2.49e-04 \\
+                    & $\rho_3$ & 3.33e-03 & 2.00 & 8.34e-04 & 2.00 & 2.09e-04 \\
+\hline
+Test 1              & $u$      & 5.24e-04 & 2.00 & 1.31e-04 & 2.00 & 3.27e-05 \\
+HO Boundary         & $v$      & 2.06e-04 & 1.99 & 5.17e-05 & 2.00 & 1.29e-05 \\
+                    & $\rho_1$ & 3.91e-03 & 2.00 & 9.78e-04 & 2.00 & 2.44e-04 \\
+                    & $\rho_2$ & 3.84e-03 & 2.00 & 9.60e-04 & 2.00 & 2.40e-04 \\
+                    & $\rho_3$ & 3.23e-03 & 2.00 & 8.06e-04 & 2.00 & 2.01e-04 \\
+\hline
+Test 2              & $u$      & 1.83e-03 & 1.91 & 4.88e-04 & 1.95 & 1.26e-04 \\
+                    & $v$      & 6.97e-04 & 1.88 & 1.90e-04 & 1.94 & 4.94e-05 \\
+                    & $\rho_1$ & 2.53e-03 & 1.88 & 6.87e-04 & 1.95 & 1.78e-04 \\
+                    & $\rho_2$ & 2.48e-03 & 1.88 & 6.74e-04 & 1.95 & 1.74e-04 \\
+                    & $\rho_3$ & 2.08e-03 & 1.88 & 5.66e-04 & 1.95 & 1.46e-04 \\
+\hline
+Test 3              & $u$      & 1.83e-03 & 1.91 & 4.88e-04 & 1.95 & 1.26e-04 \\
+                    & $v$      & 6.98e-04 & 1.88 & 1.90e-04 & 1.94 & 4.94e-05 \\
+                    & $\rho_1$ & 2.89e-03 & 1.96 & 7.42e-04 & 1.99 & 1.87e-04 \\
+                    & $\rho_2$ & 2.84e-03 & 1.96 & 7.29e-04 & 1.99 & 1.84e-04 \\
+                    & $\rho_3$ & 2.38e-03 & 1.96 & 6.12e-04 & 1.99 & 1.54e-04 \\
+\hline
+Test 4              & $u$      & 1.87e-03 & 1.91 & 4.96e-04 & 1.95 & 1.28e-04 \\
+(unlim b BDS)       & $v$      & 8.89e-04 & 2.01 & 2.20e-04 & 2.02 & 5.43e-05 \\
+                    & $\rho_1$ & 9.83e-03 & 1.71 & 3.00e-03 & 1.89 & 8.11e-04 \\
+                    & $\rho_2$ & 9.83e-03 & 1.71 & 3.00e-03 & 1.89 & 8.11e-04 \\
+                    & $\rho_3$ & 8.19e-03 & 1.71 & 2.50e-03 & 1.89 & 6.76e-04 \\
+\hline
+Test 4              & $u$      & 1.87e-03 & 1.91 & 4.96e-04 & 1.95 & 1.28e-04 \\
+(unlim q BDS)       & $v$      & 8.68e-04 & 2.01 & 2.16e-04 & 2.01 & 5.37e-05 \\
+                    & $\rho_1$ & 6.37e-03 & 1.78 & 1.85e-03 & 1.90 & 4.95e-04 \\
+                    & $\rho_2$ & 6.37e-03 & 1.78 & 1.85e-03 & 1.90 & 4.95e-04 \\
+                    & $\rho_3$ & 5.31e-03 & 1.79 & 1.54e-03 & 1.90 & 4.13e-04 \\
+\hline
+Test 4              & $u$      & 1.88e-03 & 1.92 & 4.98e-04 & 1.96 & 1.28e-04 \\
+(centered)          & $v$      & 8.93e-04 & 1.98 & 2.26e-04 & 1.99 & 5.67e-05 \\
+                    & $\rho_1$ & 1.42e-02 & 1.98 & 3.61e-03 & 2.00 & 9.04e-04 \\
+                    & $\rho_2$ & 1.42e-02 & 1.98 & 3.61e-03 & 2.00 & 9.04e-04 \\
+                    & $\rho_3$ & 1.18e-02 & 1.97 & 3.01e-03 & 2.00 & 7.54e-04 \\
+\hline
+Test 5              & $\rho_1$ & 4.04e-03 & 2.00 & 1.01e-03 & 2.00 & 2.53e-04 \\
+                    & $\rho_2$ & 3.97e-03 & 2.00 & 9.94e-04 & 2.00 & 2.48e-04 \\
+                    & $\rho_3$ & 3.33e-03 & 2.00 & 8.34e-04 & 2.00 & 2.08e-04 \\
+\hline
+Test 6              & $\rho_1$ & 2.46e-03 & 1.87 & 6.75e-04 & 1.95 & 1.75e-04 \\
+                    & $\rho_2$ & 2.42e-03 & 1.87 & 6.62e-04 & 1.94 & 1.72e-04 \\
+                    & $\rho_3$ & 2.03e-03 & 1.87 & 5.56e-04 & 1.95 & 1.44e-04 \\
+\hline
+Test 7              & $\rho_1$ & 2.90e-03 & 1.96 & 7.44e-04 & 1.99 & 1.87e-04 \\
+                    & $\rho_2$ & 2.85e-03 & 1.96 & 7.31e-04 & 1.99 & 1.84e-04 \\
+                    & $\rho_3$ & 2.39e-03 & 1.96 & 6.14e-04 & 1.99 & 1.55e-04 \\
+\hline
+Test 8              & $\rho_1$ & 9.63e-03 & 1.70 & 2.97e-03 & 1.89 & 8.00e-04 \\
+(unlim b BDS)       & $\rho_2$ & 9.63e-03 & 1.70 & 2.97e-03 & 1.89 & 8.00e-04 \\
+                    & $\rho_3$ & 8.02e-03 & 1.70 & 2.47e-03 & 1.89 & 6.67e-04 \\
+\hline
+Test 8              & $\rho_1$ & 6.44e-03 & 1.80 & 1.85e-03 & 1.88 & 5.01e-04 \\
+(unlim q BDS)       & $\rho_2$ & 6.44e-03 & 1.80 & 1.85e-03 & 1.88 & 5.01e-04 \\
+                    & $\rho_3$ & 5.37e-03 & 1.79 & 1.55e-03 & 1.89 & 4.17e-04
+\end{tabular}
+\end{center}
+\end{table}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Refining in Time Only}
+We repeat Tests 1 and 5 at $128^2$ resolution refining in time only.  We run to $t=1$ using time steps
+of $\Delta t = 2.5\times 10^{-3}, 1.25\times 10^{-3}, 6.25\times 10^{-4}$, and $3.125\times 10^{-4}$.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{table}[h]
+\begin{center}
+\caption{Refining in time only.  Errors and convergence rates in $L^\infty$.}
+\label{tab:Linf_time}
+\begin{tabular}{ccccccc}
+& & & Rate & & Rate & \\
+\hline
+Test 1              & $u$      & 1.16e-07 & 1.99 & 2.92e-08 & 1.99 & 7.33e-09 \\
+                    & $v$      & 1.04e-07 & 1.99 & 2.62e-08 & 2.00 & 6.55e-09 \\
+                    & $\rho_1$ & 6.27e-07 & 1.89 & 1.69e-07 & 1.94 & 4.41e-08 \\
+                    & $\rho_2$ & 6.18e-07 & 1.90 & 1.66e-07 & 1.93 & 4.35e-08 \\
+                    & $\rho_3$ & 5.18e-07 & 1.90 & 1.39e-07 & 1.93 & 3.64e-08 \\
+\hline
+Test 5              & $\rho_1$ & 4.47e-07 & 2.00 & 1.12e-07 & 2.01 & 2.79e-08 \\
+                    & $\rho_2$ & 4.37e-07 & 2.00 & 1.09e-07 & 2.00 & 2.73e-08 \\
+                    & $\rho_3$ & 3.67e-07 & 2.00 & 9.18e-08 & 2.00 & 2.29e-08 \\
+\end{tabular}
+\end{center}
+\end{table}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{3D Convergence Testing}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{table}[h]
+\begin{center}
+\caption{Refining in space and time.  Errors and convergence rates in $L^\infty$.}
+\label{tab:Linf_3d}
+\begin{tabular}{ccccccc}
+& & 32-64 & Rate & 64-128 & Rate & 128-256 \\
+\hline
+Test 1              & $u$      & 7.60e-03 & 1.76 & 2.25e-03 & 1.88 & 6.10e-04 \\
+                    & $v$      & 3.11e-03 & 1.96 & 7.99e-04 & 1.99 & 2.01e-04 \\
+                    & $w$      & 7.60e-03 & 1.76 & 2.25e-03 & 1.88 & 6.10e-04 \\
+                    & $\rho_1$ & 2.02e-02 & 1.86 & 5.56e-03 & 1.98 & 1.41e-03 \\
+                    & $\rho_2$ & 2.00e-02 & 1.87 & 5.49e-03 & 1.98 & 1.39e-03 \\
+                    & $\rho_3$ & 1.67e-02 & 1.86 & 4.60e-03 & 1.99 & 1.16e-03 \\
+\hline
+Test 1              & $u$      & 2.28e-03 & 1.97 & 5.81e-04 & 2.01 & 1.44e-04 \\
+HO Boundary         & $v$      & 8.84e-04 & 2.20 & 1.93e-04 & 2.00 & 4.84e-05 \\
+                    & $w$      & 2.28e-03 & 1.97 & 5.81e-04 & 2.01 & 1.44e-04 \\
+                    & $\rho_1$ & 2.02e-02 & 1.87 & 5.54e-03 & 1.98 & 1.40e-03 \\
+                    & $\rho_2$ & 2.00e-02 & 1.87 & 5.47e-03 & 1.99 & 1.38e-03 \\
+                    & $\rho_3$ & 1.67e-02 & 1.87 & 4.58e-03 & 1.98 & 1.16e-03 \\
+\hline
+Test 2              & $u$      & 7.60e-03 & 1.76 & 2.25e-03 & 1.88 & 6.10e-04 \\
+                    & $v$      & 3.10e-03 & 1.96 & 7.97e-04 & 1.99 & 2.01e-04 \\
+                    & $w$      & 7.60e-03 & 1.76 & 2.25e-03 & 1.88 & 6.10e-04 \\
+                    & $\rho_1$ & 1.41e-02 & 1.74 & 4.23e-03 & 1.89 & 1.14e-03 \\
+                    & $\rho_2$ & 1.40e-02 & 1.74 & 4.20e-03 & 1.89 & 1.13e-03 \\
+                    & $\rho_3$ & 1.17e-02 & 1.74 & 3.51e-03 & 1.90 & 9.42e-04 \\
+\hline
+Test 2              & $u$      & 2.27e-03 & 1.97 & 5.81e-04 & 2.01 & 1.44e-04 \\
+HO Boundary         & $v$      & 8.73e-04 & 2.18 & 1.93e-04 & 2.00 & 4.84e-05 \\
+                    & $w$      & 2.27e-03 & 1.97 & 5.81e-04 & 2.01 & 1.44e-04 \\
+                    & $\rho_1$ & 1.38e-02 & 1.71 & 4.21e-03 & 1.90 & 1.13e-03 \\
+                    & $\rho_2$ & 1.38e-02 & 1.72 & 4.18e-03 & 1.90 & 1.12e-03 \\
+                    & $\rho_3$ & 1.15e-02 & 1.72 & 3.49e-03 & 1.89 & 9.39e-04
+\end{tabular}
+\end{center}
+\end{table}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Infinite Schmidt Number}
+(text stolen and modified from binary implicit paper)
+In this section we verify the ability of the BDS advection scheme to advect concentration and
+density without creating spurious oscillations or instabilities, even in the near absence of mass diffusion,
+χ = $10^{-12}$. The problem setup is similar to the inertial lid-driven cavity test presented above, with
+the following differences. First, the gravity is larger, g = (0, −5), so that the higher density region
+falls downward a significant distance. Secondly, the initial conditions are a constant background
+of c = (0,0,1) with a square region covering the central 25\% of the domain initialized to c = (0.5,0.5,0) (see the
+left panel of Figure \ref{fig:square2} for an image of the total density).
+The correct solution of the equations must remain a binary field, c = (0.5,0.5,0)
+inside the advected square curve, and c = (0,0,1) elsewhere. In this test we employ limited quadratic
+BDS, and use a grid of $256^2$ grid cells and a fixed time step size $\Delta t = 2.5\times 10^{-3}$, corresponding to
+an advective CFL number of $\sim 0.6$. In Figure \ref{fig:square2}, we show the total density at several points in
+time, observing very little smearing of the interface, even as the deformed bubble passes near the
+bottom boundary.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=1.9in]{square_movie1}
+\includegraphics[width=1.9in]{square_movie2}
+\includegraphics[width=1.9in]{square_movie3}
+\caption{Square profile advection using the limited quadratic BDS scheme at $t=0,2$, and $4$.}
+\label{fig:square2}
+\end{center}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}

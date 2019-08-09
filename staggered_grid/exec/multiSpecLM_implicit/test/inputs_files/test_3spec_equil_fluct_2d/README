@@ -1,0 +1,3 @@
+Note that ./inputs_3spec_equil_fluct_2d is slightly different from ../inputs_paper_3spec_equil_fluct_2d
+Here, rho0 = rhobar_i = 3.
+We want to check algorithm = 6 (Boussinesq).

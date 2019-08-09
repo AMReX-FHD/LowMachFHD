@@ -1,0 +1,238 @@
+\documentclass[
+10pt
+%11pt,
+%12pt,
+%reprint,
+%superscriptaddress,
+%greenoupedaddress,
+%unsortedaddress,
+%runinaddress,
+%frontmatterverbose,
+%preprint,
+showpacs, showkeys,
+%preprintnumbers,
+%nofootinbib,
+%nobibnotes,
+%bibnotes,
+amsmath,amssymb,
+aps,
+pre,
+%prb,
+%rmp,
+%prstab,
+%prstper,
+floatfix,
+]{revtex4-1}
+
+
+
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage{xfrac}
+\usepackage{graphicx}
+\usepackage{siunitx}
+\usepackage{etoolbox}
+\usepackage{color}
+
+
+
+% Macros by Donev:
+\global\long\def\V#1{\boldsymbol{#1}}
+\global\long\def\M#1{\boldsymbol{#1}}
+\global\long\def\Set#1{\mathbb{#1}}
+\global\long\def\D#1{\Delta#1}
+\global\long\def\d#1{\delta#1}
+\global\long\def\norm#1{\left\Vert #1\right\Vert }
+\global\long\def\abs#1{\left|#1\right|}
+\global\long\def\grad{\M{\nabla}}
+%\global\long\def\avv#1{\langle#1\rangle}
+\global\long\def\av#1{\left\langle #1\right\rangle }
+\global\long\def\myhalf{\sfrac{1}{2}}
+
+% misc
+\newcommand{\lapl}{{\nabla^2}}                            % Laplacian
+\newcommand{\dlapl}{{\nabla^2_\mathrm{d}}}                % discrete Laplacian
+\newcommand{\divg}{{\V\nabla\cdot}}                       % divergence
+\newcommand{\ddivg}{{\V{\nabla}_\mathrm{d}\cdot}}         % discrete divergence
+\newcommand{\ddt}{{\frac{d}{dt}}}                         % d/dt
+\newcommand{\pddt}{{\frac{\partial}{\partial t}}}         % (partial d)/(partial dt)
+\newcommand{\paren}[1]{{(#1)}}                            % (#1)
+\newcommand{\Var}[1]{{\mathrm{Var}\left[#1\right]}}       % Var[#1]
+\newcommand{\Cov}[2]{{\mathrm{Cov}\left[#1,#2\right]}}    % Cov[#1,#2]
+\newcommand{\equald}{{\stackrel{\mathrm{d}}{=}}}          % equal in distribution
+
+
+
+\begin{document}
+
+\section*{Boussinesq Approximation Scheme (Reactions + Electrolytes)}
+
+\noindent For a given initial mass density $\rho_0$, the scheme preserves constant total mass density $\rho(\V{x},t)=\sum_i \rho_i(\V{x},t)=\rho_0$.
+For gravity, we use $(\rho_\mathrm{EOS} - \rho_0)\V{g}$, where
+\begin{equation}
+\rho_\mathrm{EOS} = \left(\sum_i \frac{w_i}{\bar{\rho}_i}\right)^{-1}.
+\end{equation}
+
+\begin{enumerate}
+
+\item Calculate diffusive fluxes (deterministic and stochastic) $\V{F}_\mathrm{d}^n$:
+\begin{equation}
+\V{F}_\mathrm{d}^n \equiv \big[-\rho\M{W}\V{\chi}\V{\Gamma}\grad\V{x}\big]^n + \sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}/2} } \V{L}^n_{\frac12} \widetilde{\V{\mathcal{W}}}^n_A.
+\end{equation}
+
+\item Solve the Poisson equation:
+For explicit method:
+\begin{equation}
+\big[\divg\left(\epsilon\grad\Phi\right)\big]^n = - \left(q^\mathrm{f}\right)^n.
+\end{equation}
+or if electroneutral:
+\begin{equation}
+ \divg \left[ \left(\frac{\rho^2}{n k_B T} \V{z}^T \V{W} \V{\chi} \V{W} \V{z}\right)^n \grad \Phi^{n} \right] =
+ \divg \left( \V{z}^T \V{F}_\mathrm{d}^n \right),
+\end{equation}
+
+
+\item Calculate $\divg\V{F}^n$ and $R^n_i$:
+\begin{align}
+& \divg\V{F}^n \equiv \divg \left( \V{F}_\mathrm{d}^n - \left[\rho\M{W}\V{\chi}\frac{\bar{m}\M{W}\V{z}}{k_\mathrm{B}T}\grad\Phi\right]^n \right), \\
+& R^n_i \equiv \frac{1}{\D{V}\D{t}/2}\sum_r \nu_{sr}\mathcal{P}_A(a^n_r\D{V}\D{t}/2).
+\end{align}
+
+\item Solve for $\V{v}^{n+1,*}$ and $\pi^{n+\myhalf,*}$:
+\begin{align}
+\label{boussinesq_stokes_v_1st}
+\begin{split}
+\frac{\rho^n\V{v}^{n+1,*}-\rho^n\V{v}^n}{\D{t}} + \grad\pi^{n+\myhalf,*}
+& = \divg\left(-\rho^n\V{v}^n\V{v}^n\right) + 
+\frac{1}{2}\divg\left( \eta^n \overline{\grad}\V{v}^n + \eta^n \overline{\grad}\V{v}^{n+1,*} \right)
++ \divg\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}} } \overline{\V{\mathcal{W}}}^n \right)
+\\
+& + (\rho^n_\mathrm{EOS}-\rho_0)\V{g} +\big[\left(\divg(\epsilon\grad\Phi)\right)\grad\Phi\big]^n,
+\end{split}
+\\
+\label{boussinesq_stokes_p_1st}
+\divg\V{v}^{n+1,*} & = 0.
+\end{align}
+
+\item Calculate $\rho^{n+\myhalf,*}_i$:
+\begin{equation}
+\rho^{n+\myhalf,*}_i = \rho^n_i + \frac{\D{t}}{2} \left[ -\divg\V{F}^n_i + m_i R^n_i \right]
+-\frac{\D{t}}{2}\divg
+\left\{
+\begin{array}{l}
+\rho^n_i \frac{\V{v}^n+\V{v}^{n+1,*}}{2}, \\
+\mathrm{BDS}\left(\rho_i^n,\frac{\V{v}^n+\V{v}^{n+1,*}}{2},-\divg\V{F}_i^n+m_i R_i^n,\frac{\D{t}}{2}\right).
+\end{array}
+\right.
+\end{equation}
+
+\item Calculate $\V{F}_\mathrm{d}^{n+\myhalf,*}$:
+\begin{equation}
+\V{F}_\mathrm{d}^{n+\myhalf,*} \equiv \big[-\rho\V{W}\V{\chi}\left(\V{\Gamma}\grad\V{x}\right)\big]^{n+\myhalf,*} +
+\sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}} } \V{L}^{n+\myhalf,*}_{\frac12} \frac{\widetilde{\V{\mathcal{W}}}_A^n+\widetilde{\V{\mathcal{W}}}_B^n}{\sqrt{2}}.
+\end{equation}
+
+\item Solve the Poisson equation:
+For explicit:
+\begin{equation}
+\big[\divg\left(\epsilon\grad\Phi\right)\big]^{n+\myhalf,*} = - \left(q^\mathrm{f}\right)^{n+\myhalf,*}.
+\end{equation}
+or if electroneutral:
+\begin{equation}
+ \divg \left[ \left(\frac{\rho^2}{n k_B T} \V{z}^T \V{W} \V{\chi} \V{W} \V{z}\right)^{n+\myhalf,*} \grad \Phi^{n+\myhalf,*} \right] =
+ \divg \left( \V{z}^T \V{F}_\mathrm{d}^{n+\myhalf,*} \right),
+\end{equation}
+
+\item Calculate $\divg\V{F}^{n+\myhalf}$ and $R^{n+\myhalf}_i$:
+\begin{align}
+&\divg\V{F}^{n+\myhalf} \equiv \divg\left(\V{F}_\mathrm{d}^{n+\myhalf,*} - \left[\rho\V{W}\V{\chi}\frac{\bar{m}\M{W}\V{z}}{k_\mathrm{B}T}\grad\Phi\right]^{n+\myhalf,*}\right),
+\\
+&R^{n+\myhalf}_i \equiv \frac{1}{2}\left[ R_i^n + \frac{1}{\D{V}\D{t}/2} \sum_r \nu_{sr} \mathcal{P}_B\left( \left[ 2 a^{n+\myhalf,*}_r - a^n_r \right]^+ \D{V}\D{t}/2 \right) \right].
+\end{align}
+
+\item Calculate $\rho^{n+1}_i$:
+\begin{equation}
+\rho^{n+1}_i = \rho^n_i + \D{t} \left[ -\divg\V{F}^{n+\myhalf}_i + m_i R^{n+\myhalf}_i \right]
+- \D{t}\divg
+\left\{
+\begin{array}{l}
+\rho^{n+\myhalf,*}_i \frac{\V{v}^n + \V{v}^{n+1,*}}{2}, \\
+\mathrm{BDS}\left(\rho_i^{n+\myhalf,*},\frac{\V{v}^n+\V{v}^{n+1,*}}{2},-\divg\V{F}^{n+\myhalf}_i+m_i R_i^{n+\myhalf},\D{t}\right).
+\end{array}
+\right.
+\end{equation} 
+
+\item Solve for $\V{v}^{n+1}$ and $\pi^{n+\myhalf}$:
+\begin{align}
+\label{boussinesq_stokes_v_2nd}
+\begin{split}
+\frac{\rho^{n+1}\V{v}^{n+1}-\rho^n\V{v}^n}{\D{t}} + \grad\pi^{n+\myhalf}
+&= -\frac{1}{2}\divg\left(\rho^n\V{v}^n\V{v}^n+\rho^{n+1}\V{v}^{n+1,*}\V{v}^{n+1,*}\right)
++ \frac{1}{2}\divg\left( \eta^n \overline{\grad}\V{v}^n + \eta^{n+1} \overline{\grad}\V{v}^{n+1} \right) \\
+&+ \frac{1}{2}\divg\left[\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}}} + \sqrt{\frac{\eta^{n+1} k_\mathrm{B}T}{\D{V}\D{t}}} \right) \overline{\V{\mathcal{W}}}^n \right] \\
+&+ \big(\rho^{n+\myhalf,*}_\mathrm{EOS}-\rho_0\big)\V{g} 
++ \big[\left(\divg(\epsilon\grad\Phi)\right)\grad\Phi\big]^{n+\myhalf,*}, 
+\end{split} \\
+\label{boussinesq_stokes_p_2nd}
+\divg\V{v}^{n+1} & = 0.
+\end{align}
+
+\end{enumerate}
+
+\clearpage
+
+\subsection*{Equations for the GMRES solver}
+
+\begin{enumerate}
+
+\item In order to solve Eqs.~\eqref{boussinesq_stokes_v_1st} and \eqref{boussinesq_stokes_p_1st}, we use $\V{v}^{n+1,*}=\bar{\V{v}}+\d\V{v}$ and $\pi^{n+\myhalf,*}=\pi+\d{\pi}$.
+
+\begin{itemize}
+\item $\bar{\V{v}}$ is obtained from $\V{v}^n$ (previous step) so that it satisfies the boundary conditions.
+\item $\pi$ is $\pi^{n-\myhalf}$ (previous step).
+\item $\d{\V{v}}$ and $\d{\pi}$ satisfy
+\begin{align}
+\label{boussinesq_gmres_v_1st}
+\begin{split}
+\frac{\rho^n\d{\V{v}}}{\D{t}} - \frac{1}{2}\divg\left(\eta^n\overline{\grad}\d{\V{v}}\right) + \grad\d{\pi}
+& = \frac{\rho^n\V{v}^n-\rho^n\bar{\V{v}}}{\D{t}} - \grad\pi 
++ \divg\left(-\rho^n\V{v}^n\V{v}^n\right) \\
+& + \frac{1}{2}\divg\left( \eta^n\overline{\grad}\V{v}^n + \eta^n\overline{\grad}\bar{\V{v}} \right)
++ \divg\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}} } \overline{\V{\mathcal{W}}}^n \right) \\
+& + \left(\rho^n_\mathrm{EOS}-\rho_0\right)\V{g} + \big[\left(\divg(\epsilon\grad\Phi)\right)\grad\Phi\big]^n,
+\end{split} \\
+\label{boussinesq_gmres_p_1st}
+-\divg\d{\V{v}} &= \divg\bar{\V{v}}.
+\end{align}
+\item By the GMRES solver, Eqs.~\eqref{boussinesq_gmres_v_1st} and \eqref{boussinesq_gmres_p_1st} are solved for $(\V{x}_{\V{v}},x_p)=(\d{\V{v}},\d{\pi})$, where $\V{b}_{\V{v}}$ and $b_p$ are given as the right-hand sides of Eqs.~\eqref{boussinesq_gmres_v_1st} and \eqref{boussinesq_gmres_p_1st} and $\mathcal{A}=\Theta\alpha\mathcal{I}-\mathcal{A}_0$ is defined by $\Theta=1/\D{t}$, $\alpha=\rho^n$, $\beta=\eta^n/2$ and $\gamma=\kappa^n/2$.
+\end{itemize}
+
+\item Similarly, to solve Eqs.~\eqref{boussinesq_stokes_v_2nd} and \eqref{boussinesq_stokes_p_2nd}, we use $\V{v}^{n+1}=\bar{\V{v}}+\d\V{v}$ and $\pi^{n+\myhalf}=\pi+\d{\pi}$.
+
+\begin{itemize}
+\item $\bar{\V{v}}$ is obtained from $\V{v}^n$ (previous step) so that it satisfies the boundary conditions.  We could use $\V{v}^{n+1,*}$
+but a possible disadvantage is solver tolerance issues, particularly if $\pi$ is chosen to be $\pi^{n+\myhalf,*}$.
+\item $\pi$ is $\pi^{n-\myhalf}$ (previous step).
+\item $\d{\V{v}}$ and $\d{\pi}$ satisfy
+\begin{align}
+\label{boussinesq_gmres_v_2nd}
+\begin{split}
+\frac{\rho^{n+1}\d{\V{v}}}{\D{t}} - \frac{1}{2}\divg\left(\eta^{n+1}\overline{\grad}\d{\V{v}}\right) + \grad\d{\pi}
+& = \frac{\rho^n\V{v}^n-\rho^{n+1}\bar{\V{v}}}{\D{t}} - \grad\pi 
++ \frac{1}{2}\divg\left(-\rho^n\V{v}^n\V{v}^n-\rho^{n+1}\V{v}^{n+1,*}\V{v}^{n+1,*}\right) \\
+& + \frac{1}{2}\divg\left( \eta^n\overline{\grad}\V{v}^n + \eta^{n+1}\overline{\grad}\bar{\V{v}} \right) 
++ \frac{1}{2}\divg\left[\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}}} + \sqrt{\frac{\eta^{n+1} k_\mathrm{B}T}{\D{V}\D{t}}} \right) \overline{\V{\mathcal{W}}}^n \right] \\
+& + \big(\rho^{n+\myhalf,*}_\mathrm{EOS}-\rho_0\big)\V{g} + \big[\left(\divg(\epsilon\grad\Phi)\right)\grad\Phi\big]^{n+\myhalf,*},
+\end{split} \\
+\label{boussinesq_gmres_p_2nd}
+-\divg\d{\V{v}} &= \divg\bar{\V{v}}.
+\end{align}
+\item By the GMRES solver, Eqs.~\eqref{boussinesq_gmres_v_2nd} and \eqref{boussinesq_gmres_p_2nd} are solved for $(\V{x}_{\V{v}},x_p)=(\d{\V{v}},\d{\pi})$, where $\V{b}_{\V{v}}$ and $b_p$ are given as the right-hand sides of Eqs.~\eqref{boussinesq_gmres_v_2nd} and \eqref{boussinesq_gmres_p_2nd} and $\mathcal{A}=\Theta\alpha\mathcal{I}-\mathcal{A}_0$ is defined by $\Theta=1/\D{t}$, $\alpha=\rho^{n+1}$, $\beta=\eta^{n+1}/2$ and $\gamma=\kappa^{n+1}/2$.
+\end{itemize}
+
+\end{enumerate}
+
+\end{document}

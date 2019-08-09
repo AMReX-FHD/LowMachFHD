@@ -1,0 +1,62 @@
+&PROBIN
+ dim_in = 2
+
+ max_levs = 1
+
+ n_cells(1:2) = 64 64
+! n_cells(1:2) = 128 128
+! n_cells(1:2) = 256 256
+
+ max_grid_size = 64 64
+
+ prob_hi(1:2) = 1.0 1.0
+
+ max_step  = 1000
+
+ plot_int  = 100
+ chk_int   = 0
+
+ stop_time = 0.0625d0
+ cflfac = 0.5d0
+
+ visc_coef = 0.d0
+ diff_coef = 0.d0
+
+ bc_lo = -1 -1
+ bc_hi = -1 -1
+
+ verbose = 0
+ mg_verbose = 0
+
+ prob_type = 4
+
+ print_error_norms = T
+ print_conserved = F
+
+ temporal_scheme = 2
+    ! 0=Euler, 1=Trapezoidal explicit predictor-corrector, 2=Midpoint explicit predictor-corrector, 3=RK3
+ 
+ use_stochastic_forcing = F
+ hydro_grid_int=-50 ! How often to take snapshots
+ n_steps_save_stats=50
+ center_snapshots=T
+/
+
+&hydroAnalysisOptions
+   ! 3D: 1=rho, 2-4=v, 5=T, 6=c
+   ! 2D: 1=rho, 2-3=v, 4=T, 5=c
+   staggeredVelocities = 1 ! Are velocities on a staggered grid or not, (0, +1, or -1)*h/2
+   storeConserved = F ! We are not using conserved variables here due to staggering
+
+   ! Means file:
+   ! 1=y, 2=rho, 3-5=v, 6=T, 7=c in 3D
+   ! 1=y, 2=rho, 3-4=v, 5=T, 6=c in 2D
+
+   ! Save the flow to a VTK file:
+   writeMeansVTK = T ! Save the means over the averaging interval
+   writeSnapshotVTK=T ! Save snapshots of the instantaneous fields
+   
+   outputFolder = "Output"
+   filePrefix = "MovingVortex2D"
+   axisToPrint = 2 ! 1=x, 2=y, 3=z axis
+/

@@ -1,0 +1,269 @@
+Using new code, call apply_matrix in main_driver.f90
+
+1. prob_coeff=1, prob_sol=1
+
+visc_type=1 or -1
+32*32 mesh
+ The discretization error: L0 U   =  0.52539912478925999     
+ The discretization error: L0 V   =  0.52539912478925999   
+
+64*64 mesh
+ The discretization error: L0 U   =  0.13239769925974088     
+ The discretization error: L0 V   =  0.13239769925968403 
+
+128*128 mesh
+ The discretization error: L0 U   =  3.31351477827865892E-002
+ The discretization error: L0 V   =  3.31351477827865892E-002
+
+visc_type=2 or -2
+
+32*32 mesh
+ The discretization error: L0 U   =  0.52539912479289796     
+ The discretization error: L0 V   =  0.52539912479289796
+
+64*64 mesh
+ The discretization error: L0 U   =  0.13239769925974088     
+ The discretization error: L0 V   =  0.13239769925968403  
+
+128*128 mesh
+ The discretization error: L0 U   =  3.31351477900625468E-002
+ The discretization error: L0 V   =  3.31351477900625468E-002
+
+visc_type=3 or -3
+32*32 mesh
+ The discretization error: L0 U   =  0.52539912478923156     
+ The discretization error: L0 V   =  0.52539912478925999  
+
+64*64 mesh
+ The discretization error: L0 U   =  0.13239769925974088     
+ The discretization error: L0 V   =  0.13239769925968403  
+
+128*128 mesh
+ The discretization error: L0 U   =  3.31351478337182925E-002
+ The discretization error: L0 V   =  3.31351478336898708E-002
+--------------------------------------------------------------------------------
+
+2. prob_coeff=1, prob_sol=31
+
+visc_type=1 
+32*32 mesh
+ The discretization error: L0 U   =  0.28991777713534361     
+ The discretization error: L0 V   =  0.28991777713535782     
+ The discretization error: L0 P   =  1.41299789155695521E-002
+
+64*64 mesh
+ The discretization error: L0 U   =  7.27676922606406151E-002
+ The discretization error: L0 V   =  7.27676922624027611E-002
+ The discretization error: L0 P   =  3.55946072922108669E-003
+
+128*128 mesh
+ The discretization error: L0 U   =  1.82272904632583277E-002
+ The discretization error: L0 V   =  1.82272904632725385E-002
+ The discretization error: L0 P   =  8.91556147569971813E-004
+
+visc_type=2
+
+32*32 mesh
+ The discretization error: L0 U   =  0.42692850932137105     
+ The discretization error: L0 V   =  0.45894164497238421     
+ The discretization error: L0 P   =  1.41299789155695521E-002
+
+64*64 mesh
+ The discretization error: L0 U   =  0.10710981700792388     
+ The discretization error: L0 V   =  0.11546657539460625     
+ The discretization error: L0 P   =  3.55946072922108669E-003
+
+128*128 mesh
+ The discretization error: L0 U   =  2.68017100660102869E-002
+ The discretization error: L0 V   =  2.89142948098231045E-002
+ The discretization error: L0 P   =  8.91556147569971813E-004
+
+visc_type=3
+
+32*32 mesh
+ The discretization error: L0 U   =  0.47558256924463649     
+ The discretization error: L0 V   =  0.51722594258330901     
+ The discretization error: L0 P   =  1.41299789155695521E-002
+
+64*64 mesh
+ The discretization error: L0 U   =  0.12003630785577002     
+ The discretization error: L0 V   =  0.12984215377306896     
+ The discretization error: L0 P   =  3.55946072922108669E-003
+
+128*128 mesh
+ The discretization error: L0 U   =  3.00331014234416216E-002
+ The discretization error: L0 V   =  3.25378263983964189E-002
+ The discretization error: L0 P   =  8.91556147569971813E-004
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+use variable viscosity case:
+3. prob_coeff=5, prob_sol=31
+
+visc_type = -1
+
+32*32 mesh
+ The discretization error: L0 U   =  0.43667446221530781     
+ The discretization error: L0 V   =  0.74939210509464260     
+ The discretization error: L0 P   =  1.41299789155695521E-002
+
+64*64 mesh
+ The discretization error: L0 U   =  0.11052426583999875     
+ The discretization error: L0 V   =  0.19148946278406243     
+ The discretization error: L0 P   =  3.55946072922108669E-003
+
+128*128 mesh
+ The discretization error: L0 U   =  2.77887045699998225E-002
+ The discretization error: L0 V   =  4.80215690585197308E-002
+ The discretization error: L0 P   =  8.91556147569971813E-004
+
+visc_type=-2 
+32*32 mesh
+ The discretization error: L0 U   =  0.74778836989111142     
+ The discretization error: L0 V   =   1.1072399117881844     
+ The discretization error: L0 P   =  1.41299789155695521E-002
+
+64*64 mesh
+ The discretization error: L0 U   =  0.18833885660171745     
+ The discretization error: L0 V   =  0.28037591299622022     
+ The discretization error: L0 P   =  3.55946072922108669E-003
+
+128*128 mesh
+ The discretization error: L0 U   =  4.71919815574608492E-002
+ The discretization error: L0 V   =  7.04362199740558026E-002
+ The discretization error: L0 P   =  8.91556147569971813E-004
+
+================================================================================
+using old code run, call stag_applyop in main_driver.f90, only for viscous term
+
+constant viscosity case: one can use Taylor vortex or prob_coeff=1, prob_sol=30 or 31
+
+1. prob_coeff=1, prob_sol=31
+
+visc_type=1
+
+32*32 mesh
+ The discretization error: L0 U   =  0.25212382099140029     
+ The discretization error: L0 V   =  0.25212382099140029   
+
+64*64 mesh
+ The discretization error: L0 U   =  6.33206415196241323E-002
+ The discretization error: L0 V   =  6.33206415196241323E-002
+
+128*128 mesh
+ The discretization error: L0 U   =  1.58482962465882338E-002
+ The discretization error: L0 V   =  1.58482962465882338E-002
+
+visc_type=2
+
+32*32 mesh
+ The discretization error: L0 U   =  0.40042316886579954     
+ The discretization error: L0 V   =  0.39763986140839336   
+
+64*64 mesh
+ The discretization error: L0 U   =  0.10021551613337465     
+ The discretization error: L0 V   =  0.10008161992665521 
+
+128*128 mesh
+ The discretization error: L0 U   =  2.50658157820424776E-002
+ The discretization error: L0 V   =  2.50523689956878570E-002
+
+visc_type=3
+not implemented or gamma=0, check the code, please 
+
+
+================================================================
+variable viscosity case
+
+1. init solution case (30), div free
+
+u=sin(2.d0*M_PI*x)*sin(2.d0*M_PI*y)
+v=cos(2.d0*M_PI*x)*cos(2.d0*M_PI*y)
+beta(i,j) = 1.0d0+0.5d0*cos(2.0d0*M_PI*x)*sin(2.0d0*M_PI*y)
+
+gamma=0.
+
+visc_type=-1
+
+32*32 mesh
+ The discretization error: L0 U   =  0.51112991866186519     
+ The discretization error: L0 V   =  0.51112991866096991 
+
+64*64 mesh
+ The discretization error: L0 U   =  0.13017633486950331     
+ The discretization error: L0 V   =  0.13017633486590796 
+
+128*128
+
+ The discretization error: L0 U   =  3.26344061566032906E-002
+ The discretization error: L0 V   =  3.26344061275136710E-002
+
+
+visc_type=-2
+
+32*32 mesh
+ The discretization error: L0 U   =  0.49892197177089770     
+ The discretization error: L0 V   =  0.49892197177180719  
+
+64*64 mesh
+ The discretization error: L0 U   =  0.12645219703975386     
+ The discretization error: L0 V   =  0.12645219703973964 
+
+128*128 mesh
+
+ The discretization error: L0 U   =  3.16791630860393525E-002
+ The discretization error: L0 V   =  3.16791630860251416E-002
+
+=================================================================
+2. init_solution case(31), not div free
+
+u=sin(2.d0*M_PI*x)*sin(2.d0*M_PI*y)
+v=cos(2.d0*M_PI*x)*sin(2.d0*M_PI*y)
+beta(i,j) = 1.0d0+0.5d0*cos(2.0d0*M_PI*x)*sin(2.0d0*M_PI*y)
+gamma(i,j) = sin(2.d0*M_PI*x)*sin(2.d0*M_PI*y)
+
+visc_type=-1
+
+32*32 mesh
+ The discretization error: L0 U   =  0.51112991866186519     
+ The discretization error: L0 V   =  0.74823710391407872 
+
+64*64 mesh
+ The discretization error: L0 U   =  0.13017633486950331     
+ The discretization error: L0 V   =  0.18944946602294976 
+
+128*128 mesh
+ The discretization error: L0 U   =  3.26344061566032906E-002
+ The discretization error: L0 V   =  4.75127963178607615E-002
+
+visc_type=-2
+
+32*32 mesh
+ The discretization error: L0 U   =  0.82224382633765458     
+ The discretization error: L0 V   =   1.0763994519353446 
+
+64*64 mesh
+ The discretization error: L0 U   =  0.20812782006311181     
+ The discretization error: L0 V   =  0.27223447033534853 
+
+128*128 mesh
+ The discretization error: L0 U   =  5.20600299140028255E-002
+ The discretization error: L0 V   =  6.82558227539971085E-002
+
+
+visc_type=-3
+
+
+32*32 mesh
+ The discretization error: L0 U   =  0.82501385684946626     
+ The discretization error: L0 V   =  0.88149978485822089  
+
+64*64 mesh
+ The discretization error: L0 U   =  0.20694562887504730     
+ The discretization error: L0 V   =  0.22360599195195618 
+
+128*128 mesh
+ The discretization error: L0 U   =  5.17994583686061105E-002
+ The discretization error: L0 V   =  5.60323582521391472E-002
+
+
+

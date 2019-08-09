@@ -1,0 +1,7 @@
+Note that ./inputs_3spec_giant_fluct_2d is slightly different from ../inputs_paper_3spec_giant_fluct_2d
+We want to check algorithm = 6 (Boussinesq).
+
+** Execution
+- edit run.sh and run it
+- move to $RUNNAME directory and "gnuplot ../Sk.plt"
+  (make sure the right values of nu, c11, c12, c22 are chosen)

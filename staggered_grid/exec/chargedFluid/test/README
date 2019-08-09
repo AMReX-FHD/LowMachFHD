@@ -1,0 +1,48 @@
+Supported Problems (./inputs_files/):
+
+----------------------------------
+The following inputs files were used to generate results in J-P.Peraud et al.
+"Low Mach number fluctuating hydrodanymics for electrolytes", Phys. Rev. Fluids 1, 
+074103, (2016)
+----------------------------------
+
+inputs_paper_Seawater_convergence
+
+Fig. 1 (a. and b., the line representing the system with charged species). 
+A deterministic diffusing stripe of salty water (Na+ and Cl- in water) in 
+very dilute water. 
+
+-----------------------------------
+
+inputs_paper_Seawater_structure
+
+Fig. 2. Equilibrium structure factor of a system of seawater (Na+ and Cl- in water)
+
+-----------------------------------
+
+inputs_paper_Seawater_gradient
+
+Fig. 4. Non-equilibrium (i.e. in the presence of gradient) structure factor
+of seawater
+
+-----------------------------------
+
+inputs_paper_Seawater_movie_3d
+
+Fig. 5. 3d simulation of the mixing instability. The potential at one of the walls
+is set by Epot_wall(2,2) (currently at 2.d9 in cgs units, i.e. 200V)
+
+-----------------------------------
+
+inputs_external_field
+
+Non-equilibrium (in the presence of externally applied electric field) structure
+factor of a simple system of electrolytes (both ions with same diffusivities, mass...)
+The following structure factors are obtained:
+<vx,vx> in file charge.S_k.pair=1.vtk
+<vx,vy> in file charge.S_k.pair=2.vtk
+<vy,vy> in file charge.S_k.pair=3.vtk
+<w1,w1> in file charge.S_k.pair=4.vtk
+<w1,w2> in file charge.S_k.pair=5.vtk
+<vx,w1> in file charge.S_k.pair=6.vtk
+<vx,w2> in file charge.S_k.pair=7.vtk

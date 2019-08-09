@@ -1,0 +1,145 @@
+&PROBIN
+ dim_in = 2
+
+ n_cells(1:2) = 128 128
+
+ max_grid_size = 32 32
+
+ prob_hi(1:2) = 12800 12800
+
+ max_step = 1000
+
+ print_int = 100
+ plot_int  = 100
+ chk_int   = 0
+ plot_stag = T
+
+ ! initial c within domain.  rho computed via EOS
+ c_init(1:2) = 0.1 0.9 ! 0.5 0.5
+
+ ! desired concentration at boundaries
+ c_wall(2,1:2) = 0.1 0.9
+
+ temporal_scheme = 2
+
+ fixed_dt = 1500.d0
+
+ rhobar(1:2) = 1.d0 2.d0
+
+ visc_coef = 1.d0
+ diff_coef = -0.5d0
+
+ grav = 0.d0
+
+ bc_lo = -1 11 ! 11=inflow, 14=slip, 15=noslip
+ bc_hi = -1 11 ! 11=inflow, 14=slip, 15=noslip
+
+ verbose = 0
+ mg_verbose = 0
+
+ prob_type = -1
+
+ enforce_eos = T
+
+ print_eos_error = T
+ print_conserved = T
+
+ ! Analysis of projections along or perpendicular to the gradient
+ stats_int = 100 ! If positive, how often to dump mean/std statistics
+ project_dir = 2 ! Direction of gradient (projection axes)
+ max_grid_projection(1) = 32 ! Parallel partitioning to be used for projected grid
+
+ ! For stochastic stuff:
+ use_stochastic_forcing = F
+ variance_coeff = 0.1d0
+ conc_scal = 1.d0
+ seed=0
+ hydro_grid_int=0 ! How often to take snapshots
+ n_steps_save_stats=100
+ center_snapshots=T
+/
+
+&hydroAnalysisOptions ! Full grid
+! 2D full grid data
+! NOTE: This namelist will be ignored if project_dir>0
+
+   ! 3D: 1=rho, 2-4=v, 5=T, 6=c
+   ! 2D: 1=rho, 2-3=v, 4=T, 5=c
+   staggeredVelocities = 1 ! Are velocities on a staggered grid or not, (0, +1, or -1)*h/2
+   storeConserved = F ! We are not using conserved variables here due to staggering
+
+   ! Means file:
+   ! 1=y, 2=rho, 3-5=v, 6=T, 7=c in 3D
+   ! 1=y, 2=rho, 3-4=v, 5=T, 6=c in 2D
+
+   ! Save the flow to a VTK file:
+   writeMeansVTK = T ! Save the means over the averaging interval
+   writeSnapshotVTK=T ! Save snapshots of the instantaneous fields
+   
+   outputFolder = ""
+   filePrefix = "Mixing2D"
+   axisToPrint = 2 ! 1=x, 2=y, 3=z axis
+/
+
+&hydroAnalysisOptions ! Projected 2D grid
+! 1D projection onto direction perpendicular to project_dir
+   staggeredVelocities = 1 ! Are velocities on a staggered grid or not, (0, +1, or -1)*h/2
+
+   writeSnapshotVTK=F ! Save snapshots of the instantaneous fields
+   
+   storeConserved = F ! Leave at F
+   writeMeansVTK = F ! Write the means to a VTK file
+
+   ! Variances
+   writeVariancesVTK = T ! Should we save a VTK file
+   nVariances = 2
+   !correlationCell = 1 1 1 ! Reference cell for correlations (central cell by default)
+   ! Variance file:
+   ! 1=y, 2=c-c-var, 3=c-c-corr
+   variancePairs = "0 5 0 5, 0 -5 0 5"
+      ! species1 variable1 species2 variable2
+   
+   ! Static structure factors
+   writeSpectrumVTK = T
+   writeAbsValue = F ! Only write absolute values of complex values to VTK file?
+   writeTheory = -2 ! Write the theoretical prediction (0 or 1) or project discretely (-1)
+   nStructureFactors = 2
+   ! 1=c-c, 2=c-vy, 3=c-vx, 4=c-vz
+   structureFactorPairs = "0 5 0 5, 0 1 0 1"
+
+   ! Dynamic structure factors:
+   nWavenumbers=0
+   ! Shape (3,nWavenumbers):
+   selectedWavenumbers=""
+   nSavedSnapshots=1000
+   
+   outputFolder = ""
+   filePrefix = "Mixing2DPerp"
+
+   axisToPrint = 1 ! 1=x, 2=y, 3=z axis
+   periodic = T ! Is the system periodic along the y axes
+/
+
+&hydroAnalysisOptions
+! 1D projection along hyperplane perpendicular to project_dir
+
+   staggeredVelocities = 0 ! Are velocities on a staggered grid or not, (0, +1, or -1)*h/2
+   storeConserved = F ! We are not using conserved variables here due to staggering
+
+   ! Save the flow to a VTK file:
+   writeMeansVTK = F ! Save the means over the averaging interval
+   writeSnapshotVTK = F ! Save snapshots of the instantaneous fields
+
+   ! Variances
+   writeVariancesVTK = F ! Should we save a VTK file
+   nVariances = 0
+   ! Variance file:
+   ! 1=y, 2=c-c, 3=rho-rho, 4=c-rho
+   variancePairs = "0 5 0 5, 0 1 0 1, 0 5 0 1"
+      ! species1 variable1 species2 variable2
+      
+   outputFolder = "."
+   filePrefix = "Mixing2DPar"
+   axisToPrint = 2 ! 1=x, 2=y, 3=z axis
+   periodic = T ! Is the system periodic along the y axes
+/

@@ -1,0 +1,17 @@
+** run **
+Basically, you can do parameter sweeping by executing "run.sh",
+ where you can choose either the splitting case or the unsplitting case.
+
+** output **
+The results on the screen will be saved in "res_split" or "res_unsplit".
+For each paramter combination, a directory will be created,
+ where resulting plotfiles are located.
+The screen output for each run will be save on "res.scr" on this directory.  
+
+** changeable options **
+In test_split.sh or test_unsplit.sh, you may change the following things:
+- PROG: path for the reactdiff executable
+- INPUTS: path for the inputs file
+- JOB: short test runs or actual runs
+- DIR0: prefix for result directories
+- options0: some parameter values to be used for all runs

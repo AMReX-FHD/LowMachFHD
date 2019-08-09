@@ -1,0 +1,527 @@
+\documentclass[final]{siamltex}
+
+% for red MarginPars
+\usepackage{color}
+
+% for \boldsymbol
+\usepackage{amsmath}
+\usepackage{latexsym}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{hyperref}
+
+% total number of floats allowed on a page
+\setcounter{totalnumber}{100}
+
+% float page fractions
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.9}
+\renewcommand{\textfraction}{0.2}
+
+% MarginPar
+\setlength{\marginparwidth}{0.75in}
+\newcommand{\MarginPar}[1]{\marginpar{\vskip-\baselineskip\raggedright\tiny\sffamily\hrule\smallskip{\color{red}#1}\par\smallskip\hrule}}
+
+% for non-stacked fractions
+\newcommand{\sfrac}[2]{\mathchoice
+  {\kern0em\raise.5ex\hbox{\the\scriptfont0 #1}\kern-.15em/
+   \kern-.15em\lower.25ex\hbox{\the\scriptfont0 #2}}
+  {\kern0em\raise.5ex\hbox{\the\scriptfont0 #1}\kern-.15em/
+   \kern-.15em\lower.25ex\hbox{\the\scriptfont0 #2}}
+  {\kern0em\raise.5ex\hbox{\the\scriptscriptfont0 #1}\kern-.2em/
+   \kern-.15em\lower.25ex\hbox{\the\scriptscriptfont0 #2}}
+  {#1\!/#2}}
+
+\def\1b {{\bf 1}}
+\def\Ab {{\bf A}}
+\def\bb {{\bf b}}
+\def\Eb {{\bf E}}
+\def\fb {{\bf f}}
+\def\Fb {{\bf F}}
+\def\gb {{\bf g}}
+\def\Ib {{\bf I}}
+\def\Lb {{\bf L}}
+\def\mb {{\bf m}}
+\def\vb {{\bf v}}
+\def\wb {{\bf w}}
+\def\Wb {{\bf W}}
+\def\xb {{\bf x}}
+\def\zb {{\bf z}}
+
+\def\chib   {\boldsymbol{\chi}}
+\def\deltab {\boldsymbol{\delta}}
+\def\Gammab {\boldsymbol{\Gamma}}
+\def\phib   {\boldsymbol{\phi}}
+\def\Phib   {\boldsymbol{\Phi}}
+\def\Psib   {\boldsymbol{\Psi}}
+\def\rhob   {\boldsymbol{\rho}}
+\def\sigmab {\boldsymbol{\sigma}}
+\def\Sigmab {\boldsymbol{\Sigma}}
+\def\taub   {\boldsymbol{\tau}}
+\def\zetab  {\boldsymbol{\zeta}}
+
+\def\half   {\frac{1}{2}}
+\def\myhalf {\sfrac{1}{2}}
+
+\begin{document}
+
+%==========================================================================
+% Title
+%==========================================================================
+\title{Applications}
+
+\maketitle
+
+\section{Electroosmotic Flow}
+
+Using the code from \cite{LowMachElectro}, the problem setup is as follows.
+
+The computational domain is square with $L=1.28\times 10^{-4}$~cm.
+These tests were performed in two-dimensions.  We typically use
+$128^2$ grid cells so $\Delta x = 1\times 10^{-6}$~cm.
+
+We model a saltwater solution with 3 species: Na, Cl, and Water.
+The viscosity is $1.05\times 10^{-2}$~g/cm$^2$.
+
+The applied electric field in the flow direction is $10^{11}$~V/cm.
+
+Boundary conditions are inhomogeneous Neumann, with a surface charge
+density set to exactly balance the lack of charge neutrality on the interior.
+In fact, if the Neumann condition is not specified correctly to a large number
+of digits, the electrostatic solver will fail to converge.
+
+We have a temporary fix in the code to handle the Lorentz force using the
+discretization $qE$.  For the original formulation work we somehow need to
+subtract off the charge at the boundary.
+
+\subsection{Test 1: Debye length much smaller than the channel width}
+We initialize $w_{\rm Na} = 2.088\times 10^{-6}$ and
+$w_{\rm Cl} = 1.68\times 10^{-6}$ so the Debye length of the initial
+configuration is $3.66\times 10^{-6}$~cm.  The total charge in the interior
+of the domain is $6.8812977493198297\times 10^{-11}$~C.  The surface charge density
+is $\sigma = q_{\rm tot} / (2L\cdot (1~{\rm cm})) = 2.68800693333\times 10^{-7}$~g/cm$^2$
+(this is 2D but we say the thickness is 1~cm so the units work out)
+
+As the simulation reaches
+steady-state, there are four Debye lengths to consider.
+\begin{itemize}
+\item The initial state ($3.66\times 10^{-6}$~cm).
+\item The state against the wall ($1.21\times 10^{-6}$~cm).
+\item The state 1 Debye length from the wall ($2.95\times 10^{-6}$~cm).
+\item The state at the centerline ($4.16\times 10^{-6}$~cm).
+\end{itemize}
+The peak velocity (at the centerline) is given by
+\begin{equation}
+v_0 = \frac{\lambda\sigma E_0}{\mu} ~ {\rm cm/s}.\label{eq:v0}
+\end{equation}
+Plugging in the parameters (using the smalles and largest of the 4 Debye lengths),
+the predicted peak velocity is between 
+3.10~cm/s and 10.65~cm/s.  The computationally measured peak velocity 
+is $v_0 = 6.54$~cm/s
+
+The theoretical result for the velocity one Debye length from the wall
+is $v_0 (1-e^{-1}) = (6.54)(0.63) = 4.13$~cm/s.
+This comes from the equation valid for $\lambda \ll L$:
+\begin{equation}
+v(y) = -v_0(1-e^{-(|y|-L/2)/\lambda})
+\end{equation}
+
+The computationally measured velocity one Debye length from the wall is 4.3~cm/s.  
+
+\subsection{Test 2: Debye length comparable to the channel width}
+We initialize $w_{\rm Na} = 2.088\times 10^{-9}$ and
+$w_{\rm Cl} = 1.68\times 10^{-9}$ so the Debye length is
+$1.16\times 10^{-4}$~cm.
+
+The surface charge density
+is $\sigma = q_{\rm tot} / (2L\cdot (1~{\rm cm})) = 2.68800000693\times 10^{-10}$~g/cm$^2$
+
+We have zeta potential $\zeta = \lambda\sigma/\epsilon = 44379$.
+
+The equation for velocity in general 
+\begin{equation}
+v(y) = v_0\left(1 - \frac{\phi_0(y)}{\phi_0(L/2)}\right)\label{eq:vgeneral}
+\end{equation}
+where we believe $\zeta$ is the potential at the wall, i.e., $\zeta=\phi_0(L/2)$.
+Our maximum velocity at the center line in the computation is 0.08~cm/s.
+The potential varies from $\zeta$ at the wall to $\zeta+11953$ at the centerline.
+We compute $v_0=0.30$~cm/s using (\ref{eq:v0}) above, and thus the velocity at the 
+centerline using (\ref{eq:vgeneral}) is $0.08$, matching the computation.
+
+\subsection{Conductance Test}
+I instrumented the code to all up the total advective and diffusive mass fluxes on a face
+that spans the vertical direction.  As a proxy for measuring current, I subtract
+the total flux of the postively charged species from the total flux of the negatively
+charged species.
+
+The idea is to vary only the salt concentration and measure the current.  Experiments
+show that as the concentration decreases, the conductance does not linearly decrease once
+the concentration falls below a certain value, where the conductance reaches
+a constant value.  Thus as the concentration becomes smaller, the current should be
+proportional to the applied electric field and independent of the concentration.
+
+I have tried tests where I have kept the Na and Cl at a constant ratio (that has
+a net charge), and tests where I have kept the amount of Cl on the boundary
+fixed and decreased the Na and Cl in a way to maintain overall charge neutrality.
+
+\section{Induced Charge Electrokinetic / Induced Charge Electro-osmosis}
+The setup is a neutral salt on the interior.
+The lo and hi x-boundary conditions on electric potential
+are $\phi=-1$ and $\phi=1$.
+On the hi-y wall we use a homogeneous Neumann electric potential.
+On the lo-y wall we use a homogeneous Dirichlet electric potential,
+but outside the central 50\% of the domain we set $\epsilon$ on the
+boundary face to zero, which has the net effect of a homogeneous
+Neumann electric potential boundary condition.
+
+\section{Electrophoretic Flow}
+The setup is a salt with unequal ions so there is a net interior charge.
+The x-direction is periodic with an applied electric field.
+On the hi-y wall we homogeneous Neumann electric potential.
+On the lo-y wall we use a Neumann electric potential boundary condition, where the
+central 50\% of the domain has a net surface charge density to match
+the amount of charge on the interior, and the rest of the wall is homogeneous.
+
+\section{Strip/Square Diffusion Testing}
+
+\begin{verbatim}
+We model a mixture of NaCl and KCl in water using 3 different approaches.
+In each case we have a horizontal strip of higher concentration NaCl,
+and a square region of higher concentration KCl centered in the domain.
+In this strip and square, the concentration of each salt is double the ambient.
+
+We use periodic boundary conditions.  Since we use a Boussinesq 
+approximation, all the rhobars are equal to 1.
+
+Simulation parameters:
+
+Domain Length = 2.56d-3 [cm]
+
+Approach 1.  4-species (Na, Cl, K, H2O), explicit electrodiffusion.
+             (inputs\_trinary\_test with electroneutral=F)
+
+Approach 2.  4-species, electroneutral.
+             (inputs\_trinary\_test with electroneutral=T)
+
+Approach 3.  3-species (NaCl, KCl, H2O), ambipolar approximation (no charges).
+             The initial conditions in Approach 3 have been calibrated to
+             match the amount of Na, Cl, and K used in Approach 1 and 2.
+             (inputs\_ambipolar\_trinary\_test with optional hacked 
+              src\_lowMach/write\_plotfile.f90->write\_plotfile\_ambi.f90
+              to see the individual species)
+
+For Approach 1 and 2, the Debye length is 4.42e-6cm (44.2nm).
+Thus, the explicit electrodiffusion stability limit is ~9.63d-7s.
+
+All of the binary diffusion coefficients are consistent with each other across
+the 3 approaches to 15 digits of accuracy.
+
+  -The "free" parameters are binary Na-water, K-water, Cl-water, (found in the 4-species input file)
+   and self-water (self-water does not appear in inputs file but is 2.3d-5 as reported in electrolye paper)
+  -The Na-Cl, K-Cl, Na-K binary coefficients are computed from eq (91) in the electrolyte paper
+  -The NaCl-water and KCl-water binary coefficients are computed from eq (63) in the electrolyte paper
+  -Then the NaCl-KCl binary coefficient is computed from eq (91)
+
+The mass diffusion stability limit is a function of dx
+
+n\_cell       dx       dt\_diff
+32           8.e-5    7.88e-5
+64           4.e-5    1.97e-5
+128          2.e-5    4.93e-6
+256          1.e-5    1.23e-6
+512 (ref)    5.e-6    3.08e-7
+
+Setup: (tfinal = 6.4d-4)
+
+We coarsen both space and time by factors of 2, except for the reference solution which has
+a very small time step so it can overcome the mass diffusion stability limit.
+
+n\_cell       dt       max\_step   massdiff\_cfl (1 is stability limit)  electrodiff\_cfl
+32           6.4d-6   100        0.08                                 6.65
+64           3.2d-6   200        0.16                                 3.32
+128          1.6d-6   400        0.32                                 1.66
+256          8.0d-7   800        0.65                                 0.83
+512 (ref)    2.0d-7   3200       0.65                                 0.21
+
+We run Approaches 1 and 2 with 256 cells to show they give very similar results.
+Next, we show that Approach 3 with 256 cells gives results that do not match
+Approach 1 nearly as well as Approach 2 does:
+
+(EN to EE) L1 norm of Absolute and Relative Error in Each Component
+--------------------------------------------------------------------------------
+Level:  0
+                                c1:      3.634660615e-17     9.568324806e-11
+                                c2:      1.413736678e-16     1.334739775e-10
+                                c3:      6.689817041e-17     1.295370978e-10
+                                c4:      3.854876397e-17     3.854884239e-17
+
+(AMBI to EE) L1 norm of Absolute and Relative Error in Each Component
+--------------------------------------------------------------------------------
+Level:  0
+                                c1:      1.195011321e-15     3.136804244e-09
+                                c2:      5.234618438e-16     4.912427224e-10
+                                c3:      2.331950865e-15     4.496367586e-09
+                                c4:      1.660083259e-15     1.660086688e-15
+
+We also demonstrate that we cannot run Approach 1 using any coarse resolution
+since we violate the electrodiffusion stability limit.  However we can run
+Approach 2 coarser, demonstrating the code gives convergent results with 32 cells:
+
+-----
+Error (top) and Convergence Rates (bottom) for EN algorithm
+
+c1		c2		c3		c4
+3.63E-015	8.71E-015	3.82E-015	1.58E-014  (32-64)
+9.36E-016	2.26E-015	1.01E-015	4.11E-015  (64-128)
+2.34E-016	5.63E-016	2.52E-016	1.02E-015  (128-256)
+-----
+1.9541749602	1.9484281296	1.9146316615	1.9464200824
+1.9973750393	2.0013118237	2.0047483301	2.002534713
+-----
+
+For completeness, here is the AMBI convergence rates (to obtain convergence 
+rates for the EE algorithm we need to shrink the time step; in my earlier 
+testing it was second-order, although I do not report the numbers here).
+
+-----
+Error (top) and Convergence Rates (bottom) for AMBI algorithm
+
+c1		c2		c3		c4
+3.64E-015	8.70E-015	3.77E-015	1.58E-014
+9.38E-016	2.26E-015	9.98E-016	4.11E-015
+2.35E-016	5.63E-016	2.48E-016	1.02E-015
+-----			
+1.9575453343	1.9480125666	1.9198041446	1.9455387386
+1.9977691699	2.0013748132	2.0073818783	2.0024779391
+-----
+
+REFERENCE SOLUTION
+To obtain a reference solution, we use Approach 1 using a very small dx and dt.
+We use 1024 cells, and a time step of 2.d-8.  Both the explicit electrodiffusion
+and electroneutral algorithm at 256 cells seem to give comparable answers with
+respect to the reference solution, which is expected since I already stated above
+that EE and EN give essentially the same answer.
+
+Next we compare the EN solutions at all resolutions to the reference solution, and then
+we compare the AMBI solutions at all resolutions to the reference solution.
+We can see that the EN solution is converging toward the reference solution whereas the
+AMBI solution asymptotically approaches a different solution.
+
+L1 Errors of EN algorithm compared to reference solution
+
+c1		c2		c3		c4
+4.64E-009	1.85E-008	1.23E-008	3.54E-008
+1.16E-009	4.47E-009	2.94E-009	8.40E-009
+2.82E-010	1.26E-009	7.32E-010	2.24E-009
+5.45E-011	3.80E-010	1.38E-010	5.58E-010
+			
+Convergence Rate			
+2.0043502586	2.0469087378	2.0684559857	2.0766326693
+2.0363042065	1.8330929776	2.0035237126	1.9077447356
+2.3695077669	1.7255142777	2.4126391262	2.0032054748
+-----
+
+L1 Errors of AMBI algorithm compared to reference solution
+
+c1		c2		c3		c4
+3.89E-009	1.87E-008	1.38E-008	3.64E-008
+5.45E-010	4.67E-009	4.53E-009	9.32E-009
+6.70E-010	1.48E-009	2.40E-009	3.32E-009
+8.82E-010	6.18E-010	1.93E-009	1.65E-009
+			
+Convergence Rate		
+2.8362413505	2.0029799987	1.6097501077	1.9663045457
+-0.2979170902	1.6536953736	0.917136087	1.4900618972
+-0.3971062067	1.2639758383	0.3133001509	1.0117594677
+-----
+
+Follow up: I changed the diffusion coefficients so D(Cl) = 2*D(K) = 4*D(Na) = 2.d-5
+
+(EN to EE) L1 norm of Absolute and Relative Error in Each Component
+L1 norm of Absolute and Relative Error in Each Component
+--------------------------------------------------------------------------------
+Level:  0
+                                c1:      7.634765955e-17     1.967261293e-10
+                                c2:      6.945209422e-16       6.3844666e-10
+                                c3:       1.92814393e-16      3.58636414e-10
+                                c4:       4.27874198e-16     4.278751025e-16
+
+(AMBI to EE) L1 norm of Absolute and Relative Error in Each Component
+L1 norm of Absolute and Relative Error in Each Component
+--------------------------------------------------------------------------------
+Level:  0
+                                c1:      1.422469878e-15     3.586513422e-09
+                                c2:      1.838189849e-15     1.714736948e-09
+                                c3:      3.571952675e-15     6.974175322e-09
+                                c4:       3.96370133e-15     3.963709584e-15
+
+
+Now instead of the L1 norm, let's consider the L0 norm (which may actually be
+the better way to look at the differences - consider the maximum difference)
+
+Using the 'fake' diffusion coefficients, at early time
+
+(EN to EE) L0 norm of Absolute and Relative Error in Each Component
+L0 norm of Absolute and Relative Error in Each Component
+--------------------------------------------------------------------------------
+Level:  0
+                                c1:      8.814952934e-11     0.0002280886335
+                                c2:       7.18089591e-10      0.000636396231
+                                c3:      2.345145084e-10     0.0003971919597
+                                c4:      4.160143341e-10     4.160154816e-10
+
+
+(AMBI to EE) L0 norm of Absolute and Relative Error in Each Component
+L0 norm of Absolute and Relative Error in Each Component
+--------------------------------------------------------------------------------
+Level:  0
+                                c1:      1.705761866e-09        0.0037975753
+                                c2:      1.741987167e-09      0.001584005311
+                                c3:       4.31884101e-09      0.008495029476
+                                c4:      4.375728335e-09     4.375738142e-09
+
+
+At later time (5x later)
+
+(EN to EE) L0 norm of Absolute and Relative Error in Each Component
+--------------------------------------------------------------------------------
+Level:  0
+                                c1:      6.346989821e-11     0.0001770828472
+                                c2:       3.22143482e-10     0.0003017736847
+                                c3:      1.354736963e-10     0.0002386451304
+                                c4:      1.727238352e-10     1.727243426e-10
+
+
+(AMBI to EE) L0 norm of Absolute and Relative Error in Each Component
+--------------------------------------------------------------------------------
+Level:  0
+                                c1:      4.737941285e-09       0.01086536039
+                                c2:      3.394453866e-09      0.002755756522
+                                c3:      1.126567092e-08       0.02265134035
+                                c4:      9.967068615e-09     9.967091038e-09
+
+With the 'realisitc' diffusion coefficients,
+
+(EN to EE) L0 norm of Absolute and Relative Error in Each Component
+
+--------------------------------------------------------------------------------
+Level:  0
+                                c1:      3.192426265e-11     0.0001006612942
+                                c2:      1.094870349e-10      0.000121569243
+                                c3:      5.308008371e-11     0.0001073714369
+                                c4:       2.92439406e-11     2.924398951e-11
+
+
+(AMBI to EE) L0 norm of Absolute and Relative Error in Each Component
+--------------------------------------------------------------------------------
+Level:  0
+                                c1:      9.481640704e-10      0.002990511672
+                                c2:      3.754793045e-10     0.0003999217323
+                                c3:      1.825540537e-09      0.003540720257
+                                c4:       1.24642674e-09     1.246429031e-09
+
+At longer time:
+
+(EN to EE) L0 norm of Absolute and Relative Error in Each Component
+--------------------------------------------------------------------------------
+Level:  0
+                                c1:      1.572249737e-11     5.018801799e-05
+                                c2:      4.707963446e-11     5.254320089e-05
+                                c3:      2.329893947e-11     4.689002448e-05
+                                c4:      1.064148769e-11     1.064151096e-11
+
+
+(AMBI to EE) L0 norm of Absolute and Relative Error in Each Component
+--------------------------------------------------------------------------------
+Level:  0
+                                c1:      2.039734145e-09      0.006525267577
+                                c2:      5.435538885e-10     0.0005937740117
+                                c3:      3.920152971e-09       0.00759369096
+                                c4:       2.40708431e-09     2.407088624e-09
+\end{verbatim}
+
+\section{Electroconvection Boundary Conditions}
+
+We model 3 species, $(w_+, w_-, w_0)$ (think Na$^+$, Cl$^-$, and water).
+The mass fractions are something like $(10^{-4}, 10^{-4}, \sim 1)$.\\ \\
+
+To simplify things (for now), we set each $\bar\rho=0$, so $\rho=1$.
+We set the charges per mass for $w_+$ and $w_-$ to be equal and
+opposite, and use the same molecular mass for all species.\\ \\
+
+The x-walls are periodic.\\ \\
+
+The upper y-wall is a no-slip, no-flow reservoir with fixed concentrations
+held at fixed electric potential.\\ \\
+
+The lower y-wall is the complicated case.  This wall 
+has no-slip, no-flow boundary conditions, but has a Dirichlet condition
+on $w_+$ and Dirichlet electric potential, and does not allow $w_-$ to
+pass through at all.
+To determine the boundary conditions for $w_-$ and $w_0$,
+we need to invoke physical conditions.  Ignoring fluctuations for now,
+the total flux is
+\begin{eqnarray}
+\bf{J} &=& \rho W \chi \left( \Gamma \nabla x + \underbrace{\frac{\bar{m} W z}{k_B T}}_{a}\nabla \Phi \right) \nonumber\\
+&=& \rho W \chi {\bf d}\label{eq:Jflux}
+\end{eqnarray}
+What we essentially do is multiply out (\ref{eq:Jflux})
+\begin{equation}
+\left(\begin{array}{c}
+J_+ \\
+J_- \\
+J_0
+\end{array}\right)
+=
+\left(\begin{array}{ccc}
+w_+(\chi_{++}d_+ + \chi_{+-}d_- + \chi_{+0}d_0) \\
+w_-(\chi_{-+}d_+ + \chi_{--}d_- + \chi_{-0}d_0) \\
+w_0(\chi_{0+}d_+ + \chi_{0-}d_- + \chi_{00}d_0)
+\end{array}\right)\label{eq:Jmult}
+\end{equation}
+We observe that we can obtain $d_+$ if we extrapolate the transport coefficients from
+the interior to the boundary and use a simple gradient stencil for $\nabla x$.
+The boundary does not allow $w_-$ to pass through at all, so we can invoke $J_-=0$.
+We use $J_-=0$ along with the condition
+\begin{equation}
+d_+ + d_- + d_0 = \sum a_i \nabla\phi
+\end{equation}
+to form a linear system for $d_-$ and $d_0$.
+Once we know $d_-$ and $d_0$ we can compute $J_-$ and $J_0$ using (\ref{eq:Jmult}).
+
+\section{Micropump}
+We model 5 species, H$^+$, OH$^-$, H$_2$O$_2$, and H$_2$O.
+
+The binary diffusion coefficients into water (in cgs units [cm$^2$/s]) are given by 
+$D_{15}=9.3\times 10^{-5}, D_{25}=5.3\times 10^{-5}, D_{35}=6.6\times 10^{-6}, 
+D_{45}=2.0\times 10^{-5}$ \cite{Esplandiu16,MoranPosner11}.  The self-diffusion
+coefficient for water is $D_5=2.3\times 10^{-5}$ \cite{LowMachMulti}.
+We can evaluate the remaining binary diffusion coefficients by using the
+infinite dilution approxmation in \cite{LowMachMulti},
+\begin{equation}
+D_{jk} = \frac{D_{ij}D_{ik}}{D_i}
+\end{equation}
+giving
+$D_{12}=2.143\times 10^{-4},
+D_{13}=2.669\times 10^{-4}, D_{23}=1.521\times 10^{-4}
+D_{14}=8.09\times 10^{-5}, D_{24}=4.61\times 10^{-5}, D_{34}=5.74\times 10^{-5}$.
+
+We assume the density of each species as well as the the solution is 1~g/cm$^3$,
+even though pure hydrogen peroxide is 1.45~g/cm$^3$.  For the initial conditions,
+we assume a 0.3 molar (moles/liter) solution of H$_2$O$_2$, which is approximately
+a mass fraction of 0.01.  We assume neutral water, so that OH$^-$ and H$^+$ have
+a molarity of $10^{-7}$, corresponding to mass fractions of $1.7\times 10^{-9}$
+and $10^{-10}$.  The initial O$_2$ molarity is $2\times 10^{-4}$, corresponding
+to a mass fraction of $6.4\times 10^{-6}$.  The remaining solution is H$_2$O.
+
+The chemical rates are found in \cite{MoranPosner11} as $k_{\rm anode}=5.5\times 10^{-9}$~m/s
+and $k_{\rm cathode}=1$~m$^7$s$^{-1}$/mol$^2$.  Converting to our CGS formulation where
+reactions are computed using number densities, and expressed as a change over a volume
+rather than a flux over a surface (encapsulated by a final division by $\Delta x$) gives
+$\tilde k_{\rm anode} = k_{\rm anode} 100 / \Delta x$ and
+$\tilde k_{\rm cathode} = k_{\rm cathode} 100^7 / (N_A^2 \Delta x)$.
+
+\bibliographystyle{plain}
+\bibliography{Applications}
+
+\end{document}

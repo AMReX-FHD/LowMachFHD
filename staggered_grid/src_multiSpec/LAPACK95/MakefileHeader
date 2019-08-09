@@ -1,0 +1,24 @@
+ifeq ($(findstring edison, $(HOST)), edison)
+FC       = ftn
+FC1      = ftn
+else ifeq ($(findstring cori, $(HOST)), cori)
+FC       = ftn
+FC1      = ftn
+else
+FC       = gfortran -ffree-form
+FC1      = gfortran -ffixed-form
+endif
+
+OPTS0    = -O3
+#MODLIB   = -I./lapack95_modules
+OPTS1    = -c $(OPTS0)
+OPTS3    = $(OPTS1) $(MODLIB)
+OPTL     = -o 
+OPTLIB   =
+
+LAPACK_PATH = /usr/lib64
+
+LAPACK95 = lapack95.a
+LAPACK77 = $(LAPACK_PATH)/lapack.a
+TMG77    = $(LAPACK_PATH)/tmglib.a
+BLAS     = $(LAPACK_PATH)/blas.a

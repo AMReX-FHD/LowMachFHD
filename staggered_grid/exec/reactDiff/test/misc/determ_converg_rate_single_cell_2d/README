@@ -1,0 +1,22 @@
+** run **
+By executing "run.sh", you can simulate a single cell system several times
+ up to a given time with decreasing time step. 
+
+** output **
+For each value of dt, the final number densities will be saved in file $RES.
+On the screen, you will see
+- the command for each run,
+- differences in number densities compared between successive runs,
+- the ratios between the differences for successive runs.
+Note that since dt is decreased by factor of 2, the ratio is close to 2 (or 4),
+then the scheme is of first-(or second-)order.
+ 
+** changeable options **
+In run.sh, you may change the following things:
+- PROG: path for the reactdiff executable
+- INPUTS: path for the inputs file
+- RES: output filename 
+- OPTIONS0: parameter values to be used for deterministic convergence rate test
+- OPTIONS: some parameter values to be applied for all runs 
+- DT0: largest timestep size (DT will successively decrease by factor of 2)
+- MAXSTEP0: max_step for DT0 (MAXSTEP will successively increase by factor of 2)

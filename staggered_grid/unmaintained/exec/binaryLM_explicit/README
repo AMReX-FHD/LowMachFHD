@@ -1,0 +1,4 @@
+This is a new staggered grid code that solves a low Mach number mixing model for
+fluctuating hydrodynamics.
+
+The design document sits in ./doc --- to build the document simply 'make'.

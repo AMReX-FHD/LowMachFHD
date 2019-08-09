@@ -1,0 +1,71 @@
+&PROBIN
+ dim_in = 2
+
+ ! 0=Euler, 1=Trapezoidal explicit predictor-corrector, 2=Midpoint explicit predictor-corrector, 3=RK3
+ temporal_scheme = 1
+
+ prob_hi(1:2) = 32.0 32.0
+
+ n_cells(1:2) = 32 32
+! n_cells(1:2) = 64 64
+! n_cells(1:2) = 128 128
+
+ max_grid_size = 16 16
+! max_grid_size = 32 32
+! max_grid_size = 64 64
+
+ max_step = 1000
+! max_step = 2000
+! max_step = 4000
+
+ fixed_dt = 0.2d0
+! fixed_dt = 0.1d0
+! fixed_dt = 0.05d0
+
+ plot_int  = 1000
+! plot_int  = 2000
+! plot_int  = 4000
+
+ smoothing_width = 2.d0
+! smoothing_width = 4.d0
+! smoothing_width = 8.d0
+
+ print_int = 100
+ plot_stag = T
+
+ visc_coef = -0.1d0
+ diff_coef = -0.02d0
+
+ rhobar(1:2) = 1.5d0 0.75d0
+
+ ! -1=periodic; 15 = no slip; 14 = slip
+ bc_lo = 15 15
+ bc_hi = 15 15
+
+ wallspeed_lo(1,1) = 0.d0  ! y-vel on x-face
+ wallspeed_lo(1,2) = 0.d0  ! x-vel on y-face
+
+ wallspeed_hi(1,1) = 0.d0  ! y-vel on x-face
+ wallspeed_hi(1,2) = 0.1d0 ! x-vel on y-face
+
+ material_properties(1,1) = 0.1d0
+ material_properties(2,1) = 0.1d0
+ material_properties(1,2) = 0.1d0
+ material_properties(2,2) = 0.1d0
+
+ boyce_bc = T ! Remove the singularity
+
+ vel_init(1:2) = 0 0     ! initial momentum
+ c_init(1:2) = 0.25 0.75 ! initial c
+
+ verbose = 0
+ mg_verbose = 0
+
+ prob_type = -12
+
+ print_eos_error = T
+ print_conserved = T
+ 
+ ! For stochastic stuff:
+ use_stochastic_forcing = F
+/

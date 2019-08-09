@@ -1,0 +1,35 @@
+Supported Problems (./inputs_files/):
+
+================================================================================
+The following inputs files were used to generate results in C. Kim et al. 
+"Stochastic simulation of reaction-diffusion systems: A fluctuating-
+hydrodynamics approach" J. Chem. Phys. 146, 124110 (2017)
+--------------------------------------------------------------------------------
+** inputs_paper_equilibrium_1d_hist_SODEs
+- Figure 3 (Section V.A.1)
+- Figure 10 (Appendix B)
+- 1D equilibrium Schlogl or diffusion-only system (continuous-time limit)
+- see also subdirectory equilibrium_1d_hist_SODEs
+
+** inputs_paper_equilibrium_1d_hist_schemes
+- Figure 4 (Section V.A.2)
+- 1D equilibrium Schlogl model
+- see also subdirectory equilibrium_1d_hist_schemes
+
+** inputs_paper_Schlogl_1d_structure_factor
+- Figure 2 (Section IV.B)
+- Figure 9 (Appendix A.2)
+- 1D out-of-equilibrium Schlogl model
+- see also subdirectory Schlogl_1d_structure_factor
+
+** inputs_paper_BPM_2d
+- Figures 5, 6, 7 (Section V.B)
+- 2D pattern formation of BPM model
+- see also subdirectory BPM_2d
+
+** inputs_paper_Lemarchand_3d
+- Figure 8 (Section V.C)
+- 3D front propagation in Lemarchand et al. model
+- see also subdirectory Lemarchand_3d
+================================================================================
+

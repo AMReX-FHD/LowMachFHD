@@ -1,0 +1,5 @@
+For the P1_100to1_v1_r10, I ran with a single grid up to 128^3.  Then for 256^3 and 512^3 I ran MG with bottom grid
+size of 1.  I suspect if I used a "fancy" bottom solve for 512^3 and went down to a single 2^3 the trend
+would have continued.
+
+For the other tests, they didn't seem nearly as sensitive to bottom solver grid sizes.

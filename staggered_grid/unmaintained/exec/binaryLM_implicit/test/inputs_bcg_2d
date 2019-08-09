@@ -1,0 +1,160 @@
+&probin_binarylm
+  
+  ! problem setup
+  c_init(1:2) = 0.0d0 0.0d0  ! controls initial concentration range
+  c_bc(2,1:2) = 0.1d0 0.9d0
+
+  ! fluid properties
+  temperature = 1.d0                       ! temperature
+
+  ! a/b for chi/eta/kappa
+  material_properties(1:2,1) = 0.d0 0.d0 
+  material_properties(1:2,2) = 0.d0 0.d0
+  material_properties(1:2,3) = 0.d0 0.d0
+
+  ! 1 = constant coefficients
+  ! -1 = spatially-varing coefficients
+  diff_type = 1
+  diff_coef = 0.0d0             ! concentration diffusion coefficient 'chi'
+
+/
+
+&probin_common
+
+  ! Problem specification
+  !----------------------
+  dim_in = 2                 ! 2D or 3D  
+  prob_lo(1:2) = 0.d0 0.d0   ! physical lo coordinate
+  prob_hi(1:2) = 1.d0 1.d0 ! physical hi coordinate
+  n_cells(1:2) = 128 128     ! number of cells in domain
+  max_grid_size(1:2) = 64 64 ! max number of cells in a box
+  fixed_dt = -1
+  cfl = 0.5d0  
+  plot_int = 10             ! Interval for writing a plotfile (for visit/amrvis)
+  prob_type = 4              ! sets scalars, m, coefficients (see init.f90)
+  max_step = 1000            ! maximum number of time steps
+  print_int = 0              ! how often to output EOS drift and sum of conserved quantities
+  project_eos_int = 100000        ! how often to call project_onto_eos
+
+  smoothing_width = 1.d0     ! scale factor for smoothing initial profile
+  u_init(1:2) = 0.d0 1.d0    ! controls initial x-velocity
+
+  grav(1:2) = 0.d0 0.d0    ! gravity vector (negative is downwards)
+
+  ! Algorithm control / selection
+  !----------------------
+  algorithm_type = 0	  ! enable overdamped (infinite Sc) algorithm
+
+  barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep   
+
+  ! random number seed
+  ! 0        = unpredictable seed based on clock
+  ! positive = fixed seed
+  seed = 1
+
+  ! L phi operator
+  ! if abs(visc_type) = 1, L = div beta grad
+  ! if abs(visc_type) = 2, L = div [ beta (grad + grad^T) ]
+  ! if abs(visc_type) = 3, L = div [ beta (grad + grad^T) + I (gamma - (2/3)*beta) div ]
+  ! positive = assume constant coefficients
+  ! negative = assume spatially-varying coefficients
+  visc_type = 1
+  visc_coef = 0.0d0             ! momentum diffusion coefficient 'eta'
+
+  rhobar(1:2) = 1.d0 1.d0         ! rho1bar and rho2bar
+  molmass(1:2) = 1.d0 1.d0       ! molar mass of species
+
+  advection_type = 2      ! 0 = centered, 1 = unlimited bds, 2 = limited bds
+
+  ! Boundary conditions
+  !----------------------
+  ! BC specifications:
+  ! -1 = periodic
+  ! 100 = no-slip wall      (Dir condition for normal vel; Dir velocity condition for trans vel)
+  ! 101 = no-slip reservoir (Dir condition for normal vel; Dir velocity condition for trans vel)
+  ! 200 = slip wall         (Dir condition for normal vel; Dir traction condition for trans vel)
+  ! 201 = slip reservoir    (Dir condition for normal vel; Dir traction condition for trans vel)
+  ! For a complete list see bc.f90
+  bc_lo(1:2) = -1 -1
+  bc_hi(1:2) = -1 -1
+
+  ! Each no-slip wall may be moving with a specified tangential 
+  ! velocity along the tangential directions
+  ! In 2D:
+  ! wallspeed_lo/hi(1,1) - yvel on x-face
+  ! wallspeed_lo/hi(1,2) - xvel on y-face
+  wallspeed_lo(1,1) = 0.d0
+  wallspeed_hi(1,1) = 0.d0
+  wallspeed_lo(1,2) = 0.d0
+  wallspeed_hi(1,2) = 1.d0
+
+  variance_coef_mom = 0          ! global scaling epsilon for stochastic forcing
+  variance_coef_mass = 0
+  k_B = 1.d0                 ! Boltzmann's constant
+  filtering_width = 0        ! If positive the random numbers will be filtered to smooth out the fields
+  stoch_stress_form = 1      ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
+
+/
+
+&probin_gmres
+
+  ! preconditioner type
+  ! 1 = projection preconditioner
+  !-1 = projection preconditioner with expensive pressure update
+  ! 2 = lower triangular preconditioner
+  !-2 = lower triangular preconditioner with negative sign
+  ! 3 = upper triangular preconditioner
+  !-3 = upper triangular preconditioner with negative sign
+  ! 4 = Block diagonal preconditioner
+  !-4 = Block diagonal preconditioner with negative sign
+  precon_type = 1
+
+  ! weighting of pressure when computing norms and inner products
+  p_norm_weight = 1.d0
+
+  ! scale theta, beta, gamma, and b_u by this, and then scale x_p by the inverse
+  scale_factor = 1.d0
+
+  ! MAC projection solver parameters:
+  mg_verbose = 0               ! multigrid verbosity
+  cg_verbose = 0               ! BiCGStab (mg_bottom_solver=1) verbosity
+  mg_max_vcycles = 1           ! maximum number of V-cycles
+  mg_minwidth = 2              ! length of box at coarsest multigrid level
+  mg_bottom_solver = 4         ! bottom solver type
+                               ! 0 = smooths only, controlled by mg_nsmooths_bottom
+                               ! 1 = BiCGStab
+                               ! 4 = Fancy bottom solve that coarsens down additionally
+                               !     and then applies mg_nsmooths_bottom smooths
+  mg_nsmooths_down = 2         ! number of smooths at each level on the way down
+  mg_nsmooths_up = 2           ! number of smooths at each level on the way up
+  mg_nsmooths_bottom = 8       ! number of smooths at the bottom (only if mg_bottom_solver=0)
+  mg_max_bottom_nlevels = 10   ! for mg_bottom_solver=4, number of additional levels of multigrid
+  mg_rel_tol = 1.d-9           ! relative tolerance stopping criteria
+
+  ! Staggered multigrid solver parameters
+  stag_mg_verbosity = 0        ! verbosity
+  stag_mg_max_vcycles = 1      ! max number of v-cycles
+  stag_mg_minwidth = 2         ! length of box at coarsest multigrid level
+  stag_mg_bottom_solver = 4    ! bottom solver type
+                               ! 0 = smooths only, controlled by mg_nsmooths_bottom
+                               ! 4 = Fancy bottom solve that coarsens additionally
+                               !     and then applies stag_mg_nsmooths_bottom smooths
+  stag_mg_nsmooths_down = 2    ! number of smooths at each level on the way down
+  stag_mg_nsmooths_up = 2      ! number of smooths at each level on the way up
+  stag_mg_nsmooths_bottom = 8  ! number of smooths at the bottom
+  stag_mg_max_bottom_nlevels = 10 ! for stag_mg_bottom_solver=4, 
+                                  ! number of additional levels of multigrid
+  stag_mg_omega = 1.d0         ! weighted-jacobi omega coefficient
+  stag_mg_smoother = 1         ! 0 = jacobi; 1 = 2*dm-color Gauss-Seidel
+  stag_mg_rel_tol = 1.d-9      ! relative tolerance stopping criteria
+
+  ! GMRES solver parameters
+  gmres_rel_tol = 1.d-9        ! relative tolerance stopping criteria
+  gmres_abs_tol = 0.d0         ! absolute tolerance stopping criteria
+  gmres_verbose = 1            ! gmres verbosity; if greater than 1, more residuals will be printed out
+  gmres_max_outer = 20         ! max number of outer iterations
+  gmres_max_inner = 5          ! max number of inner iterations, or restart number
+  gmres_max_iter = 100         ! max number of gmres iterations
+  gmres_min_iter = 1           ! min number of gmres iterations
+
+/

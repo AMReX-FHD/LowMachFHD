@@ -1,0 +1,116 @@
+&PROBIN
+ dim_in = 2
+
+ n_cells(1:2) = 32 32 ! 128 128 ! 64 64 ! 32 32
+
+ max_grid_size(1:2) = 32 32 ! 64 64 ! 32 32
+
+ ! always keep prob_hi/n_cell = 10
+ !prob_hi(1:2) = 320.0 320.0
+ !prob_hi(1:2) = 640.0 640.0
+ prob_hi(1:2) = 1280.0 1280.0
+
+ max_step = 1 ! 100
+ n_steps_skip = 0 ! 100
+
+ print_int = 10
+ plot_int  = -2
+ chk_int   = -1000
+
+ temporal_scheme = 3
+
+ fixed_dt = 10.0 ! corresponds to diffusive cfl ~ 0.2
+
+ rhobar(1:2) = 1 2
+ !c_init(1:2) = 0 1
+ c_init(1:2) = 0.5 0.5
+ vel_init = 0 0 ! Initial velocity
+
+ visc_coef = 1
+ diff_coef = 1
+
+ variance_coeff = 1
+ conc_scal = 1
+ initial_variance = 0
+
+ grav = 0.0
+
+ bc_lo = -1 -1 ! 14=slip, 15=noslip -1=periodic
+ bc_hi = -1 -1 ! 14=slip, 15=noslip
+
+ verbose = 0
+ mg_verbose = 0
+
+! mixing variant
+ prob_type = 1
+ smoothing_width = 1.0 ! How much to smooth the tanh profile
+
+ enforce_eos = T
+
+ print_eos_error = T
+ print_conserved = T
+
+ ! Analysis of projections along or perpendicular to the gradient
+ stats_int = 0 ! If positive, how often to dump mean/std statistics
+ project_dir = 0 ! Direction of gradient (projection axes)
+ max_grid_projection(1) = 32 ! Parallel partitioning to be used for projected grid
+   ! Here that grid is of size (n_cellx) so use n_cellx / nCPUs for above input
+ center_snapshots=F ! Average momenta to cell-centers or shift them?
+ analyze_conserved=F ! Use conserved or primitive variables for analysis?
+
+ ! For stochastic stuff:
+ use_stochastic_forcing = T
+ filtering_width = 2
+ seed=-1 ! Keep all the seeds the same for testing
+ hydro_grid_int=0 ! 5 ! How often to take HydroGrid snapshots
+ n_steps_save_stats=0 ! How often to dump HydroGrid statistics
+/
+
+&hydroAnalysisOptions
+! 2D full grid data
+! NOTE: This namelist will be ignored if project_dir>0
+
+   ! 3D: 1=rho, 2-4=v, 5=T, 6=c
+   ! 2D: 1=rho, 2-3=v, 4=T, 5=c
+   staggeredVelocities = 1 ! Are velocities on a staggered grid or not, (0, +1, or -1)*h/2
+   storeConserved = F ! We are not using conserved variables here due to staggering
+
+   ! Means file:
+   ! 1=y, 2=rho, 3-5=v, 6=T, 7=c in 3D
+   ! 1=y, 2=rho, 3-4=v, 5=T, 6=c in 2D
+
+   ! Save the flow to a VTK file:
+   writeMeansVTK = F ! Save the means over the averaging interval
+   writeSnapshotVTK = F ! Save snapshots of the instantaneous fields
+
+   ! Variances
+   writeVariancesVTK = T ! Should we save a VTK file
+   nVariances = 3
+   ! Variance file:
+   ! 1=y, 2=c-c, 3=rho-rho, 4=vx-vx
+   variancePairs = "0 5 0 5, 0 1 0 1, 0 2 0 2"
+      ! species1 variable1 species2 variable2
+
+   ! Static structure factors
+   subtractMeanFT = F
+   writeSpectrumVTK = T
+   writeAbsValue = F ! Only write absolute values of complex values to VTK file?
+   writeTheory = -1 ! Also write: -2=no discretization (for MD), -1=discrete
+   nStructureFactors = 5
+   ! 1=vx-vx, 2=vy-vy, 3=vx-vy, 4=c-c, 5=rho-rho
+   structureFactorPairs = "0 2 0 2, 0 3 0 3, 0 2 0 3, 0 5 0 5, 0 1 0 1"
+   vectorStructureFactor = "1 2 -1 0 0 0" ! For grouping into a tensor
+   
+   ! Dynamic structure factors:
+   nWavenumbers=0
+   ! Shape (nDims,nWavenumbers):
+   selectedWavenumbers="0 2, 2 0, 2 2, 2 -2, 4 0, 0 4, 2 4, 4 2, 4 4"
+   !selectedWavenumbers="0 4, 4 0, 4 4, 4 -4, 8 0, 0 8, 4 8, 8 4, 8 8"
+   !selectedWavenumbers="0 8, 8 0, 8 8, 8 -8, 16 0, 0 16, 8 16, 16 8, 16 16"
+   nSavedSnapshots=2000
+      
+   outputFolder = "."
+   filePrefix = "InitializeFluct"
+   axisToPrint = 2 ! 1=x, 2=y, 3=z axis
+   periodic = T ! Is the system periodic along the y axes
+/

@@ -1,0 +1,90 @@
+ ! Initial conditions and forcing functions (for exact_solutions.f90)
+  !----------------------
+  prob_coeff = 8     ! Coeff_mat selection (see init_precon.f90 for key) ! variable density
+  prob_sol =   32    ! RHS selection (see init_solutoin.f90/init_precon.f90 for key)
+
+  prob_lo = 0.d0 0.d0 0.d0 ! physical lo coordinate
+  prob_hi = 1.d0 1.d0 1.d0 ! physical hi coordinate
+
+! only elliptic operator, no Laplacian 
+  coeff_mag = 1.0d0 0.0d0 0.0d0      ! for control the scalings of alpha, beta, gamma
+
+
+! periodic BC, use 
+  test_type =  0
+
+-----------------------------------------------------------------
+32*32*32 mesh       ! number of cells in domain
+ The discretization error: L0 U   =  8.05898942129381624E-002
+ The discretization error: L0 V   =  8.17708037413389377E-002
+ The discretization error: L0 W   =  8.11746773332853166E-002
+ The discretization error: L0 P   =  1.61565120097613146E-002
+
+64*64*64 mesh
+ The discretization error: L0 U   =  2.01766504298799276E-002
+ The discretization error: L0 V   =  2.04763398178702261E-002
+ The discretization error: L0 W   =  2.03261343564840047E-002
+ The discretization error: L0 P   =  4.07632741056929149E-003
+
+128*128 mesh 
+ The discretization error: L0 U   =  5.04598651294152489E-003
+ The discretization error: L0 V   =  5.12119119695420011E-003
+ The discretization error: L0 W   =  5.08356620812300264E-003
+ The discretization error: L0 P   =  1.02018856518704126E-003
+
+===========================================================================
+
+Dirichlet BC, we check the other way, we check the discretization error in alternative way
+test_type =2 
+
+32*32*32 mesh
+ L0 U   =  1.73040514506778154E-003
+ L0 V   =  2.44319210648380469E-003
+ L0 W   =  2.08276550748486000E-003
+ L0 P   =  1.92486339315123267E-002
+ 
+ L1 U   =  3.92588554586537639E-004
+ L1 V   =  4.01018977535360711E-004
+ L1 W   =  2.91101289770135882E-004
+ L1 P   =  6.47073720373554824E-003
+ 
+ L2 U   =  5.12544959480553037E-004
+ L2 V   =  5.24333583626963038E-004
+ L2 W   =  4.11028654743244616E-004
+ L2 P   =  7.89576524484108394E-003
+
+
+64*64*64 mesh
+
+ L0 U   =  4.33149563934753790E-004
+ L0 V   =  6.25967966938700826E-004
+ L0 W   =  5.36726374636711800E-004
+ L0 P   =  4.86556195484455500E-003
+ 
+ L1 U   =  9.81494988788133259E-005
+ L1 V   =  1.00343115066306660E-004
+ L1 W   =  7.28215701575428957E-005
+ L1 P   =  1.61051256555126351E-003
+ 
+ L2 U   =  1.27963885933075661E-004
+ L2 V   =  1.31034794780213816E-004
+ L2 W   =  1.02648786327286823E-004
+ L2 P   =  1.96728062853846744E-003
+
+128*128*128 mesh
+ L0 U   =  1.08425589496363717E-004
+ L0 V   =  1.57390607770979685E-004
+ L0 W   =  1.36138722355662323E-004
+ L0 P   =  1.21972734420916495E-003
+ 
+ L1 U   =  2.45377376210281229E-005
+ L1 V   =  2.50905722832761525E-005
+ L1 W   =  1.82088594786101009E-005
+ L1 P   =  4.02239659291008596E-004
+ 
+ L2 U   =  3.19802031690338313E-005
+ L2 V   =  3.27557095058844512E-005
+ L2 W   =  2.56554489370449969E-005
+ L2 P   =  4.91405449848994957E-004
+
+

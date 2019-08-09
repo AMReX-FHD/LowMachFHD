@@ -1,0 +1,1167 @@
+\documentclass[final]{siamltex}
+
+% for red MarginPars
+\usepackage{color}
+
+% for \boldsymbol
+\usepackage{amsmath}
+\usepackage{latexsym}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{hyperref}
+
+% total number of floats allowed on a page
+\setcounter{totalnumber}{100}
+
+% float page fractions
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.9}
+\renewcommand{\textfraction}{0.2}
+
+% MarginPar
+\setlength{\marginparwidth}{0.75in}
+\newcommand{\MarginPar}[1]{\marginpar{\vskip-\baselineskip\raggedright\tiny\sffamily\hrule\smallskip{\color{red}#1}\par\smallskip\hrule}}
+
+% for non-stacked fractions
+\newcommand{\sfrac}[2]{\mathchoice
+  {\kern0em\raise.5ex\hbox{\the\scriptfont0 #1}\kern-.15em/
+   \kern-.15em\lower.25ex\hbox{\the\scriptfont0 #2}}
+  {\kern0em\raise.5ex\hbox{\the\scriptfont0 #1}\kern-.15em/
+   \kern-.15em\lower.25ex\hbox{\the\scriptfont0 #2}}
+  {\kern0em\raise.5ex\hbox{\the\scriptscriptfont0 #1}\kern-.2em/
+   \kern-.15em\lower.25ex\hbox{\the\scriptscriptfont0 #2}}
+  {#1\!/#2}}
+
+\def\Ab {{\bf A}}
+\def\bb {{\bf b}}
+\def\Fb {{\bf F}}
+\def\gb {{\bf g}}
+\def\Pb {{\bf P}}
+\def\rb {{\bf r}}
+\def\vb {{\bf v}}
+\def\Wb {{\bf W}}
+\def\xb {{\bf x}}
+
+\def\deltab {\boldsymbol{\delta}}
+\def\Psib   {\boldsymbol{\Psi}}
+\def\Sigmab {\boldsymbol{\Sigma}}
+\def\taub   {\boldsymbol{\tau}}
+
+\def\half   {\frac{1}{2}}
+\def\myhalf {\sfrac{1}{2}}
+
+\begin{document}
+
+%==========================================================================
+% Title
+%==========================================================================
+\title{Implicit Low Mach Number Binary Mixing Notes}
+
+\maketitle
+
+\section{Introduction}
+We have developed a new staggered grid code library for solving PDEs where scalars
+are naturally cell-centered, and momentum and velocities are naturally face-centered,
+or ``staggered'' in a MAC-stencil sense (see Figure \ref{fig:grid}).  We currently
+have two applications: (i) a GMRES solver and (ii) an implicit low Mach number binary 
+mixing code, which uses the GMRES solver.  In these notes we describe the implicit
+low Mach number binary mixing code.  The GMRES solver is discussed in full detail 
+in a forthcoming paper.  Within the code we also have an explicit binary mixing code,
+but it is mostly self-contained and ideas from this code were used to develop the
+low Mach number source code.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[hb]
+\centering
+\includegraphics[width=5in]{grid}
+\label{fig:grid}
+\caption{Cartesian grid, finite volume grid structure with ``cell-centered'' scalars
+and staggered momenta.}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Code Structure}
+See Figure \ref{fig:flowchart} for a code structure chart.  Here is a summary
+of what is contained within these directories:\\
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[tb]
+\centering
+\includegraphics[width=4in]{flowchart}
+\caption{Code structure chart for the source code for our staggered grid applications.}\label{fig:flowchart}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{itemize}
+\item {\tt FluctHydro}\\
+Git repo for all fluctuating hydrodynamics applications.
+\begin{itemize}
+\item {\tt staggered\_grid}\\
+Staggered grid source code.
+\begin{itemize}
+\item {\tt src\_common}\\
+Stuff that is common to all staggered grid codes.
+\item {\tt src\_gmres}\\
+Stuff required for the GMRES solver.
+\item {\tt src\_binaryLM}\\
+Source code specific to the binaryLM\_implicit code.
+\item {\tt exec}\\
+Stores all the run directories.
+\begin{itemize}
+\item {\tt stokes\_preconditioner}\\
+Source code for the GMRES test code.
+\item {\tt binaryLM\_implicit}\\
+Source code for the low Mach number implicit binary code.
+\item {\tt binaryLM\_implicit}\\
+Source code for the multispecies code.
+\end{itemize}
+\end{itemize}
+\item {\tt HydroGrid}\\
+Source code for random number generators and some analysis codes.
+\end{itemize}
+\item {\tt BoxLib}\\
+Git repo for all BoxLib applications.
+\begin{itemize}
+\item {\tt Src}\\
+BoxLib source code.
+\begin{itemize}
+\item {\tt F\_BaseLib}\\
+Fortran90 BoxLib source code.
+\item {\tt LinearSolvers}\\
+Linear solver source code.
+\begin{itemize}
+\item {\tt F\_MG}\\
+Fortran linear solver source code.  We use the cell-centered multigrid solver.
+\end{itemize}
+\end{itemize}
+\item {\tt Tools}\\
+BoxLib utilities.
+\begin{itemize}
+\item {\tt F\_mk}\\
+Contains make system for Fortran90 BoxLib applications.
+\end{itemize}
+\end{itemize}
+\end{itemize}
+
+\section{Low Mach Number Binary Mixing Equations}
+We have two incompressible fluids with densities $\bar\rho_1$ and $\bar\rho_2$, where 
+each fluid does not change volume upon mixing.  Defining $\rho$ to be the density of
+a mixture of these fluids, the densities of each fluid are $\rho_1 \equiv \rho c$ and 
+$\rho_2 \equiv \rho(1-c)$, where $c$ is the {\it mass} fraction of the first fluid.  
+Thus, $\rho = \rho_1 + \rho_2$.  Since the fluids do not change volume upon mixing, 
+the equation of state will enforce that the {\it volume} fractions must sum to 1:
+\begin{equation}
+\frac{\rho_1}{\bar\rho_1} + \frac{\rho_2}{\bar\rho_2} =
+\frac{\rho c}{\bar\rho_1} + \frac{\rho(1-c)}{\bar\rho_2} = 1 
+\quad \rightarrow \quad
+\rho = \left(\frac{c}{\bar\rho_1} + \frac{1-c}{\bar\rho_2}\right)^{-1}.
+\end{equation}
+The isothermal low Mach number equations of motion are:
+\begin{eqnarray}
+\partial_t\rho &=& -\nabla\cdot(\rho\vb),\\
+\partial_t\rho_1 &=& -\nabla\cdot(\rho_1\vb) + \underbrace{\nabla\cdot\rho\chi\left(\nabla c + K_p\nabla p_0\right) + \nabla\cdot\Psib}_{\nabla\cdot\Fb},\\
+\partial_t(\rho\vb) &=& -\nabla\cdot(\rho\vb\vb^T) - \nabla p + \nabla\cdot\taub(\vb) + \nabla\cdot\Sigmab + \rho\gb,
+\end{eqnarray}
+subject to
+\begin{equation}
+\nabla\cdot\vb = S \equiv \underbrace{\left(\frac{1}{\bar\rho_1}-\frac{1}{\bar\rho_2}\right)}_{-\beta/\rho}\nabla\cdot\Fb.
+\end{equation}
+Thus, $S \equiv S(\Fb)$.  The baro-diffusion coefficient is given by
+\begin{equation}
+K_P = \frac{\beta}{\rho\mu_c} = \left(\frac{1}{\bar\rho_1}-\frac{1}{\bar\rho_2}\right)\mu_c^{-1},
+\end{equation}
+and $p_0$ is a fixed background pressure stratification.  The stochastic terms are:
+\begin{eqnarray}
+\Psib &=& \sqrt{\frac{2\chi\rho\mu_c^{-1}k_BT}{\Delta t\Delta V}}\widetilde\Wb,\label{eq:rho1 stoch}\\
+\Sigmab &=& \sqrt{\frac{\eta k_B T}{\Delta t\Delta V}}\left(\Wb + \Wb^T\right),\label{eq:mom stoch}
+\end{eqnarray}
+where $\Wb$ and $\widetilde\Wb$ are standard white-noise random Gaussian tensor
+and vector fields with uncorrelated components.  In our implementation, 
+we use an ideal gas mixture for (\ref{eq:rho1 stoch}) with 
+$k_BT=1$ and $\mu_c^{-1}=c(1-c)[cm_1+(1-c)m_2]$ with $m_1=m_2=1$ so that
+\begin{equation}
+\Psib = \sqrt{\frac{2\chi\rho c(1-c)}{\Delta t\Delta V}}\widetilde\Wb
+\end{equation}
+Also, in (\ref{eq:mom stoch}) we use
+\begin{equation}
+\frac{\Wb + \Wb^T}{\sqrt{2}} = \widehat\Wb \quad \rightarrow \quad
+\Sigmab = \sqrt{\frac{2\eta k_B T}{\Delta t\Delta V}}\widehat\Wb,
+\end{equation}
+where $\widehat\Wb$ is a symmetric Gaussian random tensor field whose diagonal elements
+have variance 2 and off-diagonal elements have variance 1.\\
+
+The code has several options for the viscous stress tensor.  For ease of exposition,
+we define $\nabla\cdot\taub(\vb)\equiv\mathcal{A}_0\vb$ (the superscript
+for $\mathcal{A}_0$ indicates the temporal discretization for the transport coefficients):\\
+\begin{itemize}
+\item $|${\tt visc\_type}$|$=1 $\quad\rightarrow\quad \mathcal{A}_0^n\vb \equiv \nabla\cdot\beta^n\nabla\vb$.\\
+\item $|${\tt visc\_type}$|$=2 $\quad\rightarrow\quad \mathcal{A}_0^n\vb \equiv \nabla\cdot\left\{\beta^n[\nabla\vb + (\nabla\vb)^T]\right\}$.\\
+\item $|${\tt visc\_type}$|$=3 $\quad\rightarrow\quad \mathcal{A}_0^n\vb \equiv \nabla\cdot\left\{\beta^n[\nabla\vb + (\nabla\vb)^T] + \mathcal{I}\left(\gamma^n - \frac{2}{3}\beta^n\right)(\nabla\cdot\vb)\right\}$.\\
+\end{itemize}
+If {\tt visc\_type} $<0$, we assume the transport coefficients are spatially-varying.
+If {\tt visc\_type} $>0$, we assume the transport coefficients are spatially-constant, and use simplified stencils
+in the code.
+
+\section{GMRES Solver}
+
+More details on the GMRES can be found in our upcoming preconditioner paper,
+so here we only summarize some important points.
+We use a GMRES solver that solves saddle-point systems of the form,
+\begin{equation}
+\underbrace{
+\left(\begin{array}{cc}
+\mathcal{A} & \mathcal{G} \\
+-\mathcal{D} & 0
+\end{array}\right)
+}_{\Ab}
+\underbrace{
+\left(\begin{array}{c}
+\xb_{\vb} \\
+x_p
+\end{array}\right)
+}_{\xb}
+=
+\underbrace{
+\left(\begin{array}{c}
+\bb_{\vb}\\
+b_p
+\end{array}\right)}_{\bb},
+\end{equation}
+where $\xb_\vb$ and $\bb_\vb$ are staggered quantities and $x_p$ and $b_p$ are
+cell-centered quantities.  The gradient operator, $\mathcal{G}$, operates on
+cell-centered data and returns a staggered field.  The divergence operator, 
+$\mathcal{D}$, operates on staggered data and returns a cell-centered field.  
+The Helmholtz-like operator, $\mathcal{A}$, has the general form,
+$\mathcal{A} = \Theta\alpha\mathcal{I} - \mathcal{A}_0$, where
+$\Theta$ is a constant parameter that can be adjusted for handle both steady and unsteady flow,
+$\alpha$ is a cell-centered quantity (typically a density if the system represents a momentum discretization),
+$\mathcal{I}$ is the identity matrix, 
+and $\mathcal{A}_0$ represents the viscous stress tensor.
+Both $\mathcal{A}$ and $\mathcal{A}_0$ operate on staggered data and return
+a staggered field.\\
+
+In practice, we allow for a rescaling of the linear system to balance the effects of the terms
+due to the choice of units.  We have the option to include a scaling factor $c$, as in,
+\begin{equation}
+\left(\begin{array}{cc}
+c\mathcal{A} & \mathcal{G} \\
+-\mathcal{D} & 0
+\end{array}\right)
+\left(\begin{array}{c}
+\xb_{\vb} \\
+cx_p
+\end{array}\right)
+=
+\left(\begin{array}{c}
+c\bb_{\vb}\\
+b_p
+\end{array}\right),
+\end{equation}
+This should eliminate the need for the {\tt p\_norm\_weight} scaling factor
+when computing the total residual.\\
+
+Each residual is composed of two parts, a velocity residual, $r_v$,
+and a pressure residual, $r_p$.  We combine these into a total residual, 
+$r=\sqrt{r_v^2 + r_p^2}$.  We consider two
+kinds of residuals, the unpreconditined residual, $r=||\Ab\xb-\bb||$, 
+and the preconditioned 
+residual $r_P=||\Pb^{-1}(\Ab\xb-\bb)||$.  GMRES internally {\it estimates} the 
+preconditioned residual without actually computing it. This estimate 
+is good if the Krylov basis is truly orthogonal but may not be very good 
+if there is some degeneration in orthogonality (usually a sign of bad 
+scaling or ill-conditioning). So the way the convergence testing is done 
+is as follows:\\
+\begin{enumerate}
+\item At the beginning of every outer iteration (restart), we compute 
+both the true and the preconditioned residuals (this is no extra cost 
+since we need to do this anyway).\\
+\item If a minimum number of total iterations have been performed, and the 
+preconditioned residual is within tolerance,
+$r_P < {\tt gmres\_rel\_tol}*\min(||P^{-1}b||,r_{P,\rm init})$
+we terminate the GMRES iteration. If the true residual is larger than 10 
+times the tolerance, we issue a warning since this means that the 
+preconditioned residual is not a good indication of the 
+unpreconditioned residual.\\
+\item In the inner iteration, we  test the estimate of the preconditioned
+residual, and if it is within tolerance, we exit the inner iteration.
+This does not mean the GMRES iteration will terminate, since the actual
+value of the preconditioned residual may be different.
+If the maximum number of inner or outer iterations is reached we exit 
+with an error message.
+\end{enumerate}
+
+\section{Implicit Low Mach Number Binary Mixing Algorithm}
+\subsection{Original Algorithm}
+Here is the time-advancement scheme.\\ \\
+{\bf Step 0: Initialization:}\\
+
+Initialize $\vb^{\rm init}, \rho^0, \rho_1^0, \chi^0, K_P^0, \eta^0, \kappa^0$, and $p^0$.
+Then, perform projection to obtain an initial velocity field, $\vb^0$, that satisfies
+\begin{equation}
+\nabla\cdot\vb^0 = S^0 \equiv S(\Fb^0); \qquad 
+\Fb^0 = \left[\rho\chi\left(\nabla c + K_P\nabla p\right)\right]^0 + \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}\right)^0k_B T}{\Delta t\Delta V}}\widetilde\Wb^0}_{\Psib^0}.
+\end{equation}
+We do this by solving for $\phi$ and updating $\vb^{\rm init}$ as follows:
+\begin{equation}
+\nabla\cdot\frac{1}{\rho^0}\nabla\phi = \nabla\cdot\vb^{\rm init} - S^0,
+\end{equation}
+\begin{equation}
+\vb^0 = \vb^{\rm init} - \frac{1}{\rho}\nabla\phi.
+\end{equation}
+{\bf Step 1: Calculate Predictor Diffusive and Stochastic Fluxes:}\\ \\
+Compute
+\begin{equation}
+\Fb^n = \left[\rho^n\chi^n\left(\nabla c^n + K_P^n\nabla p^n\right)\right] + \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}\right)^nk_B T}{\Delta t\Delta V}}\widetilde\Wb^n}_{\Psib^n},
+\end{equation}
+and evaluate $S^n$ from $\Fb^n$.  Note that this step is functionally a null-op since
+we reuse the result from either {\bf Step 0} or {\bf Step 6} from the previous 
+time step.\\ \\
+{\bf Step 2: Predictor Euler Step}:\\ \\
+Using the velocity field from either {\bf Step 0} or {\bf Step 7} from the previous 
+time step, take a predictor forward Euler step for $\rho_1$ and $\rho$:
+\begin{eqnarray}
+\rho_1^{*,n+1} &=& \rho_1^n + \Delta t\nabla\cdot(-\rho_1^n\vb^n + \Fb^n).\label{eq:alg1_1st_rho1_adv}\\
+\rho^{*,n+1} &=& \rho^n + \Delta t\nabla\cdot(-\rho^n\vb^n)\label{eq:alg1_1st_rho_adv}
+\end{eqnarray}
+{\bf Step 3: Calculate Corrector Diffusive and Stochastic Fluxes:}\\ \\
+We reuse the same random numbers, but evaluate the diffusive fluxes and the noise
+amplitude from the predictor,
+\begin{equation}
+\Fb^{*,n+1} = \left[\rho^{*,n+1}\chi^{*,n+1}\left(\nabla c^{*,n+1} + K_P^{*,n+1}\nabla p^n\right)\right] + \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}\right)^{*,n+1}k_B T}{\Delta t\Delta V}}\widetilde\Wb^n}_{\Psib^{n'}},
+\end{equation}
+and then evalute $S^{*,n+1}$ from $\Fb^{*,n+1}$.\\ \\
+{\bf Step 4: Predictor Crank-Nicolson Step:}\\ \\
+Define $\vb^{*,n+1} = \overline\vb^n + \deltab\vb, p^{*,n+1} = p^n + \delta p$ (in these notes the overline
+indicates the the velocity field has been modified to incorporate the boundary conditions on the
+full velocity field after the solve) and solve
+for $\deltab\vb$ and $\delta p$:
+\begin{eqnarray}
+\frac{\rho^{*,n+1}(\overline\vb^n + \deltab\vb) - \rho^n\vb^n}{\Delta t} + \nabla(p^n+\delta p) &=&\nonumber\\
+&&\hspace{-1in}\nabla\cdot(-\rho^n\vb^n\vb^n) + \half\left[\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{*,n+1}(\overline\vb^n + \deltab\vb)\right] + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^n} + \rho^n\gb,\nonumber\\
+\end{eqnarray}
+\begin{equation}
+\nabla\cdot(\overline\vb^n+\deltab\vb) = S^{*,n+1}.
+\end{equation}
+We rewrite this system as
+\begin{eqnarray}
+\left(\frac{\rho^{*,n+1}}{\Delta t} - \half\mathcal{A}_0^{*,n+1}\right)\deltab\vb + \nabla\delta p &=& \frac{\rho^n\vb^n-\rho^{*,n+1}\overline\vb^n}{\Delta t} -\nabla p^n\nonumber\\
+&&\hspace{-0.5in}+ \nabla\cdot(-\rho^n\vb^n\vb^n) + \half\mathcal{A}_0^n\vb^n + \half\mathcal{A}_0^{*,n+1}\overline\vb^n + \nabla\cdot\Sigmab^n + \rho^n\gb,\label{eq:CN Vel Pred}
+\end{eqnarray}
+\begin{equation}
+-\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^n - S^{*,n+1}.
+\end{equation}
+Relating this to the GMRES solver, we can see that we are solving for 
+$(\xb_\vb,x_p) = (\deltab\vb,\delta p)$ with $b_p = \nabla\cdot\overline\vb^n-S^{*,n+1}$ (note the change in sign!) 
+and $\bb_\vb$ equal to the right-hand-side of (\ref{eq:CN Vel Pred}).  For the Helmholtz-like operator, 
+$\mathcal{A}=\Theta\alpha\mathcal{I} - \mathcal{A}_0$, we have $\Theta=1/\Delta t, \alpha=\rho^{*,n+1}, 
+\beta=\eta/2$, and $\gamma=\kappa/2$.
+Next, define $\vb^{*,n+1} = \overline\vb^n + \deltab\vb$ and $p^{*,n+1} = p^n + \delta p$.\\ \\
+{\bf Step 5: Trapezoidal Scalar Corrector:}
+\begin{eqnarray}
+\rho_1^{n+1} &=& \half\rho_1^n + \half\left[\rho_1^{*,n+1} + \Delta t\nabla\cdot(-\rho_1^{*,n+1}\vb^{*,n+1} + \Fb^{*,n+1})\right].\label{eq:alg1_2nd_rho1_adv}\\
+\rho^{n+1} &=& \half\rho^n + \half\left[\rho^{*,n+1} + \Delta t\nabla\cdot(-\rho^{*,n+1}\vb^{*,n+1})\right],\label{eq:alg1_2nd_rho_adv}
+\end{eqnarray}
+Note that $\Fb^{*,n+1}$ has already been computed during {\bf Step 3}.\\ \\
+{\bf Step 6: Calculate Diffusive and Stochastic Fluxes:}\\ \\
+Calculate the fluxes for the next time level:
+\begin{equation}
+\Fb^{n+1} = \left[\rho^{n+1}\chi^{n+1}\left(\nabla c^{n+1} + K_P^{n+1}\nabla p^{*,n+1}\right)\right] + \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}\right)^{n+1}k_B T}{\Delta t\Delta V}}\widetilde\Wb^{n+1}}_{\Psib^{n+1}},
+\end{equation}
+and then evaluate $S^{n+1}$ from $\Fb^{n+1}$.\\ \\
+{\bf Step 7: Corrector Crank-Nicolson Step:}\\ \\
+Take a corrector step for velocity, using the same random numbers as for the predictor
+stage, but average the amplitude of the stochastic flux between time $n$ and $n+1$:
+Define $\vb^{n+1} = \overline\vb^{*,n+1} + \deltab\vb$ and $p^{n+1} = p^{*,n+1} + \delta p$ and
+solve the following system for $(\deltab\vb,\delta p)$:
+\begin{eqnarray}
+\frac{\rho^{n+1}(\overline\vb^{*,n+1} + \deltab\vb) - \rho^n\vb^n}{\Delta t} + \nabla(p^{*,n+1}+\delta p) &=& \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{*,n+1}\vb^{*,n+1}\vb^{*,n+1})\nonumber\\
+&&\hspace{-1.5in}+ \half\left[\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{n+1}(\overline\vb^{*,n+1} + \deltab\vb)\right]\nonumber\\
+&&\hspace{-1.5in}+ \nabla\cdot\underbrace{\half\left(\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}} + \sqrt{\frac{2\eta^{n+1} k_B T}{\Delta t\Delta V}}\right)\widehat\Wb^n}_{\Sigmab^{n'}} + \half\left(\rho^n+\rho^{n+1}\right)\gb,
+\end{eqnarray}
+\begin{equation}
+\nabla\cdot(\overline\vb^{*,n+1} + \deltab\vb) = S^{n+1}.
+\end{equation}
+We rewrite this system as:
+\begin{eqnarray}
+\left(\frac{\rho^{n+1}}{\Delta t} - \half\mathcal{A}_0^{n+1}\right)\deltab\vb + \nabla\delta p &=& \frac{\rho^n\vb^n-\rho^{n+1}\overline\vb^{*,n+1}}{\Delta t} -\nabla p^n\nonumber\\
+&&+ \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{*,n+1}\vb^{*,n+1}\vb^{*,n+1}) + \half(\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{n+1}\overline\vb^{*,n+1} )\nonumber\\
+&&+ \nabla\cdot\Sigmab^{n'} + \half\left(\rho^n+\rho^{n+1}\right)\gb,
+\end{eqnarray}
+\begin{equation}
+-\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{*,n+1} - S^{n+1}.
+\end{equation}
+
+\subsection{Overdamped Limit Algorithm - 1 Random Stage}
+The overdamped Eulerian dynamics can be efficiently simulated using the following Euler-Heun 
+predictor-corrector temporal algorithm with time step size $\Delta t$, which updates the 
+concentration from time step $n$ to time step $n+1$ (denoted here by superscript):\\ \\
+{\bf Step 1: Predictor Stochastic/Diffusive Fluxes:}\\ \\
+Calculate predictor diffusive and stochastic fluxes,
+\begin{equation}
+\Fb^n = (\rho\chi\nabla c)^n + \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}\right)^n k_B T}{\Delta t\Delta V}}\widetilde\Wb^n}_{\Psib^{(1)}},
+\end{equation}
+and then evaluate $S^n$ from $\Fb^n$.\\ \\
+{\bf Step 2: Predictor Stokes Solve:}\\ \\
+Generate a random advection velocity by solving the steady Stokes equation with random forcing.
+Define $p^* = p^{n-\myhalf} + \delta p$ and $\vb^* = \overline\vb^{n-\myhalf} + \delta\vb$ and solve:
+\begin{equation}
+\nabla(p^{n-\myhalf} + \delta p) = \mathcal A_0^n(\overline\vb^{n-\myhalf} + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^{(1)}} + \rho^n\gb,
+\end{equation}
+\begin{equation}
+\nabla\cdot(\overline\vb^{n-\myhalf} + \delta\vb) = S^n,
+\end{equation}
+which can be written as
+\begin{equation}
+-\mathcal{A}_0^n\deltab\vb + \nabla\delta p = -\nabla p^{n-\myhalf} + \mathcal{A}_0^n\overline\vb^{n-\myhalf}
++ \nabla\cdot\Sigmab^{(1)}
++ \rho^n\gb,\label{eq:Overdamped Pred Stokes}
+\end{equation}
+\begin{equation}
+-\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{n-\myhalf} - S^n.
+\end{equation}
+Relating this to the GMRES solver, we can see that we are solving for 
+$(\xb_\vb,x_p) = (\deltab\vb,\delta p)$ with $b_p = \nabla\cdot\overline\vb^{n-\myhalf}-S^n$ (note the change in sign!) 
+and $\bb_\vb$ equal to the right-hand-side of (\ref{eq:Overdamped Pred Stokes}).
+For the Helmholtz-like operator, 
+$\mathcal{A}=\Theta\alpha\mathcal{I} - \mathcal{A}_0$, we have $\Theta=0, 
+\beta=\eta$, and $\gamma=\kappa/2$.  Make sure to set $\alpha$ to some non-zero to avoid
+divide-by-zero errors.
+Next, define $\vb^* = \overline\vb^{n-\myhalf} + \deltab\vb$ and $p^* = p^{n-\myhalf} + \delta p$.\\ \\
+{\bf Step 3: Scalar Predictor Midpoint Euler Step}\\ \\
+Take a midpoint predictor forward Euler step for $\rho$ and $\rho_1$:
+\begin{eqnarray}
+\rho^{*,n+\myhalf} &=& \rho^n + \frac{\Delta t}{2}\nabla\cdot(-\rho^n\vb^*),\label{eq:alg2_1st_rho_adv}\\
+\rho_1^{*,n+\myhalf} &=& \rho_1^n + \frac{\Delta t}{2}\nabla\cdot(-\rho_1^n\vb^* + \Fb^n).\label{eq:alg2_1st_rho1_adv}
+\end{eqnarray}
+{\bf Step 4: Corrector Stochastic/Diffusive Fluxes:}\\ \\
+Calculate corrector diffusive fluxes, and reuse the same random numbers:
+\begin{equation}
+\Fb^{*,n+\myhalf} = (\rho\chi\nabla c)^{*,n+\myhalf}
++ \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}\right)^{*,n+\myhalf}k_B T}{\Delta t\Delta V}}\widetilde\Wb^n}_{\Psib^{(2)}},
+\end{equation}
+and then evaluate $S^{*,n+\myhalf}$ from $\Fb^{*,n+\myhalf}$.\\ \\
+{\bf Step 5: Corrector Stokes Solve:}\\ \\
+Solve a steady Stokes system with $p^{n+\myhalf} = p^* + \delta p$ and $\vb^{n+\myhalf} = \overline\vb^* + \delta\vb$:
+\begin{equation}
+\nabla(p^* + \delta p) = \mathcal A_0^{*,n+\myhalf}(\overline\vb^* + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^{(2)}} + \rho^{*,n+\myhalf}\gb,
+\end{equation}
+\begin{equation}
+\nabla\cdot(\overline\vb^* + \delta\vb) = S^{*,n+\myhalf},
+\end{equation}
+which can be written as
+\begin{equation}
+-\mathcal{A}_0^{*,n+\myhalf}\deltab\vb + \nabla\delta p = -\nabla p^* + \mathcal{A}_0^{*,n+\myhalf}\overline\vb^*
++ \nabla\cdot\Sigmab^{(2)}
++ \rho^{*,n+\myhalf}\gb,
+\end{equation}
+\begin{equation}
+-\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^* - S^{*,n+\myhalf}.
+\end{equation}
+Next, define $\vb^{n+\myhalf} = \overline\vb^* + \deltab\vb$ and $p^{n+\myhalf} = p^* + \delta p$.\\ \\
+{\bf Step 6: Midpoint Scalar Corrector:}\\ \\
+Update the densities and concentrations
+\begin{eqnarray}
+\rho^{n+1} &=& \rho^n + \Delta t\left(-\rho^{*,n+\myhalf}\vb^{n+\myhalf}\right),\label{eq:alg2_2nd_rho_adv}\\
+\rho_1^{n+1} &=& \rho_1^n + \Delta t\left(-\rho_1^{*,n+\myhalf}\vb^{n+\myhalf} + \Fb^{*,n+\myhalf}\right).\label{eq:alg2_2nd_rho1_adv}
+\end{eqnarray}
+
+\subsection{Overdamped Limit Algorithm - 2 Random Stages}
+The overdamped Eulerian dynamics can be efficiently simulated using the following Euler-Heun 
+predictor-corrector temporal algorithm with time step size $\Delta t$, which updates the 
+concentration from time step $n$ to time step $n+1$ (denoted here by superscript):\\ \\
+{\bf Step 1: Predictor Stochastic/Diffusive Fluxes:}\\ \\
+Calculate predictor diffusive and stochastic fluxes,
+\begin{equation}
+\Fb^n = (\rho\chi\nabla c)^n + \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}\right)^n k_B T}{(\Delta t/2)\Delta V}}\widetilde\Wb_A^n}_{\Psib^{(1)}},
+\end{equation}
+and then evaluate $S^n$ from $\Fb^n$.\\ \\
+{\bf Step 2: Predictor Stokes Solve:}\\ \\
+Generate a random advection velocity by solving the steady Stokes equation with random forcing.
+Define $p^* = p^{n-\myhalf} + \delta p$ and $\vb^* = \overline\vb^{n-\myhalf} + \delta\vb$ and solve:
+\begin{equation}
+\nabla(p^{n-\myhalf} + \delta p) = \mathcal A_0^n(\overline\vb^{n-\myhalf} + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{(\Delta t/2)\Delta V}}\widehat\Wb_A^n}_{\Sigmab^{(1)}} + \rho^n\gb,
+\end{equation}
+\begin{equation}
+\nabla\cdot(\overline\vb^{n-\myhalf} + \delta\vb) = S^n,
+\end{equation}
+which can be written as
+\begin{equation}
+-\mathcal{A}_0^n\deltab\vb + \nabla\delta p = -\nabla p^{n-\myhalf} + \mathcal{A}_0^n\overline\vb^{n-\myhalf}
++ \nabla\cdot\Sigmab^{(1)}
++ \rho^n\gb,\label{eq:Overdamped2 Pred Stokes}
+\end{equation}
+\begin{equation}
+-\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{n-\myhalf} - S^n.
+\end{equation}
+Relating this to the GMRES solver, we can see that we are solving for 
+$(\xb_\vb,x_p) = (\deltab\vb,\delta p)$ with $b_p = \nabla\cdot\overline\vb^{n-\myhalf}-S^n$ (note the change in sign!) 
+and $\bb_\vb$ equal to the right-hand-side of (\ref{eq:Overdamped2 Pred Stokes}).
+For the Helmholtz-like operator, 
+$\mathcal{A}=\Theta\alpha\mathcal{I} - \mathcal{A}_0$, we have $\Theta=0, 
+\beta=\eta$, and $\gamma=\kappa/2$.  Make sure to set $\alpha$ to some non-zero to avoid
+divide-by-zero errors.
+Next, define $\vb^* = \overline\vb^{n-\myhalf} + \deltab\vb$ and $p^* = p^{n-\myhalf} + \delta p$.\\ \\
+{\bf Step 3: Scalar Predictor Midpoint Euler Step}\\ \\
+Take a midpoint predictor forward Euler step for $\rho$ and $\rho_1$:
+\begin{eqnarray}
+\rho^{*,n+\myhalf} &=& \rho^n + \frac{\Delta t}{2}\nabla\cdot(-\rho^n\vb^*),\\
+\rho_1^{*,n+\myhalf} &=& \rho_1^n + \frac{\Delta t}{2}\nabla\cdot(-\rho_1^n\vb^* + \Fb^n).
+\end{eqnarray}
+{\bf Step 4: Corrector Stochastic/Diffusive Fluxes:}\\ \\
+Calculate corrector diffusive fluxes, and reuse the same random numbers:
+\begin{equation}
+\Fb^{*,n+\myhalf} = (\rho\chi\nabla c)^{*,n+\myhalf}
++ \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}\right)^{*,n+\myhalf}k_B T}{\Delta t\Delta V}}\left(\frac{\widetilde\Wb_A^n+\widetilde\Wb_B^n}{\sqrt{2}}\right)}_{\Psib^{(2)}},
+\end{equation}
+and then evaluate $S^{*,n+\myhalf}$ from $\Fb^{*,n+\myhalf}$.\\ \\
+{\bf Step 5: Corrector Stokes Solve:}\\ \\
+Solve a steady Stokes system with $p^{n+\myhalf} = p^* + \delta p$ and $\vb^{n+\myhalf} = \overline\vb^* + \delta\vb$:
+\begin{equation}
+\nabla(p^* + \delta p) = \mathcal A_0^{*,n+\myhalf}(\overline\vb^* + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\left(\frac{\widehat\Wb_A^n+\widehat\Wb_B^n}{2}\right)}_{\Sigmab^{(2)}} + \rho^{*,n+\myhalf}\gb,
+\end{equation}
+\begin{equation}
+\nabla\cdot(\overline\vb^* + \delta\vb) = S^{*,n+\myhalf},
+\end{equation}
+which can be written as
+\begin{equation}
+-\mathcal{A}_0^{*,n+\myhalf}\deltab\vb + \nabla\delta p = -\nabla p^* + \mathcal{A}_0^{*,n+\myhalf}\overline\vb^*
++ \nabla\cdot\Sigmab^{(2)}
++ \rho^{*,n+\myhalf}\gb,
+\end{equation}
+\begin{equation}
+-\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^* - S^{*,n+\myhalf}.
+\end{equation}
+Next, define $\vb^{n+\myhalf} = \overline\vb^* + \deltab\vb$ and $p^{n+\myhalf} = p^* + \delta p$.\\ \\
+{\bf Step 6: Midpoint Scalar Corrector:}\\ \\
+Update the densities and concentrations
+\begin{eqnarray}
+\rho^{n+1} &=& \rho^n + \Delta t\left(-\rho^{*,n+\myhalf}\vb^{n+\myhalf}\right),\\
+\rho_1^{n+1} &=& \rho_1^n + \Delta t\left(-\rho_1^{*,n+\myhalf}\vb^{n+\myhalf} + \Fb^{*,n+\myhalf}\right).
+\end{eqnarray}
+
+\section{BDS Advection}
+We will consider the ``linear'' BDS advection schemes developed in 
+two dimensions \cite{BDS} and three dimensions \cite{BDS3d}.
+The basic idea behind BDS is that given a cell-centered scalar field at time $t^n$,
+$\phi^n \equiv \phi(t^n)$, a
+temporally-constant MAC velocity field, $\vb = (u,v)$, and the following PDE,
+\begin{equation}
+\frac{\partial\phi}{\partial t} + \nabla\cdot(\phi\vb) = q,
+\end{equation}
+is that the BDS algorithm constructs scalar edge states, $\phi_{i+\myhalf,j}$, etc., by
+integrating piecewise-bilinear (trilinear in 3D) profiles of $\phi$ over the 
+space-time region determined by the characteristic domain of dependence of the 
+face over a time interval $\Delta t$.  Thus, $\phi_{i+\myhalf,j}$ can be thought
+of as the average value of $\phi$ passing through a given face over a time step.
+The edge states can be used to compute advective fluxes, e.g.,
+\begin{equation}
+\left[\nabla\cdot(\phi\vb)\right]_{ij} = \frac{\phi_{i+\myhalf,j}u_{i+\myhalf,j} - \phi_{i-\myhalf,j}u_{i-\myhalf,j}}{\Delta x} + \frac{\phi_{i,j+\myhalf}v_{i,j+\myhalf} - \phi_{i,j-\myhalf}v_{i,j-\myhalf}}{\Delta y}.
+\end{equation}
+A key point here is that the MAC velocities are fixed in time, so in order to
+achieve second-order overall accuracy to solve the PDE we ultimately need time-centered
+MAC velocities.
+
+In our description below, we will use the shorthand $\rm{BDS}(\phi,\vb,q)$ to refer to 
+the scalar edge states computed with the BDS algorithm given a cell-centered field 
+$\phi$, a MAC velocity field $\vb$, and a cell-centered source term $q$.  A key point
+here is that if $q=0$ when computing $\rho$ edge states, and $q=\nabla\cdot\Fb$ when
+compute $\rho_1$ edge states, where
+$\Fb$ is the same flux used to generate the RHS of the divergence constraint on the
+input velocity field, that the BDS advection scheme will ensure that the resulting edge
+states $(\rho,\rho_1)$ satisfy the EOS.  There is a proof on our whiteboard here that 
+John worked out, but just take this as a given for now.
+
+\subsection{Original Algorithm}
+To modify the original algorithm, we replace equations
+(\ref{eq:alg1_1st_rho1_adv}) and (\ref{eq:alg1_1st_rho_adv}) in {\bf Step 1} with
+\begin{eqnarray}
+\rho_1^{*,n+1} &=& \rho_1^n + \Delta t\nabla\cdot(-\rho_1^{{\rm BDS},*}\vb^n + \Fb^n),\\
+\rho^{*,n+1} &=& \rho^n + \Delta t\nabla\cdot(-\rho^{{\rm BDS},*}\vb^n),
+\end{eqnarray}
+where $\rho^{{\rm BDS},*} = {\rm BDS}(\rho^n,\vb^n,0)$ and 
+$\rho_1^{{\rm BDS},*} = {\rm BDS}(\rho_1^n,\vb^n,\nabla\cdot\Fb^n)$.
+Nothing else changes until {\bf Step 3}, where we define
+\begin{eqnarray}
+\vb^{n+\myhalf} &=& \frac{\vb^n + \vb^{*,n+1}}{2},\\
+\Fb^{n+\myhalf} &=& \frac{\Fb^n + \Fb^{*,n+1}}{2},
+\end{eqnarray}
+and then replace equations (\ref{eq:alg1_2nd_rho1_adv}) and
+(\ref{eq:alg1_2nd_rho_adv}) with
+\begin{eqnarray}
+\rho_1^{n+1} &=& \rho_1^n + \Delta t\nabla\cdot\left(-\rho_1^{\rm BDS}\vb^{n+\myhalf} + \Fb^{n+\myhalf}\right),\\
+\rho^{n+1} &=& \rho^n + \Delta t\nabla\cdot\left(-\rho^{\rm BDS}\vb^{n+\myhalf}\right),
+\end{eqnarray}
+where $\rho^{\rm BDS} = {\rm BDS}(\rho^n,\vb^{n+\myhalf},0)$ and 
+$\rho_1^{\rm BDS} = {\rm BDS}(\rho_1^n,\vb^{n+\myhalf},\nabla\cdot\Fb^{n+\myhalf})$.
+
+\subsection{Overdamped Limit Algorithm}
+To modify the original algorithm, we replace equations (\ref{eq:alg2_1st_rho_adv}) and 
+(\ref{eq:alg2_1st_rho1_adv}) in {\bf Step 3} with
+\begin{eqnarray}
+\rho^{*,n+\myhalf} &=& \rho^n + \frac{\Delta t}{2}\nabla\cdot(-\rho^{{\rm BDS},*}\vb^*),\\
+\rho_1^{*,n+\myhalf} &=& \rho_1^n + \frac{\Delta t}{2}\nabla\cdot(-\rho_1^{{\rm BDS},*}\vb^* + \Fb^n),
+\end{eqnarray}
+where $\rho^{{\rm BDS},*} = {\rm BDS}(\rho^n,\vb^*,0)$ and 
+$\rho_1^{{\rm BDS},*} = {\rm BDS}(\rho_1^n,\vb^*,\nabla\cdot\Fb^n)$.
+
+Nothing else changes until {\bf Step 7}, where we replace equations 
+(\ref{eq:alg2_2nd_rho_adv}) and (\ref{eq:alg2_2nd_rho1_adv}) with
+\begin{eqnarray}
+\rho^{n+1} &=& \rho^n + \Delta t\left(-\rho^{\rm BDS}\vb^{n+\myhalf}\right),\\
+\rho_1^{n+1} &=& \rho_1^n + \Delta t\left(-\rho_1^{\rm BDS}\vb^{n+\myhalf} + \Fb^{*,n+\myhalf}\right),
+\end{eqnarray}
+where $\rho^{\rm BDS} = {\rm BDS}(\rho^n,\vb^{n+\myhalf},0)$ and 
+$\rho_1^{\rm BDS} = {\rm BDS}(\rho_1^n,\vb^{n+\myhalf},\nabla\cdot\Fb^{*,n+\myhalf})$.
+
+\section{Boundary Conditions}
+The types of non-periodic, ``physical'' boundary conditions we consider are 
+(i) ``no-slip'' (impermeable) walls,
+(ii) ``slip'' (impermeable) walls,
+(iii) ``no-slip'' reservoir, and
+(iv) ``slip'' reservoir conditions.
+We impose boundary conditions on the primitive variables and velocities,
+i.e., $\rho,c$, and $\vb$, and can convert these back to conservative
+variables afterwards if needed.\\
+
+{\bf No-Slip Wall:}  For any impermeable wall, the stochastic and diffusive
+fluxes are both zero, $\rho\chi\partial c/\partial n = \Psi_n = 0$, as well as the 
+advective flux, $\rho v_n = \rho_1 v_n = 0$.  The zero
+diffusive flux implies a homogeneous Neumann condition on $c$ and also for $\rho$ since $\rho$
+is derived from $c$ and the EOS.  The zero advective flux implies that $v_n=0$ on the
+boundary.  The no-slip condition implies that each $v_{\tau}$ is a prescribed value
+on the boundary.\\
+
+{\bf Slip Wall:}  This is the same situation as the no-slip impermeable
+wall, except that the tangential velocities are subject to the condition that the
+traction, or tangential compoment of the normal viscous stress, is prescribed.
+In other words, for each tangential direction $\tau$,
+\begin{equation}
+\eta\left(\frac{\partial v_n}{\partial\tau} + \frac{\partial v_{\tau}}{\partial n}\right) = f.\label{eq:free slip}
+\end{equation}
+Note that for walls with constant $v_n$ (including impermeable walls with $v_n=0$),
+this condition reduces to $\partial v_{\tau}/\partial n=f/\eta$.  In most cases we
+use a zero traction condition, where $f=0$.\\
+
+{\bf No-Slip Reservoir:} We specify $c$ with a Dirichlet condition at the boundary, 
+and use the EOS to obtain $\rho$ at the
+boundary.  The normal velocity must be equal to $-(\beta/\rho)F_n$ in order for
+the EOS to remain satisfied.  We must be careful with sequencing in a sense that
+$F_n$ is not a function of $\vb$, so we can compute $F_n$ first and {\it then}
+use this to directly specify $v_n$ on boundaries, making sure that the
+subsequent GMRES solve preserves these boundary conditions.
+The no-slip condition implies that each $v_{\tau}$ is
+a prescribed value on the boundary.\\
+
+{\bf Slip Reservoir:} This is the same situation as the no-slip reservoir, except
+that each $v_{\tau}$ is subject to (\ref{eq:free slip}).  Since in general
+the normal velocity is not constant in the tangential direction(s), we will have 
+an inhomogeneous Neumann condition on each $v_{\tau}$, even if $f=0$.
+
+\subsection{Design Principles}
+For all physical boundaries, the value of a primitive
+variable on the boundary shall be stored in the ghost cell for convenience.  This
+is true regardless of whether we use a homogeneous Neumann or Dirichlet condition.
+For homogeneous Neumann, we simply copy the interior cell value, thus representing
+a first-order extrapolation.  For Dirichlet conditions, we prescribe $c$ and use
+the EOS to obtain $\rho$.  We fill ghost cells for primitive variables using the
+subroutine, {\tt multifab\_physbc}.  Note that the transport coefficients, $(\eta,\kappa,\chi)$,
+are functions of the primitive variables, so when we compute them, we simply loop
+over valid {\it and} ghost cells, and do not require special routines to fill
+the ghost cells aftewards.\\
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[tb]
+\centering
+\includegraphics[width=5.25in]{viscOp}
+\caption{The stencils for the $x$-component of (Left) $\nabla\cdot\beta\nabla\vb$, (Middle) 
+$\nabla\cdot\beta(\nabla\vb)^T$, and (Right) $\nabla\cdot[\mathcal{I}(\gamma-\frac{2}{3}\beta)(\nabla\cdot\vb)]$.  
+The black circles indicate locations of $u$.
+The black triangles indicate locations of $v$.
+The red dots indicate the location of the $\beta$ and the gradients of velocity.}\label{fig:viscOp}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[tb]
+\centering
+\includegraphics[width=5.25in]{viscOp_3d}
+\caption{The stencils for the $x$-component of (Left) $\nabla\cdot\beta\nabla\vb$, (Middle) 
+$\nabla\cdot\beta(\nabla\vb)^T$, and (Right) $\nabla\cdot[\mathcal{I}(\gamma-\frac{2}{3}\beta)(\nabla\cdot\vb)]$.  
+The black circles indicate locations of $u$.
+The black triangles indicate locations of $v$ and $w$.
+The red dots indicate the location of the $\beta$ and the gradients of velocity.}\label{fig:viscOp_3d}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+For velocities, it is helpful to first consider the stencils 
+for the viscous operators, as illustrated
+in Figures \ref{fig:viscOp} and \ref{fig:viscOp_3d} for two and three dimensions.
+There are a few key design principles to keep in mind:\\
+\begin{itemize}
+\item The viscous operator for faces {\it on} any physical boundary must
+evaluate to zero, so it does not matter what value is stored for the normal component
+of velocity in the ghost face immediately outside of the valid region, unless you 
+are concerned 
+about possible intermediate {\tt NaN} states that will later be overwritten.\\
+\item The value of the normal velocity {\it on} the boundary {\it does} matter, since it
+enters the stencil for the first interior normal velocity face and stencils for the
+transverse velocity near the boundary.\\
+\item The value of transverse velocities in ghost faces behind physical boundaries
+{\it does} matter, since it enters the stencil for the interior transverse face.
+We make sure to fill these using the appropriate physical boundary condition.\\
+\item When setting normal velocities on physical boundaries, we don't have to worry
+about corner ghost faces outside of the domain.  Those only matter if we are periodic 
+in the transverse
+direction, in which case the call to {\tt multifab\_fill\_boundary} should take care of
+these periodic values.\\
+\item When setting transverse velocity ghost faces behind physical boundaries, we do
+not have to worry about ghost faces that are outside the valid region with respect
+to the problem domain in the transverse direction.  Those only matter if we are 
+periodic in the transverse direction, in which case the call to {\tt multifab\_fill\_boundary}
+should take care of these periodic values.\\
+\item Unlike the case for scalars, here the values of velocity in ghost cells represent
+the value extrapolated to that point (for tangential velocities), or the value {\it on}
+the boundary (for normal velocities).\\
+\end{itemize}
+
+We carry around several auxiliary multifabs that store the Dirichlet values 
+for velocity on the
+boundary, whether they are homogeneous or inhomogeneous.  To deal with normal 
+velocities, the multifab {\tt vel\_bc\_n(nlevs,dm)}
+stores the actual Dirichlet value.  The $(n,d)^{\rm th}$ element is a face-centered
+multifab for refinement level $n$ in direction $d$ and does not require ghost cells.
+The boundary face itself stores the Dirichlet value.\\
+
+To deal with transverse velocities, the multifab {\tt vel\_bc\_t(nlevs,X)} stores
+either the Dirichlet or Neumann value (depending on the boundary type), for both 
+inhomogeneous and homogeneous cases.  In 2D, X=2,
+and in 3D, X=6.  In 2D, the multifabs are each nodal and the components represent:\\
+\begin{enumerate}
+\item The y-velocity bc on x-faces.
+\item The x-velocity bc on y-faces.\\
+\end{enumerate}
+
+In 3D, the multifabs are edge-based (i.e., nodal in 2 directions)
+and the components represent:\\
+\begin{enumerate}
+\item The y-velocity bc on x-faces (thus is nodal in y and x).
+\item The z-velocity bc on x-faces (thus is nodal in z and x).
+\item The x-velocity bc on y-faces (thus is nodal in x and y).
+\item The z-velocity bc on y-faces (thus is nodal in z and y).
+\item The x-velocity bc on z-faces (thus is nodal in x and z).
+\item The y-velocity bc on z-faces (thus is nodal in y and z).\\
+\end{enumerate}
+
+Note that none of these multifabs require any ghost cells.\\
+
+\subsection{Implementation}
+
+To fill {\tt vel\_bc\_n} and {\tt vel\_bc\_t} we call the subroutine,
+{\tt set\_inhomogeneous\_vel\_bcs}.  This routine loops over domain boundary
+faces, and if the domain boundary is a physical boundary, it uses the
+function {\tt inhomogeneous\_bc\_val\_Xd} to fill {\tt vel\_bc\_n} and 
+{\tt vel\_bc\_t}.\\
+
+We have two subroutines that fill velocity domain boundary and ghost cells based
+on the values in {\tt vel\_bc\_n} and {\tt vel\_bc\_t}.
+
+Each of these take in {\tt vel\_bc\_n} or {\tt vel\_bc\_t} as
+an optional multifab argument that represents the prescribed Dirichlet
+or Neumann value on the boundary.  
+The subroutine {\tt multifab\_physbc\_domainvel} sets the 
+value for faces on the boundary and can take {\tt vel\_bc\_n} as an optional input.
+The subroutine {\tt multifab\_physbc\_macvel}
+sets the transverse velocity ghost faces behind the physical boundary and
+can take {\tt vel\_bc\_t} as an optional input.
+If no multifab is passed in, it is assumed that the boundary conditions
+are homogeneous.\\
+
+For {\tt multifab\_physbc\_macvel}, the optional multifab that gets passed in
+must be nodal in exactly 2 directions.
+We use the domain value to represent
+the Dirichlet or Neumann value, and then depending on the boundary conditions, the 
+appropriate stencil is used to fill in the ghost value.
+The stencil for transverse velocities is a two-point stencil involving the
+interior value and the Dirichlet or Neumann boundary value.\\
+
+The subroutine {\tt set\_inhomogeneous\_vel\_bcs} sets the Dirichlet or
+Neumann condition, $f$, for normal and transverse velocities.  For the case of 
+reservoir boundary conditions, it sets $f=0$ and relies on other subroutines 
+to update the normal velocity boundary condition as the fluxes for the concentrations
+are built up.\\
+
+The subroutine {\tt modify\_traction\_bcs} is a standalone subroutine that
+modifies the traction boundary condition by subtracting off the 
+$\partial v_n/\partial\tau$ term for the Neumann conditions
+on $v_{\tau}$.  This only matters if the normal velocity
+changes as a function of the transverse velocity of interest.  This subroutine
+should only be called after calling the inhomogeneous version of 
+{\tt multifab\_physbc\_domainvel}.
+
+\subsection{Calling Sequence}
+WORK IN PROGRESS... NOT CORRECT YET... Since in the GMRES solve at the end of the
+time step we use new-time stochastic fluxes the sequencing here gets tricky.\\
+
+A typical calling sequence for a low Mach number algorithm for a given time
+step should look something like:
+\begin{enumerate}
+\item Assume we start with $\rho$ and $c$ in the valid region, as well as
+velocities everywhere in the valid region {\it except} on the boundary.
+\item Call {\tt multifab\_fill\_boundary} to fill ghost cells for $\rho$ and
+$c$, noting that the ghost value represent the value on the boundary.
+\item Compute transport coefficients that are a function of $\rho$ and $c$ by
+looping over valid {\it and} ghost regions.
+\item Call {\tt set\_inhomogeneous\_vel\_bcs} to fill the bc multifabs,
+{\tt vel\_bc\_n} and {\tt vel\_bc\_t}.
+\item Compute the diffusive and stochastic $\rho c$ fluxes, making sure to update
+{\tt vel\_bc\_n} for the reservoir case.
+\item Call the inhomogeneous versions of {\tt multifab\_physbc\_macvel} and
+{\tt multifab\_physbc\_domainvel}.
+\end{enumerate}
+
+\subsection{GMRES Boundary Conditions}
+We want to solve a system of the form:
+\begin{equation}
+\Ab\xb^{\rm new} = {\rm RHS},
+\end{equation}
+given $\xb^{\rm old}$ as an initial guess.  The GMRES solver can only solve
+systems with homogeneous boundary conditions (either Dirichlet or Neumann) of the
+form:
+\begin{equation}
+\Ab^H\xb = \bb.
+\end{equation}
+We define $\xb^{\rm new} = \overline\xb^{\rm old} + \deltab\xb$, where 
+$\overline\xb^{\rm old} = \xb^{\rm old}$ but with normal velocities on physical boundaries
+and transverse velocities in ghost cells behind physical boundaries overwritten
+to respect the boundary conditions for $\xb^{\rm new}$.
+Then, we use the GMRES solver to compute the solution to
+\begin{equation}
+\Ab^H\deltab\xb = {\rm RHS} - \Ab\overline\xb^{\rm old}.
+\end{equation}
+Then, $\xb^{\rm new} = \overline\xb^{\rm old} + \deltab\xb$.
+
+\section{Results}
+\subsection{2D Lid-Driven Cavity Convergence Testing}
+The problem is a deterministic lid-driven cavity in two dimensions.
+All units are cgs.
+The domain is 1 $\times$ 1 divided into $64^2, 128^2, 256^2$, and $512^2$ grid cells.
+The lo-y and hi-y walls are no-slip walls moving in equal and opposite directions,
+setting up a circular flow pattern.  The hi-y wall speed is given by:
+\begin{equation}
+u(x,t) =
+\begin{cases}
+\frac{1}{4}\left[1 + \sin{(2\pi x - \frac{\pi}{2}})\right]
+           \left[1 + \sin{(2\pi t - \frac{\pi}{2}})\right], & t < 0.5\\
+\frac{1}{2}\left[1 + \sin{(2\pi x - \frac{\pi}{2}})\right], & t \ge 0.5
+\end{cases}.
+\end{equation}
+The x-boundaries are stationary no-slip walls.
+The time step for the coarsest simulation is $\Delta t=5\times 10^{-3}$ 
+and is reduced by a factor of 2 as the resolution increases by a factor of 2.
+This corresponds to an advective CFL number of $\sim 0.3$ for each simulation, and
+a mass diffusion CFL of $\sim 0.67$ for the finest simulation.
+We run each simulation to $t=2$.
+We use $\bar\rho_1 = 2, \bar\rho_2 = 1$.
+The initial conditions are $\vb=0$ and $p=0$ with
+a Gaussian bump of high density centered at $(x,y) = (0.5, 0.5)$ such that
+\begin{equation}
+c = e^{-75r^2}; \quad r = \sqrt{(x-0.5)^2 + (y-0.5)^2}
+\end{equation}
+The viscosity varies linearly as a function of concentration, such that $\mu=0.1$
+when $c=0$ and $\mu=1$ when $c=1$.  Similarly, the mass diffusion coefficient
+varies lienarly as a function of concentration, such that $\chi=10^{-4}$ when $c=0$ and
+$\chi=10^{-3}$ when $c=1$.  Gravity acts downward with $\gb=(0,-1)$, and we use
+the viscous stress tensor formulation, $\taub = \eta[\nabla\vb + (\nabla\vb)^T]$.
+Figure \ref{fig:convergence} illustrates the initial and final ($t=2$) configurations
+of concentration and velocity.
+
+In Tables \ref{tab:Linf}, \ref{tab:L1}, and \ref{tab:L2},
+we present convergence results in $L^\infty, L^1$, and $L^2$ for the following
+test problems:
+\begin{itemize}
+\item Test 1: Inertial algorithm, centered scalar advection
+\item Test 2: Inertial algorithm, unlimited bilinear BDS scalar advection.
+\item Test 3: Inertial algorithm, unlimited quadratic BDS scalar advection.
+\item Test 4: Inertial algorithm, unlimited bilinear BDS scalar advection, $\chi=0$.
+\item Test 5: Overdamped algorithm, centered scalar advection
+\item Test 6: Overdamped algorithm, unlimited bilinear BDS scalar advection.
+\item Test 7: Overdamped algorithm, unlimited quadratic BDS scalar advection.
+\item Test 8: Overdamped algorithm, unlimited bilinear BDS scalar advection, $\chi=0$.
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}
+\begin{center}
+\includegraphics[width=2.9in]{gaussian_1}
+\includegraphics[width=2.9in]{gaussian_2}
+\caption{Initial and final ($t=2$) concentration and velocities for the convergence
+test problems.}
+\label{fig:convergence}
+\end{center}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{table}[h]
+\begin{center}
+\caption{Refining in space and time.  Errors and convergence rates in $L^\infty$.}
+\label{tab:Linf}
+\begin{tabular}{ccccccc}
+& & 64-128 & Rate & 128-256 & Rate & 256-512 \\
+\hline
+Test 1:             & $u$ & 1.93e-03 & 1.91 & 5.12e-04 & 1.96 & 1.32e-04 \\
+                    & $v$ & 8.69e-04 & 1.99 & 2.19e-04 & 2.00 & 5.49e-05 \\
+                    & $c$ & 3.02e-04 & 1.99 & 7.60e-04 & 2.00 & 1.90e-04 \\
+\hline
+Test 2:             & $u$ & 1.92e-03 & 1.91 & 5.11e-04 & 1.95 & 1.32e-04 \\
+                    & $v$ & 9.08e-04 & 1.96 & 2.34e-04 & 1.99 & 5.91e-05 \\
+                    & $c$ & 2.63e-03 & 1.72 & 7.99e-04 & 1.92 & 2.11e-04 \\
+\hline
+Test 3:             & $u$ & 1.92e-03 & 1.91 & 5.11e-04 & 1.95 & 1.32e-04 \\
+                    & $v$ & 8.62e-04 & 1.95 & 2.23e-04 & 1.98 & 5.64e-05 \\
+                    & $c$ & 1.95e-03 & 1.99 & 4.91e-04 & 2.00 & 1.23e-04 \\
+\hline
+Test 4:             & $u$ & 1.91e-03 & 1.92 & 5.06e-04 & 1.96 & 1.30e-04 \\
+                    & $v$ & 9.78e-04 & 2.01 & 2.43e-04 & 2.02 & 6.00e-05 \\
+                    & $c$ & 4.29e-03 & 1.90 & 1.15e-03 & 1.97 & 2.93e-04 \\
+\hline
+Test 5:             & $c$ & 3.57e-03 & 2.00 & 8.90e-04 & 2.00 & 2.22e-04 \\
+\hline
+Test 6:             & $c$ & 2.70e-03 & 1.78 & 7.87e-04 & 1.92 & 2.08e-04 \\
+\hline
+Test 7:             & $c$ & 1.95e-03 & 1.99 & 4.91e-04 & 1.94 & 1.28e-04 \\
+\hline
+Test 8:             & $c$ & 4.23e-03 & 1.93 & 1.11e-03 & 1.96 & 2.86e-04
+\end{tabular}
+\end{center}
+\end{table}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{table}[h]
+\begin{center}
+\caption{Errors and convergence rates in $L^1$.}
+\label{tab:L1}
+\begin{tabular}{ccccccc}
+& & 64-128 & Rate & 128-256 & Rate & 256-512 \\
+\hline
+Test 1:             & $u$ & 2.22e-04 & 2.02 & 5.49e-05 & 1.95 & 1.42e-05 \\
+                    & $v$ & 2.64e-04 & 1.99 & 6.63e-05 & 1.99 & 1.67e-05 \\
+                    & $c$ & 2.24e-04 & 1.99 & 5.64e-05 & 2.00 & 1.41e-05 \\
+\hline
+Test 2:             & $u$ & 1.87e-04 & 1.99 & 4.72e-05 & 1.99 & 1.19e-05 \\
+                    & $v$ & 2.91e-04 & 1.99 & 7.33e-05 & 1.99 & 1.84e-05 \\
+                    & $c$ & 1.62e-04 & 1.96 & 4.16e-05 & 1.96 & 1.07e-05 \\
+\hline
+Test 3:             & $u$ & 1.94e-04 & 1.99 & 4.90e-05 & 1.97 & 1.25e-05 \\
+                    & $v$ & 2.81e-04 & 1.99 & 7.07e-05 & 1.97 & 1.81e-05 \\
+                    & $c$ & 1.22e-04 & 1.99 & 3.08e-05 & 1.99 & 7.75e-06 \\
+\hline
+Test 4:             & $u$ & 1.98e-04 & 2.00 & 4.96e-05 & 1.99 & 1.25e-05 \\
+                    & $v$ & 3.02e-04 & 2.00 & 7.57e-05 & 1.99 & 1.90e-05 \\
+                    & $c$ & 1.57e-04 & 1.97 & 4.01e-05 & 1.98 & 1.02e-05 \\
+\hline
+Test 5:             & $c$ & 2.11e-04 & 1.99 & 5.30e-05 & 1.99 & 1.33e-05 \\
+\hline
+Test 6:             & $c$ & 1.59e-04 & 1.97 & 4.05e-05 & 1.98 & 1.03e-05 \\
+\hline
+Test 7:             & $c$ & 1.25e-04 & 1.99 & 3.14e-05 & 1.99 & 7.89e-06 \\
+\hline
+Test 8:             & $c$ & 1.63e-04 & 1.97 & 4.16e-05 & 1.97 & 1.06e-05
+\end{tabular}
+\end{center}
+\end{table}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{table}[h]
+\begin{center}
+\caption{Errors and convergence rates in $L^2$.}
+\label{tab:L2}
+\begin{tabular}{ccccccc}
+& & 64-128 & Rate & 128-256 & Rate & 256-512 \\
+\hline
+Test 1:             & $u$ & 3.47e-04 & 2.00 & 8.66e-05 & 2.00 & 2.16e-05 \\
+                    & $v$ & 3.13e-04 & 1.99 & 7.89e-05 & 1.99 & 1.98e-05 \\
+                    & $c$ & 5.41e-04 & 1.99 & 1.36e-04 & 2.00 & 3.39e-05 \\
+\hline
+Test 2:             & $u$ & 3.24e-04 & 1.99 & 8.14e-05 & 1.99 & 2.03e-05 \\
+                    & $v$ & 3.48e-04 & 1.98 & 8.81e-05 & 2.00 & 2.21e-05 \\
+                    & $c$ & 4.01e-04 & 1.88 & 1.09e-04 & 1.94 & 2.85e-05 \\
+\hline
+Test 3:             & $u$ & 3.28e-04 & 1.99 & 8.23e-05 & 1.99 & 2.07e-05 \\
+                    & $v$ & 3.34e-04 & 1.98 & 8.46e-05 & 1.98 & 2.15e-05 \\
+                    & $c$ & 3.30e-04 & 1.94 & 8.60e-05 & 1.96 & 2.21e-05 \\
+\hline
+Test 4:             & $u$ & 3.32e-04 & 2.00 & 8.32e-05 & 2.00 & 2.08e-05 \\
+                    & $v$ & 3.58e-04 & 1.99 & 9.00e-05 & 1.99 & 2.26e-05 \\
+                    & $c$ & 4.52e-04 & 1.93 & 1.19e-04 & 1.96 & 3.06e-05 \\
+\hline
+Test 5:             & $c$ & 5.22e-04 & 2.01 & 1.30e-04 & 2.00 & 3.26e-05 \\
+\hline
+Test 6:             & $c$ & 3.97e-04 & 1.89 & 1.07e-04 & 1.93 & 2.81e-05 \\
+\hline
+Test 7:             & $c$ & 3.35e-04 & 1.94 & 8.76e-05 & 1.96 & 2.25e-05 \\
+\hline
+Test 8:             & $c$ & 4.57e-04 & 1.92 & 1.21e-04 & 1.96 & 3.12e-05
+\end{tabular}
+\end{center}
+\end{table}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{3D Lid-Driven Cavity Convergence Testing}
+The problem setup is exactly the same as the 2D case except that we use spatial
+resolutions of $32^3$ up to $256^3$ with coarse time step $\Delta t=1.25\times 10^{-2}$
+that still decreases by a factor of two with spatial refinement.  This corresponds
+to an advective CFL of $\sim 0.4$ at all levels and a mass diffusion CFL of
+$\sim 0.6$ for the finest resolution simulation.  We run to $t=1$ (80 coarse time steps).
+The lo-y and hi-y walls move with
+a equal an opposite diagonal velocities, such that the $x$- and $z-$ velocities on
+the hi-y walls have speeds:
+\begin{equation}
+u(x,z,t) = w(x,z,t) = 
+\begin{cases}
+\frac{1}{8}\left[1 + \sin{(2\pi x - \frac{\pi}{2}})\right]
+           \left[1 + \sin{(2\pi z - \frac{\pi}{2}})\right]
+           \left[1 + \sin{(2\pi t - \frac{\pi}{2}})\right], & t < 1\\
+\frac{1}{4}\left[1 + \sin{(2\pi x - \frac{\pi}{2}})\right]
+           \left[1 + \sin{(2\pi z - \frac{\pi}{2}})\right], & t \ge 1
+\end{cases}.
+\end{equation}
+We run Test 1 and Test 2 again.  We also run Test 1 and Test 2 with higher-order transverse
+velocity ghost cell extrapolation, since for these coarser runs (relative to the 2D runs),
+they seem to help us reach the asymptotic regime at lower resolutions.
+See Table \ref{tab:Linf_3d} for results.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{table}[h]
+\begin{center}
+\caption{Three-dimensional convergence testing refining in space and time.
+Errors and convergence rates in $L^\infty$.}
+\label{tab:Linf_3d}
+\begin{tabular}{ccccccc}
+& & 32-64 & Rate & 64-128 & Rate & 128-256 \\
+\hline
+Test 1:             & $u$ & 7.66e-03 & 1.75 & 2.27e-03 & 1.88 & 6.16e-04 \\
+                    & $v$ & 3.12e-03 & 1.96 & 8.02e-04 & 1.99 & 2.02e-04 \\
+                    & $w$ & 7.66e-03 & 1.75 & 2.27e-03 & 1.88 & 6.16e-04 \\
+                    & $c$ & 1.22e-02 & 2.00 & 3.06e-03 & 2.00 & 7.64e-04 \\
+\hline
+Test 1:             & $u$ & 2.30e-03 & 1.97 & 5.88e-04 & 2.02 & 1.45e-04 \\
+H-O Boundary Fix    & $v$ & 9.01e-04 & 2.23 & 1.92e-04 & 1.99 & 4.82e-05 \\
+                    & $w$ & 2.30e-03 & 1.97 & 5.88e-04 & 2.02 & 1.45e-04 \\
+                    & $c$ & 1.21e-02 & 1.99 & 3.05e-03 & 2.00 & 7.62e-04 \\
+\hline
+Test 2:             & $u$ & 7.67e-03 & 1.75 & 2.28e-03 & 1.89 & 6.16e-04 \\
+                    & $v$ & 3.11e-03 & 1.96 & 8.01e-04 & 1.99 & 2.02e-04 \\
+                    & $w$ & 7.67e-03 & 1.75 & 2.28e-03 & 1.89 & 6.16e-04 \\
+                    & $c$ & 9.79e-03 & 1.91 & 2.61e-03 & 1.97 & 6.68e-04 \\
+\hline
+Test 2:             & $u$ & 2.30e-03 & 1.96 & 5.89e-04 & 2.01 & 1.46e-04 \\
+H-O Boundary Fix    & $v$ & 8.90e-04 & 2.21 & 1.92e-04 & 1.99 & 4.82e-05 \\
+                    & $w$ & 2.30e-03 & 1.96 & 5.89e-04 & 2.01 & 1.46e-04 \\
+                    & $c$ & 9.70e-03 & 1.91 & 2.59e-03 & 1.96 & 6.67e-04
+\end{tabular}
+\end{center}
+\end{table}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Square Profile Advection}
+Here we compare the performance of four different advections schemes in the
+infinite Schmidt number limit in the presence of sharp discontinuities.  The problem setup
+remains the same as the lid-driven cavity convergence testing with only the following differences.
+First, the initial conditions are a constant background of $c=0$ with a square region covering
+the central 25\% of the domain initialized to $c=1$ 
+(see the top-left panel of Figure \ref{fig:square}).
+The mass diffusion is set to zero ($\chi=0$),
+and gravity acts downward with a larger magnitude, $\gb=(0,-5)$ so that the higher density
+region falls downward with time.
+We use the inertial algorithm and test the following advection schemes: (1) centered,
+(2) unlimited bilinear BDS, (3) limited bilinear BDS, (4) unlimited quadratic BDS,
+and (5) limited quadratic BDS.
+Each simulation uses $256^2$ grid cells and a fixed $\Delta t=2.5\times 10^{-3}$.  
+This corresponds to an advective CFL number of $\sim 0.6$.
+In Figure \ref{fig:square}, we show the concentration at $t=1.25$.
+Centered advection
+severely overshoots, leaving numerical ringing.  The unlimited BDS
+schemes slightly overshoot, but do not suffer from Gibbs ringing.
+The limited BDS schemes do not overshoot or undershoot.
+In fact, we run the limited quadratic BDS scheme to a longer time ($t=5$)
+and show the results in Figure \ref{fig:square2}, noting that the method does a good job in preserving
+the interface without overshoot.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}
+\begin{center}
+\includegraphics[width=2.25in]{square_init}
+\includegraphics[width=2.25in]{square_cen}\\
+\includegraphics[width=2.25in]{square_unl_b_bds}
+\includegraphics[width=2.25in]{square_lim_b_bds}\\
+\includegraphics[width=2.25in]{square_unl_q_bds}
+\includegraphics[width=2.25in]{square_lim_q_bds}
+\caption{Square profile advection with infinite Schmidt number and sharp discontinuities.
+Colorbars indicate the concentration.  The initial condition is in the top-left; the
+other images represent the final ($t=1.25$) condition:
+(Top-Right) centered advection,
+(Middle-Left) unlimited bilinear BDS,
+(Middle-Right) limited bilinear BDS,
+(Bottom-Left) unlimited quadratic BDS
+(Bottom-Right) limited quadratic BDS}
+\label{fig:square}
+\end{center}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}
+\begin{center}
+\includegraphics[width=1.9in]{square_movie1}
+\includegraphics[width=1.9in]{square_movie2}
+\includegraphics[width=1.9in]{square_movie3} \\
+\includegraphics[width=1.9in]{square_movie4}
+\includegraphics[width=1.9in]{square_movie5}
+\includegraphics[width=1.9in]{square_movie6}
+\caption{Square profile advection using the limited quadratic BDS scheme 
+at $t=0,1,2,3,4$, and $50$.}
+\label{fig:square2}
+\end{center}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{3D Kelvin-Helmholtz}
+We perform a simulation of a three-dimensional Kelvin-Helmholtz instability in order to demonstrate
+the robustness of our inertial time-advancement scheme in a deterministic setting.
+Our simulation uses $256\times 128\times 256$ computational cells with grid spacing
+$\Delta x=1/256$.  We use periodic boundary conditions on the x- and z-side walls, a 
+stationary no-slip condition on the lo-y, and a no-slip condition on hi-y wall
+but with a prescribed wall velocity of $\vb=(1,0,0)$.
+Each time step, $\Delta t$ changes in accordance with an
+advective CFL number of 0.9.  The binary mixture has a 10:1 density contrast with
+$\bar\rho_1=10$ and $\bar\rho_2=1$.  The initial condition is $c=1$ in the lower-half
+of the domain, and $c=0$ in the upper-half of the domain, so that light fluid
+sits on top of heavy fluid with a discontinuous interface.
+In order to set off the instability, 
+in a row of cells at the centerline, $c$ is initialized to a random value between 0 and 1.
+The initial momentum is set to $\rho\vb=(1,0)$ in the upper-half of
+the domain and $\rho\vb=0$ in the lower-half of the domain.
+Gravity has a magnitude of 0.1 acting in the downward y-direction.
+The mass diffusion coefficient is fixed at $\chi=10^{-6}$.
+We employ the limited bilinear BDS advection scheme to
+preserving min/max bounds on $c$ to $\mathcal O(10^{-11})$.
+Viscosity depends linearly on concentration, such that $\eta=10^{-4}$ for $c=0$ 
+and $\eta=10^{-3}$ for $c=1$ in the stress tensor,
+$\taub = \eta[\nabla\vb + (\nabla\vb)^T]$.
+Figure \ref{fig:KHLM_3D} shows a time lapse rendering of the resulting rollup.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}
+\begin{center}
+\includegraphics[width=1.9in]{KHLM_3d0}
+\includegraphics[width=1.9in]{KHLM_3d1}
+\includegraphics[width=1.9in]{KHLM_3d2}
+\includegraphics[width=1.9in]{KHLM_3d3}
+\includegraphics[width=1.9in]{KHLM_3d4}
+\includegraphics[width=1.9in]{KHLM_3d5}
+\includegraphics[width=1.9in]{KHLM_3d6}
+\includegraphics[width=1.9in]{KHLM_3d7}
+\includegraphics[width=1.9in]{KHLM_3d8}
+\caption{Kelvin-Helmholtz simulation of density at time
+         $t=0, 0.87, 1.72, 2.46, 3.16, 3.86, 4.53, 5.20$, and $5.85$ [s].
+         Density ranges from 1 (red) to 10 (blue).}\label{fig:KHLM_3D}
+\end{center}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\bibliographystyle{plain}
+\bibliography{DesignDocument}
+
+\end{document}

@@ -1,0 +1,633 @@
+%% LyX 2.0.8.1 created this file.  For more info, see http://www.lyx.org/.
+%% Do not edit unless you really know what you are doing.
+\documentclass[english,11pt,aps,letter,superscriptaddress,nofootinbib,pre]{revtex4}
+\usepackage[T1]{fontenc}
+\usepackage[latin9]{inputenc}
+\setcounter{secnumdepth}{3}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{esint}
+\PassOptionsToPackage{normalem}{ulem}
+\usepackage{ulem}
+
+\makeatletter
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
+\providecolor{lyxadded}{rgb}{1,0,0}
+\providecolor{lyxdeleted}{rgb}{0,0,1}
+%% Change tracking with ulem
+\DeclareRobustCommand{\lyxadded}[3]{{\color{lyxadded}{}#3}}
+\DeclareRobustCommand{\lyxdeleted}[3]{{\color{lyxdeleted}\sout{#3}}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Textclass specific LaTeX commands.
+\@ifundefined{textcolor}{}
+{%
+ \definecolor{BLACK}{gray}{0}
+ \definecolor{WHITE}{gray}{1}
+ \definecolor{RED}{rgb}{1,0,0}
+ \definecolor{GREEN}{rgb}{0,1,0}
+ \definecolor{BLUE}{rgb}{0,0,1}
+ \definecolor{CYAN}{cmyk}{1,0,0,0}
+ \definecolor{MAGENTA}{cmyk}{0,1,0,0}
+ \definecolor{YELLOW}{cmyk}{0,0,1,0}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
+\usepackage{ae,aecompl}
+
+%\usepackage[normalmargins,normalbib,normaltitle,normalsections,normalindent]{savetrees}
+%\usepackage[normalmargins,normalbib,normaltitle]{savetrees}
+
+\providecommand{\onlinecite}{\cite}
+\providecommand{\onlineref}{\ref}
+\providecommand{\FToth}{Fejes T\'oth}
+
+% for non-stacked fractions
+\newcommand{\sfrac}[2]{\mathchoice
+  {\kern0em\raise.5ex\hbox{\the\scriptfont0 #1}\kern-.15em/
+   \kern-.15em\lower.25ex\hbox{\the\scriptfont0 #2}}
+  {\kern0em\raise.5ex\hbox{\the\scriptfont0 #1}\kern-.15em/
+   \kern-.15em\lower.25ex\hbox{\the\scriptfont0 #2}}
+  {\kern0em\raise.5ex\hbox{\the\scriptscriptfont0 #1}\kern-.2em/
+   \kern-.15em\lower.25ex\hbox{\the\scriptscriptfont0 #2}}
+  {#1\!/#2}}
+
+\makeatletter
+\DeclareMathSizes{\@xipt}{10}{6}{5}
+\makeatother
+
+\setlength{\abovedisplayskip}{0.25ex}\setlength{\belowdisplayskip}{0.25ex}\setlength{\abovedisplayshortskip}{0.1ex}\setlength{\belowdisplayshortskip}{0.1ex}
+
+\makeatother
+
+\usepackage{babel}
+\begin{document}
+\global\long\def\V#1{\boldsymbol{#1}}
+\global\long\def\M#1{\boldsymbol{#1}}
+\global\long\def\Set#1{\mathbb{#1}}
+
+
+\global\long\def\D#1{\Delta#1}
+\global\long\def\d#1{\delta#1}
+
+
+\global\long\def\norm#1{\left\Vert #1\right\Vert }
+\global\long\def\abs#1{\left|#1\right|}
+
+
+\global\long\def\grad{\M{\nabla}}
+\global\long\def\avv#1{\langle#1\rangle}
+\global\long\def\av#1{\left\langle #1\right\rangle }
+
+
+\global\long\def\myhalf{\sfrac{1}{2}}
+\global\long\def\mythreehalves{\sfrac{3}{2}}
+
+
+
+\title{Fluctuating Hydrodynamics of Isothermal Reactive Binary Mixtures}
+
+\maketitle
+
+\section{Compressible Equations}
+
+The starting point of our investigations is the system of isothermal
+compressible equations of fluctuating hydrodynamics for the density
+$\rho(\V r,t)$, velocity $\V v(\V r,t)$, and mass concentration
+$c(\V r,t)$ for a mixture of two fluids, A and B, in $d$ dimensions.
+The two components undergo a chemical reaction
+\[
+\nu_{1}^{+}A+\nu_{2}^{+}B\leftrightarrow\nu_{1}^{-}A+\nu_{2}^{-}B
+\]
+The standard stochiometric coefficients are $\V{\nu}=\V{\nu}^{-}-\V{\nu}^{+}$
+(negative for reactants), and mass conservation requires that $\nu_{1}m_{1}+\nu_{2}m_{2}=0$,
+where $\V m$ are the molecular masses. For a binary reaction we can
+think of the effective reaction as
+\[
+\left(\nu_{1}^{+}-\nu_{1}^{-}\right)A\leftrightarrow\left(\nu_{2}^{-}-\nu_{2}^{+}\right)B\quad\equiv\quad\left(-\nu_{1}\right)A\leftrightarrow\nu_{2}B.
+\]
+
+
+In a nonlinear Langevin FHD formalism for multispecies reactive mixtures
+\cite{MultispeciesChemistry,GENERIC_Chemical}, the additional contribution
+to the mass density equation from this reaction can be written in
+the form (in the kinetic or Klimontovich interpretation \cite{KineticStochasticIntegral_Ottinger})
+{[}Donev: In \textbf{\cite{MultispeciesChemistry}} we used a reaction
+time and some other prefactors instead of a rate, but it is all just
+irrelevant constants for our purpose.{]}
+\begin{align}
+\left(\partial_{t}\V{\rho}\right)_{\text{react}} & =\left(\V{\nu}\odot\V m\right)\left[-r\tilde{\mathcal{A}}+\left(2r\frac{\tilde{\mathcal{A}}}{\mathcal{A}}\right)^{\frac{1}{2}}\diamond\check{\mathcal{W}}\right],\label{eq:GENERIC}
+\end{align}
+where $\odot$ denote element-wise product and $r\left(P,T\right)$
+is a reaction rate parameter assumed to be independent of the composition.
+The expression in the square brackets is the number flux. The nonlinear
+expression 
+\[
+\tilde{\mathcal{A}}=\exp\left(\sum_{k}\tilde{\mu}_{k}^{-}\right)-\exp\left(\sum_{k}\tilde{\mu}_{k}^{+}\right)=\left(\prod_{k}e^{\tilde{\mu}_{k}^{-}}-\prod_{k}e^{\tilde{\mu}_{k}^{+}}\right),
+\]
+is related to the reaction \emph{affinity} 
+\[
+\mathcal{A}=\sum_{k}\tilde{\mu}_{k}^{-}-\sum_{k}\tilde{\mu}_{k}^{+}=\left(k_{B}T\right)^{-1}\sum_{k}\nu_{k}m_{k}\mu_{k}.
+\]
+Here $\tilde{\mu}_{k}^{\pm}=\left(k_{B}T\right)^{-1}\nu_{k}^{\pm}m_{k}\mu_{k}$
+are related to the (mass-density-based) chemical potentials $\mu_{k}$.
+Note that the variance of the stochastic forcing in this nonlinear
+Langevin equation can be seen to be positive because $\tilde{\mathcal{A}}$
+and $\mathcal{A}$ always have the same sign \cite{GENERIC_Chemical}.
+
+Note that both $\mathcal{A}$ and $\tilde{\mathcal{A}}$ are equal
+to zero at chemical equilibrium. If we linearize (\ref{eq:GENERIC})
+around a steady state to first order in the affinity $\mathcal{A}$,
+then we can alternatively write the noise term as a sum over the forward
+and the reverse reaction
+\begin{equation}
+\mbox{variance}\sim2\frac{\tilde{\mathcal{A}}}{\mathcal{A}}\approx\exp\left(\sum_{k}\tilde{\mu}_{k}^{+}\right)+\exp\left(\sum_{k}\tilde{\mu}_{k}^{-}\right),\label{eq:linearized}
+\end{equation}
+which is nonlinear and evidently positive. This is the form found
+in most works on the subject \cite{KeizerBook,NonEqThermo_Bedeaux,FluctuatingReactionDiffusion,LLNS_ReactionDiffusion,LLNS_ReactionDiffusion2},
+and when applied to a nonlinear setting it gives the CLE \cite{MultispeciesChemistry},
+\begin{align}
+\left(\partial_{t}\V{\rho}\right)_{\text{react}}= & \left(\V{\nu}\odot\V m\right)r\left(\prod_{k}e^{\tilde{\mu}_{k}^{+}}-\prod_{k}e^{\tilde{\mu}_{k}^{-}}\right)\label{eq:CLE}\\
++ & \left(\V{\nu}\odot\V m\right)r^{\frac{1}{2}}\left[\left(\prod_{k}e^{\tilde{\mu}_{k}^{-}/2}\right)\check{\mathcal{W}}^{-}+\left(\prod_{k}e^{\tilde{\mu}_{k}^{+}/2}\right)\check{\mathcal{W}}^{+}\right].\nonumber 
+\end{align}
+In the linearized setting at thermodynamic equilibrium the LME (\ref{eq:GENERIC})
+and (\ref{eq:CLE}) are indistinguishable, but they are different
+in the nonlinear setting even at equilibrium, as well as in the linearized
+setting outside of equilibrium \cite{MultispeciesChemistry}.
+
+For a binary mixture, we have that affinity is related to the reduced
+chemical potential of the mixture $\mu$ as used in \cite{LowMachExplicit},
+\[
+\mathcal{A}=\left(k_{B}T\right)^{-1}\left(\nu_{1}m_{1}\mu_{1}+\nu_{2}m_{2}\mu_{2}\right)=\left(k_{B}T\right)^{-1}\nu_{1}m_{1}\left(\mu_{1}-\mu_{2}\right)=\left(k_{B}T\right)^{-1}\nu_{1}m_{1}\mu.
+\]
+We also have that at equilibrium $\tilde{\mathcal{A}}=0$ which gives
+\[
+\exp\left(\sum_{k}\tilde{\mu}_{k}^{+}\right)+\exp\left(\sum_{k}\tilde{\mu}_{k}^{-}\right)=2\exp\left(\sum_{k}\tilde{\mu}_{k}^{+}\right)=2\exp\left(\sum_{k}\tilde{\mu}_{k}^{-}\right)=2\Upsilon,
+\]
+i.e., close to equilibrium $\tilde{\mathcal{A}}\approx\Upsilon\mathcal{A}$
+where $\Upsilon$ is a constant, i.e., the nonlinear and linear affinities
+are equivalent up to a constant. Therefore, if we redefine the chemical
+rate as $\kappa=\nu_{1}^{2}m_{1}^{2}\left(k_{B}T\right)^{-1}r\Upsilon$,
+near equilibrium we have that 
+\begin{align}
+\left(\partial_{t}\rho_{1}\right)_{\text{react}}^{\text{eq}} & \approx\nu_{1}m_{1}\left[-r\Upsilon\mathcal{A}+\left(2r\Upsilon\right)^{\frac{1}{2}}\check{\mathcal{W}}\right]=-\kappa\mu+\left(2\kappa k_{B}T\right)^{\frac{1}{2}}\check{\mathcal{W}}.\label{eq:LinearizedChemistry}
+\end{align}
+This matches the expressions derived by Grossman from equilibrium
+fluctuation-dissipation balance \cite{FluctChemistry_Grossmann},
+and will be useful for the linearized analysis performed later.
+
+In terms of mass and momentum densities the equations can be written
+as conservation laws \cite{OttingerBook,FluctHydroNonEq_Book,LowMachExplicit},
+\begin{align}
+\partial_{t}\rho+\grad\cdot\left(\rho\V v\right)= & \;0\nonumber \\
+\partial_{t}\left(\rho\V v\right)+\grad\cdot\left(\rho\V v\V v^{T}\right)= & -\grad P+\grad\cdot\left[\eta\left(\grad\V v+\grad^{T}\V v\right)+\M{\Sigma}\right]+\rho\V g\nonumber \\
+\partial_{t}\left(\rho_{1}\right)+\grad\cdot\left(\rho_{1}\V v\right)= & \grad\cdot\left[\rho\chi\left(\grad c+K_{P}\grad P\right)+\M{\Psi}\right]+\left(\partial_{t}\rho_{1}\right)_{\text{react}},\label{LLNS_primitive}
+\end{align}
+where $\rho_{1}=\rho c$ is the density of the first component, $\rho_{2}=(1-c)\rho$
+is the density of the second component, $P(\rho,c;T)$ is the equation
+of state for the pressure at the reference temperature $T=T_{0}=\mbox{const.}$,
+and $\V g$ is the gravitational acceleration. Here we neglected bulk
+viscosity since this is not expected to enter in the low Mach limit.
+The shear viscosity $\eta$, bulk viscosity $\kappa$, mass diffusion
+coefficient $\chi$, reaction rate $r$, and baro-diffusion coefficient
+$K_{P}$, in general, depend on the state. 
+
+The capital Greek letters denote stochastic momentum and mass fluxes
+that are formally modeled as \cite{LLNS_Staggered} 
+\begin{align}
+\M{\Sigma}=\sqrt{\eta k_{B}T}\left(\M{\mathcal{W}}+\M{\mathcal{W}}^{T}\right)\mbox{ and } & \M{\Psi}=\sqrt{2\chi\rho\mu_{c}^{-1}k_{B}T}\;\widetilde{\M{\mathcal{W}}},\label{stoch_flux_covariance}
+\end{align}
+where $k_{B}$ is Boltzmann's constant, and $\M{\mathcal{W}}(\V r,t)$
+and $\widetilde{\M{\mathcal{W}}}(\V r,t)$ are standard zero mean,
+unit variance random Gaussian tensor and vector fields with uncorrelated
+components,
+\[
+\avv{\mathcal{W}_{ij}(\V r,t)\mathcal{W}_{kl}(\V r^{\prime},t')}=\delta_{ik}\delta_{jl}\;\delta(t-t^{\prime})\delta(\V r-\V r^{\prime}),
+\]
+and similarly for $\widetilde{\M{\mathcal{W}}}$.
+
+
+\subsection{Thermodynamic Identities}
+
+The various coefficients appearing in the equations are not unrelated
+to each other. Let us define the following coefficients, which can
+be taken as arbitrary:
+\begin{eqnarray*}
+c_{T}^{2} & = & \left(\partial P/\partial\rho\right)_{c}\quad\text{(isothermal speed of sound)}\\
+\mu_{c} & = & \left(\partial\mu/\partial c\right)_{P}\quad\text{(second derivative of Gibbs free energy)}\\
+\beta & = & \frac{1}{\rho}\left(\frac{\partial\rho}{\partial c}\right)_{P}\quad\text{(solutal expansion coefficient)}.
+\end{eqnarray*}
+Thermodynamics then gives expressions for all other derivatives and
+coefficients in terms of these three coefficients, which depend on
+the type of fluid under consideration.
+
+First, we have the Maxwell identity \cite{Landau:StatPhys1}
+\begin{equation}
+\left(\frac{\partial\mu}{\partial P}\right)_{c}=-\frac{1}{\rho^{2}}\left(\frac{\partial\rho}{\partial c}\right)_{P}=-\frac{\beta}{\rho}.\label{eq:MaxwellId}
+\end{equation}
+The baro-diffusion coefficient $K_{P}$ is not a transport coefficient
+but rather determined from thermodynamics via (\ref{eq:MaxwellId}),
+\begin{equation}
+K_{P}=\frac{\left(\partial\mu/\partial P\right)_{c}}{\left(\partial\mu/\partial c\right)_{P}}=-\rho^{-2}\frac{\left(\partial\rho/\partial c\right)_{P}}{\left(\partial\mu/\partial c\right)_{P}}=-\frac{\beta}{\rho\mu_{c}}.\label{eq:K_P}
+\end{equation}
+
+
+We will now use the mathematical identities for derivatives in the
+presence of an EOS constraint relating three variables (in our case
+$\rho$, $c$ and $P$), $z=z(x,y)$ and $w=w(x,y)$,
+\[
+\left(\frac{\partial x}{\partial y}\right)_{z}=-\left(\frac{\partial x}{\partial z}\right)_{y}\left(\frac{\partial z}{\partial y}\right)_{x}
+\]
+\[
+\left(\frac{\partial z}{\partial x}\right)_{w}=\left(\frac{\partial z}{\partial x}\right)_{y}+\left(\frac{\partial z}{\partial y}\right)_{x}\left(\frac{\partial y}{\partial x}\right)_{w},
+\]
+which follow from the chain rule. From these and (\ref{eq:MaxwellId})
+we can derive
+\[
+\left(\frac{\partial P}{\partial c}\right)_{\rho}=-\left(\frac{\partial P}{\partial\rho}\right)_{c}\left(\frac{\partial\rho}{\partial c}\right)_{P}=\beta\rho c_{T}^{2}
+\]
+
+
+\[
+\left(\frac{\partial\mu}{\partial c}\right)_{\rho}=\left(\frac{\partial\mu}{\partial c}\right)_{P}+\left(\frac{\partial\mu}{\partial P}\right)_{c}\left(\frac{\partial P}{\partial c}\right)_{\rho}=\mu_{c}+\beta^{2}c_{T}^{2},
+\]
+and, using the standard chain rule in one variable and (\ref{eq:MaxwellId}),
+\[
+\left(\frac{\partial\mu}{\partial\rho}\right)_{c}=\left(\frac{\partial\mu}{\partial P}\right)_{c}\left(\frac{\partial P}{\partial\rho}\right)_{c}=-\frac{\beta c_{T}^{2}}{\rho}.
+\]
+These will be crucial in the linearized analysis to follow.
+
+
+\subsection{Linearized Analysis}
+
+Some of the most important quantities predicted by the fluctuating
+hydrodynamics equations are the equilibrium structure factors (static
+covariances) of the fluctuating fields. These can be obtained by linearizing
+the compressible equations (\ref{LLNS_primitive}) around a uniform
+reference state, $\rho=\rho_{0}+\d{\rho}$, $c=c_{0}+\d c$, $\V v=\d{\V v}$,
+$P=P_{0}+\d P$, $\mu=\mu_{0}+\d{\mu}$, where 
+\begin{eqnarray}
+\d P & = & \left(\frac{\partial P}{\partial\rho}\right)_{c}\left(\d{\rho}\right)+\left(\frac{\partial P}{\partial c}\right)_{\rho}\left(\d c\right)=c_{T}^{2}\left(\d{\rho}\right)-\beta\rho c_{T}^{2}\left(\d c\right),\nonumber \\
+\delta\mu & = & \left(\frac{\partial\mu}{\partial\rho}\right)_{c}\left(\d{\rho}\right)+\left(\frac{\partial\mu}{\partial c}\right)_{\rho}\left(\d c\right)=-\frac{\beta c_{T}^{2}}{\rho}\left(\d{\rho}\right)+\left(\mu_{c}+\beta^{2}c_{T}^{2}\right)\left(\d c\right).\label{eq:dmu_isothermal}
+\end{eqnarray}
+Using the linearized form of the chemical production (\ref{eq:LinearizedChemistry}),
+we get the linearized equations at thermodynamic equilibrium {[}\textbf{Donev:
+I did not add subscripts zero here for the base state}{]}:
+\begin{align}
+\partial_{t}\left(\d{\rho}\right)= & -\rho\grad\cdot\V v\nonumber \\
+\partial_{t}\left(\d{\V v}\right)= & -\frac{c_{T}^{2}}{\rho}\grad\left(\d{\rho}\right)+\beta c_{T}^{2}\grad\left(\d c\right)+\nu\grad\cdot\left(\grad\left(\d{\V v}\right)+\grad^{T}\left(\d{\V v}\right)\right)+\sqrt{\nu\rho^{-1}k_{B}T}\,\grad\cdot\left(\M{\mathcal{W}}+\M{\mathcal{W}}^{T}\right)\nonumber \\
+\partial_{t}\left(\d c\right)= & \chi\grad^{2}\left(\d c\right){\color{magenta}-\frac{\chi\beta}{\rho\mu_{c}}\left(c_{T}^{2}\grad^{2}\left(\d{\rho}\right)-\beta\rho c_{T}^{2}\grad^{2}\left(\d c\right)\right)}+\sqrt{2\chi\rho^{-1}\mu_{c}^{-1}k_{B}T}\;\grad\cdot\widetilde{\M{\mathcal{W}}}\label{eq:LinearizedCompressible}\\
+ & {\color{red}-\frac{\kappa}{\rho}\left(-\frac{\beta c_{T}^{2}}{\rho}\left(\d{\rho}\right)+\left(\mu_{c}+\beta^{2}c_{T}^{2}\right)\left(\d c\right)\right)}+\left(2\kappa\rho^{-2}k_{B}T\right)^{\frac{1}{2}}\check{\mathcal{W}},\nonumber 
+\end{align}
+where the (rather non-trivial!) deterministic barodiffusion terms
+are shown in magenta and the reactive terms are shown in red.
+
+Owing to fluctuation-dissipation balance the static structure factors
+are independent of the wavevector $\V k$ at thermodynamic equilibrium,
+\begin{eqnarray}
+S_{\rho,\rho}\left(\V k\right)= & \av{\left(\widehat{\d{\rho}}\right)\left(\widehat{\d{\rho}}\right)^{\star}} & =\frac{\rho_{0}k_{B}T_{0}}{c_{T}^{2}}+\beta^{2}\frac{\rho_{0}k_{B}T_{0}}{\mu_{c}}\nonumber \\
+\M S_{\V v,\V v}\left(\V k\right)= & \av{(\widehat{\delta\V v})(\widehat{\d{\V v}})^{\star}} & =\rho_{0}^{-1}k_{B}T_{0}\,\M I\nonumber \\
+S_{c,c}\left(\V k\right)= & \av{\left(\widehat{\d c}\right)\left(\widehat{\d c}\right)^{\star}} & =\frac{k_{B}T_{0}}{\rho_{0}\mu_{c}}.\label{eq:S_equilibrium}
+\end{eqnarray}
+Note that density fluctuations do not vanish even in the incompressible
+limit $c_{T}\rightarrow\infty$ unless $\beta=0$.
+
+
+\subsection{Dimerization reaction for $\beta=0$}
+
+Let us first take the supposedly easy case of $\beta=0$, i.e., $\rho=\text{const.}$
+independent of concentration. In this case the momentum and density
+equations decouple from the concentration equation in the linearization,
+and we get the single reaction-diffusion equation for the concentration,
+\begin{eqnarray}
+\partial_{t}\left(\d c\right) & = & \chi\grad^{2}\left(\d c\right)+\sqrt{2\chi\rho^{-1}\mu_{c}^{-1}k_{B}T}\;\grad\cdot\widetilde{\M{\mathcal{W}}}\nonumber \\
+ &  & -\frac{\kappa}{\rho}\mu_{c}\left(\d c\right)+\left(2\kappa\rho^{-2}k_{B}T\right)^{\frac{1}{2}}\check{\mathcal{W}}.\label{eq:beta_zero}
+\end{eqnarray}
+This equation is thermodynamically consistent, because both reaction
+and diffusion are separately consistent with $S_{c,c}=k_{B}T/\left(\rho\mu_{c}\right)$.
+However, notice that in the chemical reaction rate what enters is
+$\mu_{c}$; in particular, we see that the reaction part of the linearized
+equation must be written as
+\begin{equation}
+\partial_{t}\left(\d c\right)_{\text{react}}=-r\left(\d c\right)+\sqrt{2\frac{k_{B}T}{\rho\mu_{c}}r}\,\check{\mathcal{W}},\label{eq:react_diff_thermo}
+\end{equation}
+for some constant $r$ in order to be thermodynamically consistent.
+
+In the compressible chemistry paper \cite{MultispeciesChemistry}
+we considered a dimerization reaction $2A\leftrightarrow A_{2}$ in
+an ideal gas mixture, $m_{1}=m$ and $m_{2}=2m$. But, note that for
+an ideal gas mixture, it is \emph{not} true that $\beta=0$. For an
+ideal gas, we took $n_{0}=\rho/m=\rho_{1}/m_{1}+2\rho_{2}/m_{2}=n_{1}+2n_{2}$,
+the total number density of A particles contained in both monomers
+and dimers, to be spatially constant in the reaction-diffusion approximation.
+This is identical to taking density to be constant consistent with
+our assumption $\beta=0$, giving
+\begin{eqnarray*}
+n_{0} & = & n_{1}+2n_{2}=\text{const.}
+\end{eqnarray*}
+For an ideal mixture (not necessarily an ideal gas, we have
+\[
+\mu_{c}=\frac{k_{B}T}{c\left(1-c\right)\left[cm_{2}+\left(1-c\right)m_{1}\right]}=\frac{k_{B}T}{mc\left(1-c^{2}\right)}.
+\]
+
+
+
+\subsubsection{Number-density based LMA}
+
+Assume now that we use the usual law of mass action and take the chemical
+production to be given by (the noise here is chosen to follow the
+CLE form but this is not important in the linearization)
+\begin{equation}
+\left(\partial_{t}c\right)_{\text{react}}=-2\frac{m_{1}}{\rho}\left(k^{+}n_{1}^{2}-k^{-}n_{2}\right)+2\frac{m_{1}}{\rho}\left(k^{+}n_{1}^{2}+k^{-}n_{2}\right)^{\frac{1}{2}}\check{\mathcal{W}}.\label{eq:LMA_n}
+\end{equation}
+If we now eliminate $n_{2}$ in terms of $n_{1}$, and express the
+result back in terms of mass fraction, and set the deterministic term
+to zero when $c=c_{0}$, we get that the forward rate should be
+\[
+k^{+}=\frac{k^{-}}{n_{0}}\frac{1-c_{0}}{2c_{0}^{2}}.
+\]
+If we now linearize the reaction around $c_{0}$, we get
+\begin{equation}
+\partial_{t}\left(\d c\right)_{\text{react}}=-\frac{c_{0}\left(2-c_{0}\right)}{c_{0}^{2}}k^{-}\left(\d c\right)+\left(\frac{4\left(1-c_{0}\right)}{n_{0}}k^{-}\right)^{\frac{1}{2}}\check{\mathcal{W}}.\label{eq:LMA_dimer_n}
+\end{equation}
+
+
+But the LMA equation (\ref{eq:LMA_dimer_n}) is \emph{not} of the
+required form (\ref{eq:react_diff_thermo}). For this to be true we
+require that
+\[
+\frac{\frac{c_{0}\left(2-c_{0}\right)}{c_{0}^{2}}k^{-}}{\frac{4\left(1-c_{0}\right)}{n_{0}}k^{-}}=\frac{n_{0}\left(2-c_{0}\right)}{4c_{0}(1-c_{0})}\overset{?}{=}\frac{\rho\mu_{c}}{2k_{B}T}=\frac{n_{0}}{2c_{0}\left(1-c_{0}^{2}\right)},
+\]
+which is not true for general $c_{0}$. In particular, for $c_{0}=1/2$,
+which is the case we studied in \cite{MultispeciesChemistry}, we
+get $3/2\neq4/3$. This means that the law of mass action kinetics
+assumed is not consistent with thermodynamics, even in the compressible
+case, if we take $\beta=0$! In particular, the LMA formulation (\ref{eq:LMA_dimer_n})
+for $c_{0}=1/2$ combined with diffusion gives
+\[
+\partial_{t}\left(\d c\right)=\chi\grad^{2}\left(\d c\right)+\sqrt{2\chi\left(\frac{3}{8n_{0}}\right)}\;\grad\cdot\widetilde{\M{\mathcal{W}}}-3k^{-}\left(\d c\right)+\sqrt{\frac{2k^{-}}{n_{0}}}\,\check{\mathcal{W}},
+\]
+which gives the non-constant structure factor (see identical formula
+in (34) in\cite{MultispeciesChemistry}) 
+\[
+S(k)=\frac{3}{8n_{0}}\frac{8/9+k^{2}d^{2}}{1+k^{2}d^{2}},
+\]
+where the penetration depth is $d^{2}=\chi/\left(3k^{-}\right)$.
+
+
+\subsubsection{Mole-fraction based LMA}
+
+As shown in Eq. (18) in \cite{MultispeciesChemistry}, the correct
+formulation of the LMA for general ideal mixtures (not necessarily
+ideal gas) uses \emph{mole fractions} and not number densities. This
+gives the CLE, with $n=n_{1}+n_{2}$,
+\begin{equation}
+\left(\partial_{t}c\right)_{\text{react}}=-2\frac{m_{1}}{\rho}\left(k^{+}\left(\frac{n_{1}}{n}\right)^{2}-k^{-}\frac{n_{2}}{n}\right)+2\frac{m_{1}}{\rho}\left(k^{+}\left(\frac{n_{1}}{n}\right)^{2}+k^{-}\frac{n_{2}}{n}\right)^{\frac{1}{2}}\check{\mathcal{W}}.\label{eq:LMA_mole}
+\end{equation}
+Repeating the calculation now gives
+\[
+k^{+}=\frac{k^{-}}{n_{0}}\frac{1-c_{0}^{2}}{2c_{0}^{2}},
+\]
+and a linearized equation with reactive part 
+\begin{equation}
+\partial_{t}\left(\d c\right)_{\text{react}}=-\frac{4}{n_{0}c_{0}\left(1+c_{0}\right)^{2}}k^{-}\left(\d c\right)+\left(\frac{8\left(1-c_{0}\right)}{n_{0}^{2}\left(1+c_{0}\right)}k^{-}\right)^{\frac{1}{2}}\check{\mathcal{W}}.\label{eq:LMA_dimer_mole}
+\end{equation}
+This mole-fraction-based LMA equation (\ref{eq:LMA_dimer_n}) \emph{is}
+of the required form (\ref{eq:react_diff_thermo}), since
+\[
+\frac{\frac{4}{n_{0}c_{0}\left(1+c_{0}\right)^{2}}k^{-}}{\frac{8\left(1-c_{0}\right)}{n_{0}^{2}\left(1+c_{0}\right)}k^{-}}=\frac{n_{0}}{2c_{0}\left(1-c_{0}^{2}\right)}=\frac{\rho\mu_{c}}{2k_{B}T},
+\]
+and now everything is thermodynamically consistent and the structure
+factor is flat.
+
+
+
+
+\section{Low Mach Equations}
+
+The asymptotic low Mach analysis of (\ref{LLNS_primitive}) is standard
+{[}\textbf{Donev: Not really, we don't actually know how to precisely
+derive these equations with barodiffusion included...}{]} and follows
+the procedure outlined in Ref. \cite{IncompressibleLimit_Majda},
+formally treating the stochastic forcing as smooth. This analysis
+leads to the \emph{isothermal reactive low Mach number} equations
+for a binary mixture of fluids in conservation form,
+\begin{align}
+\partial_{t}\rho+\grad\cdot\left(\rho\V v\right)= & 0\label{eq:rho_eq}\\
+\partial_{t}\left(\rho\V v\right)+\nabla\pi=-\grad\cdot\left(\rho\V v\V v^{T}\right) & +\grad\cdot\left[\eta\left(\grad\V v+\grad^{T}\V v\right)+\M{\Sigma}\right]+\rho\V g\label{eq:momentum_eq}\\
+\partial_{t}\left(\rho_{1}\right)=-\grad\cdot\left(\rho_{1}\V v\right)+ & \grad\cdot\V F+\left(\partial_{t}\rho_{1}\right)_{\text{react}}^{P_{0}}\label{eq:rho1_eq}\\
+\mbox{such that }\grad\cdot\V v= & -\left(\rho^{-1}\beta\right)\,\grad\cdot\V F,\label{eq:div_v_constraint}
+\end{align}
+where the non-advective (diffusive and stochastic) fluxes are denoted
+with
+\[
+\V F=\rho\chi\grad c+\M{\Psi}.
+\]
+The gradient of the non-thermodynamic component of the pressure $\pi$
+(Lagrange multiplier) appears in the momentum equation as a driving
+force that ensures the EOS constraint (\ref{eq:div_v_constraint})
+is obeyed. The superscript $P_{0}$ on the reactive term means here
+that the activities need to be evaluated at constant pressure.
+
+In this work we consider a specific linear EOS, 
+\begin{equation}
+\frac{\rho_{1}}{\bar{\rho}_{1}}+\frac{\rho_{2}}{\bar{\rho}_{2}}=\frac{c\rho}{\bar{\rho}_{1}}+\frac{(1-c)\rho}{\bar{\rho}_{2}}=1,\label{eq:EOS_quasi_incomp}
+\end{equation}
+where $\bar{\rho}_{1}$ and $\bar{\rho}_{2}$ are the densities of
+the pure component fluids ($c=1$ and $c=0$, respectively), giving
+\begin{equation}
+\beta=\rho\left(\frac{1}{\bar{\rho}_{2}}-\frac{1}{\bar{\rho}_{1}}\right)=\frac{\bar{\rho}_{1}-\bar{\rho}_{2}}{c\bar{\rho}_{2}+(1-c)\bar{\rho}_{1}}.\label{eq:beta_simple}
+\end{equation}
+It is important that for this specific form of the EOS $\beta/\rho$
+is a material constant independent of the concentration. The density
+dependence (\ref{eq:beta_simple}) on concentration arises if one
+assumes that the two fluids do not change volume upon mixing.
+
+
+\subsection{Linearized Analysis}
+
+We now examine the spatio-temporal correlations of the steady-state
+fluctuations in the low Mach number equations (\ref{eq:momentum_eq},\ref{eq:rho1_eq},\ref{eq:div_v_constraint},\ref{eq:rho_eq}).
+Note that a density gradient will accompany a concentration gradient,
+and this can introduce some additional terms in $\V F$ depending
+on how $\rho\chi$ depends on concentration. For simplicity, we assume
+$\rho\chi$ is a constant so that the diffusive term $\grad\cdot\V F$
+in (\ref{eq:rho1_eq}) is simply $\rho\chi\grad^{2}c$. We also assume
+the viscosity $\eta$ is spatially constant.
+
+Because we are evaluating things at constant pressure, the activity,
+which for the binary mix is the same as the chemical potential (really
+difference of chemical potentials), can be linearized as
+\begin{equation}
+\delta\mu=\left(\frac{\partial\mu}{\partial c}\right)_{P}\left(\d c\right)=\mu_{c}\left(\d c\right),\label{eq:dmu_isobaric}
+\end{equation}
+which no longer contains $\beta$ or $c_{T}$; this is identical to
+(\ref{eq:dmu_isothermal}) but using the fact that $\rho=\rho(c)$
+is given by (\ref{eq:EOS_quasi_incomp}) and therefore $\delta\rho=\rho\beta\,\delta c$
+. We thus obtain the simplified linearized reactive low Mach equations,
+\begin{align}
+\partial_{t}\left(\d{\V v}\right)= & -\rho^{-1}\grad\pi+\nu\grad^{2}\left(\d{\V v}\right)+\sqrt{\nu\rho^{-1}k_{B}T}\,\grad\cdot\left(\M{\mathcal{W}}+\M{\mathcal{W}}^{T}\right)\nonumber \\
+\partial_{t}\left(\d c\right)= & \chi\grad^{2}\left(\d c\right)+\sqrt{2\chi\rho^{-1}\mu_{c}^{-1}k_{B}T}\;\grad\cdot\widetilde{\M{\mathcal{W}}}\nonumber \\
+ & {\color{red}-\frac{\kappa}{\rho}\mu_{c}\left(\d c\right)+\left(2\kappa\rho^{-2}k_{B}T\right)^{\frac{1}{2}}\check{\mathcal{W}}}\nonumber \\
+\grad\cdot\left(\d{\V v}\right)= & -\beta\partial_{t}\left(\d c\right).\label{eq:simpl_primitive_eqs}
+\end{align}
+
+
+Observe that the concentration equation is uncoupled from the velocity
+equation, and is \emph{identical} to (\ref{eq:beta_zero}), i.e.,
+to the full compressible equation with $\beta=0$. Therefore, it is
+thermodynamically consistent in the sense that it will give the expected
+structure factor for concentration even in the presence of reactions.
+Specifically, it gives the following dynamic and static structure
+factors:
+\begin{equation}
+S_{c,c}\left(\V k,\omega\right)=\frac{2k_{B}T\,\left(\chi\,{k}^{2}\rho+\kappa\,\mu_{{c}}\right)}{\left({\kappa}^{2}{\mu_{{c}}}^{2}+2\,\chi\,{k}^{2}\kappa\,\rho\,\mu_{{c}}+{\rho}^{2}\left({\chi}^{2}{k}^{4}+{\omega}^{2}\right)\right)\mu_{{c}}}\label{eq:S_kw_c_LM}
+\end{equation}
+\[
+S_{c,c}\left(\V k\right)=\frac{1}{2\pi}\int_{\infty}^{\infty}S_{c,c}\left(\V k,\omega\right)d\omega=\frac{k_{B}T}{\rho\mu_{c}}.
+\]
+
+
+
+\subsection{The Bad News: Low Mach Limit?}
+
+The only bad news is that it is still unclear how to go from the full
+compressible equations to the low Mach equations. I computed the dynamic
+structure factor from the full compressible equations and got a very
+complicated expression that contained $\beta$ and $\mu_{c}$ and
+$c_{T}$ in nontrivial ways. This seems to contradict a statement
+in Appendix A in \cite{LowMachExplicit} where we claim that our low
+Mach equations give the same result for $S_{c,c}\left(\V k,\omega\right)$
+as the full compressible equations. I am not sure where we got that
+statement and whether some approximations were involved.
+
+I was able to get the much simpler result (\ref{eq:S_kw_c_LM}) by
+taking the following limit:
+\begin{eqnarray*}
+c_{T} & \rightarrow & \infty\\
+\mu_{c} & = & C\, c_{T}^{2}\\
+\kappa\mu_{c} & = & K,
+\end{eqnarray*}
+where $C$ and $K$ are some (finite) constants. This limit is somewhat
+sensible, in that for a binary mixture we know that $\mu_{c}\sim c_{T}^{2}\sim k_{B}T/m$,
+where $m$ is a typical molecular mass. Recall also the thermodynamic
+relation
+\[
+\left(\frac{\partial\mu}{\partial c}\right)_{\rho}=\mu_{c}+\beta^{2}c_{T}^{2}.
+\]
+
+
+A better way to justify the limit would be to think a bit more about
+what it means physically. Physically, $c_{T}$ and $\mu_{c}$ are
+constants and don't go to infinity. Instead, what we are assuming
+here is that $k$ and $\omega$ are such that the two side Brillouin
+peaks are far separated from the central peak. Perhaps there is an
+additional assumption that the peaks are also in some sense narrow.
+I am not really sure how to make it precise and how to connect $\mu_{c}$
+back into it, since the side peaks depend on $c_{T}$ only and not
+on $\mu_{c}$.
+
+
+
+
+\subsection{Nonlinear Formulation of Chemistry}
+
+To go beyond the linearized equations and still be consistent with
+a traditional LMA we need to use the full formalism described in \cite{MultispeciesChemistry},
+and use tau-leaping/SSA with forward/backward reaction rate (see (\ref{eq:CLE}))\textcolor{red}{
+\[
+r^{\pm}=r\left(P,T\right)\prod_{k}e^{\tilde{\mu}_{k}^{\pm}},
+\]
+}which we can convert this into the more standard LMA form based on
+mole fractions (but \emph{not} number densities, as explained above)
+\cite{MultispeciesChemistry}. Specifically, general multispecies
+mixtures, we can express chemical potentials as a sum of ideal and
+excess contributions, \textcolor{red}{
+\[
+\mu_{k}\left(\V x,T,P\right)=\left(\mu_{k}^{0}\left(T,P\right)+\frac{k_{B}T}{m_{k}}\ln\left(x_{k}\right)\right)+\frac{k_{B}T}{m_{k}}\ln\left(\gamma_{k}\right),
+\]
+}where $\mu_{k}^{0}\left(T,P\right)$ is a reference chemical potential
+(e.g., pure liquid state at standard conditions), and $\gamma_{k}\left(\V x,T,P\right)$
+is the activity coefficient of species $k$; for an ideal mixture
+$\gamma_{k}=1$. In the low Mach number setting we consider here,
+the chemical potentials depends on pressure \emph{only} through the
+reference state. This is always true for an ideal mixture, but may
+be assumed more generally so long as the activities only depend on
+composition and \emph{not} on pressure.
+
+For chemistry it is more convenient to work with a dimensionless chemical
+potential per particle, 
+\[
+\hat{\mu}_{s}=\frac{m_{s}\mu_{s}}{k_{B}T}=\ln(x_{s}\gamma_{s})+\hat{\mu}_{s}^{o},
+\]
+where $\hat{\mu}_{s}^{o}=(m_{s}\mu_{s}^{o})/(k_{B}T)$, and $x_{s}\gamma_{s}$
+is the activity (i.e., effective concentration). This gives 
+\[
+\exp\left(\tilde{\mu}_{s}^{\pm}\right)=\exp\left(\nu_{k}^{\pm}\hat{\mu}_{s}^{o}\right)\left(x_{s}\gamma_{s}\right)^{\nu_{s}^{\pm}}\;\;,
+\]
+which leads to a generalized law-of-mass action (LMA) of the form
+\textcolor{red}{
+\begin{eqnarray}
+\left(\partial_{t}\rho_{s}\right)_{\text{react}} & = & \nu_{s}m_{s}\left(\kappa_{r}^{+}\prod_{s^{\prime}}\left(x_{s^{\prime}}\gamma_{s^{\prime}}\right)^{\nu_{{s^{\prime}}}^{+}}-\kappa_{r}^{-}\prod_{s^{\prime}}\left(x_{s^{\prime}}\gamma_{s^{\prime}}\right)^{\nu_{{s^{\prime}}}^{-}}\right),\label{eq:LMA_generalized}
+\end{eqnarray}
+}where $\kappa_{r}^{\pm}(T,p,\V X)$ are the more familiar forward/reverse
+reaction rates (per unit time and per unit volume). Since there is
+only one independent timescale parameter $r$, the forward and reverse
+rates are not independent and the LMA gives the ratio to be the equilibrium
+constant,
+\begin{equation}
+K_{r}(T,P)=\frac{\kappa_{r}^{+}}{\kappa_{r}^{-}}=\left[\frac{\prod_{s}\left(x_{s}\gamma_{s}\right)^{\nu_{{k}}^{-}}}{\prod_{s}\left(x_{s}\gamma_{s}\right)^{\nu_{{k}}^{+}}}\right]_{\mathrm{eq}}=\exp\left(-\sum_{s}\nu_{s}\hat{\mu}_{s}^{o}\right),\label{eq:eq_const-1}
+\end{equation}
+which is a purely thermodynamic quantity (closely related to the dimensionless
+reference Gibbs energy for the reaction at a unit reference pressure)
+that can be calculated from pure component data~\cite{zemansky1981heat,NonEqThermo_Bedeaux}.
+
+
+\subsection{Equilibrium Free Energy beyond Gaussian Approximation}
+
+If everything is done right, for an ideal mixture with $\beta=0$,
+sometimes called a \emph{perfect solution}, the thermodynamic equilibrium
+state should be consistent with the Einstein distribution with an
+ideal entropy of mixing (since here we have constant mass, i.e., constant
+density, the only contribution is the entropy of mixing),\textcolor{red}{
+\begin{equation}
+P\left(\V n\right)\sim\exp\left[-\left(n\D V\right)\sum_{k}x_{k}\,\left(\ln\left(x_{k}/x_{k}^{\text{eq}}\right)-1\right)\right]=\exp\left[-\D V\sum_{k}n_{k}\,\ln\left(x_{k}/x_{k}^{\text{eq}}\right)\right],\label{eq:eq_distro_LM}
+\end{equation}
+}including going beyond the Gaussian approximation. Here $x_{k}^{\text{eq}}$
+is the equilibrium mole fraction, which is determined by the equilibrium
+constant. For the dimerization reaction in a single cell with $c_{\text{eq}}=1/2$,
+we have the mass conservation $n_{1}+2n_{2}=n_{0}$ relating $n_{1}$
+and $n_{2}$, where $n_{0}=\rho/m$ is the number of $A$ atoms, and
+$n_{1}^{\text{eq}}=n_{0}/2$, $n_{2}^{\text{eq}}=n_{0}/4$, $n_{eq}=3n_{0}/4$.
+The distribution (\ref{eq:eq_distro_LM}) should be the equilibrium
+density for the mole fraction in each cell (and different cells should
+be independent). It is related to but different from the Poisson distribution
+for the number of molecules of each species which applies in the ideal
+gas case. We have confirmed that (\ref{eq:eq_distro_LM}) is indeed
+the equilibrium distribution of the LME with LMA based on mole fractions,
+and also that for sufficiently large $N_{0}=n_{0}\D V$ it is the
+equilibrium distribution for mole-fraction-based CME (SSA/tau-leaping)
+{[}Donev: This test was done numerically and not analytically but
+I am pretty sure it is right.{]}.
+
+Note that for an ideal gas mixture, as we considered in \cite{MultispeciesChemistry},
+we used the ideal-gas entropy, which would give 
+\begin{equation}
+P\left(\V n\right)\sim\exp\left[-\D V\sum_{k}n_{k}\,\left(\ln\left(n_{k}/n_{k}^{\text{eq}}\right)-1\right)\right].\label{eq:eq_distro_gas}
+\end{equation}
+Expressing the argument of the exponential in terms of $c=n_{1}m_{1}/\rho=n_{1}/n_{0}$,
+this gives exactly the formula (28) in \cite{MultispeciesChemistry},
+which is derived in Appendix B of that paper using combinatorics without
+using the known entropy of a mixture. But the important thing is that
+(\ref{eq:eq_distro_gas}) is \emph{different} from (\ref{eq:eq_distro_LM})
+because $x_{k}=n_{k}/n$ and $n_{k}$ are different because $n$ varies.
+For an ideal gas constant pressure means constant $n$ so the two
+are then the same. In the previous \cite{MultispeciesChemistry} we
+showed that (\ref{eq:eq_distro_gas}) is the steady-state solution
+of the Fokker-Planck equation for the LME equation when the LMA is
+expressed in terms of number densities.
+
+\bibliographystyle{unsrt}
+\bibliography{References,GarciaGeneralBibFile,MScaleProp}
+
+\end{document}
