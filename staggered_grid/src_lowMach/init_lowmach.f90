@@ -195,7 +195,7 @@ contains
 
     ! if prob_type = 16 and dm = 3, then we should read in the 1d values of 
     ! c1,c2,c3,u
-    if (prob_type.eq.16 .and. dm.eq.3) then 
+    if (prob_type.eq.16) then 
        if (nspecies.ne.3) then 
           call bl_error("Only nspecies = 3 is currently supported for prob_type 16")
        endif 
@@ -209,8 +209,11 @@ contains
           read(36,*) c3_1d_arr(j)
           read(37,*) u_1d_arr(j)
        end do 
-    end if 
-    
+       close(34)
+       close(35)
+       close(36)
+       close(37)
+    end if     
 
     ! looping over boxes 
     do n=1,nlevs
@@ -225,7 +228,8 @@ contains
           case (2)
              call init_rho_and_umac_2d(dp(:,:,1,:),ng_c,rp(:,:,1,:),ng_r, &
                                        up(:,:,1,1),vp(:,:,1,1),ng_u, &
-                                       lo,hi,dx(n,:),time)
+                                       lo,hi,dx(n,:),time,c1_1d_arr,c2_1d_arr, &
+                                       c3_1d_arr,u_1d_arr)
           case (3)
              wp => dataptr(umac(n,3),i)
              call init_rho_and_umac_3d(dp(:,:,:,:),ng_c,rp(:,:,:,:),ng_r, &
@@ -244,7 +248,8 @@ contains
 
   end subroutine init_rho_and_umac
 
-  subroutine init_rho_and_umac_2d(c,ng_c,rho,ng_r,u,v,ng_u,lo,hi,dx,time)
+  subroutine init_rho_and_umac_2d(c,ng_c,rho,ng_r,u,v,ng_u,lo,hi,dx,time, &
+                                  c1_file,c2_file,c3_file,u_file)
 
     integer          :: lo(2), hi(2), ng_c, ng_u, ng_r
     real(kind=dp_t)  ::   c(lo(1)-ng_c:,lo(2)-ng_c:,:)
@@ -253,7 +258,13 @@ contains
     real(kind=dp_t)  ::   v(lo(1)-ng_u:,lo(2)-ng_u:)
     real(kind=dp_t)  :: dx(:)
     real(kind=dp_t)  :: time 
- 
+
+    ! These are only used if prob_type = 16...
+    real(kind=dp_t)  :: c1_file(0:n_cells(2)-1)
+    real(kind=dp_t)  :: c2_file(0:n_cells(2)-1)
+    real(kind=dp_t)  :: c3_file(0:n_cells(2)-1)
+    real(kind=dp_t)  :: u_file(0:n_cells(2)-1) 
+
     ! local varables
     integer          :: i,j,n
     real(kind=dp_t)  :: x,y,rad,L(2),sumtot,r,r1,r2,y1,y2,c_loc,x1,x2,coeff
@@ -622,7 +633,7 @@ contains
           enddo
        enddo
 
-    case (15,16)
+    case (15)
 
        !=========================================================
        ! Discontinuous band in central 50% of domain
@@ -782,6 +793,22 @@ contains
 
        end if
 
+    case (16)
+
+       !=============================================================
+       ! Here we restart from a (statistically) 1d state where
+       ! the values rho_i and u only depend on the wall normal 
+       ! coordinate. 
+       !=============================================================
+
+       ! flow only nonzero in first component
+       v = 0.d0 
+       do j =lo(2), hi(2)
+          c(:,j,1) = c1_file(j)
+          c(:,j,2) = c2_file(j) 
+          c(:,j,3) = c3_file(j)
+          u(:,j)   = u_file(j) 
+       end do
 
     case default
 
@@ -843,7 +870,8 @@ contains
     
   end subroutine init_rho_and_umac_2d
 
-  subroutine init_rho_and_umac_3d(c,ng_c,rho,ng_r,u,v,w,ng_u,lo,hi,dx,time,c1_file,c2_file,c3_file,u_file)
+  subroutine init_rho_and_umac_3d(c,ng_c,rho,ng_r,u,v,w,ng_u,lo,hi,dx,time, &
+                                  c1_file,c2_file,c3_file,u_file)
     
     integer          :: lo(3), hi(3), ng_c, ng_u, ng_r
     real(kind=dp_t)  ::   c(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:,:)
@@ -1273,24 +1301,23 @@ contains
           enddo
        enddo
 
-    case (16) !SC
-    
-    !=============================================================
-    ! Here we restart from a (statistically) 1d state where
-    ! the values rho_i and u only depend on the wall normal 
-    ! coordinate. 
-    !=============================================================
-   
-    ! flow only nonzero in first component
-    v = 0.d0 
-    w = 0.d0 
-    do j =lo(2), hi(2)
-       c(:,j,:,1) = c1_file(j)
-       c(:,j,:,2) = c2_file(j) 
-       c(:,j,:,3) = c3_file(j)
-       u(:,j,:)   = u_file(j) 
-    end do 
+    case (16)
 
+       !=============================================================
+       ! Here we restart from a (statistically) 1d state where
+       ! the values rho_i and u only depend on the wall normal 
+       ! coordinate. 
+       !=============================================================
+
+       ! flow only nonzero in first component
+       v = 0.d0 
+       w = 0.d0 
+       do j =lo(2), hi(2)
+          c(:,j,:,1) = c1_file(j)
+          c(:,j,:,2) = c2_file(j) 
+          c(:,j,:,3) = c3_file(j)
+          u(:,j,:)   = u_file(j) 
+       end do
 
     case default
 

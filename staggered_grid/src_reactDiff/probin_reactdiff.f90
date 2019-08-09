@@ -40,7 +40,7 @@ module probin_reactdiff_module
 
   logical, save :: inhomogeneous_bc_fix = .false.   ! use the Einkemmer boundary condition fix (split schemes only)
 
-  real(kind=dp_t), save :: volume_factor = 1.d0     ! volume multiplier (dv = product(dx(1:MAX_SPACEDIM))*volume_factor)
+  real(kind=dp_t), save :: volume_factor = 1.d0     ! volume multiplier (dv = product(dx(1:MAX_SPACEDIM))*volume_factor
                                                     ! only really intended for 3D since in 2D one can control the cell depth
 
   ! Initial and boundary conditions

@@ -19,7 +19,7 @@ module probin_charged_module
   integer            :: E_ext_type
   real(kind=dp_t)    :: E_ext_value(1:3)
   logical            :: electroneutral
-  logical            :: induced_charge_eo 
+  logical            :: induced_charge_eo, ac_iceo
   integer            :: zero_eps_on_wall_type
   integer            :: zero_charge_on_wall_type
   real(kind=dp_t)    :: zero_eps_on_wall_left_end, zero_eps_on_wall_right_start
@@ -53,7 +53,8 @@ module probin_charged_module
   namelist /probin_charged/ E_ext_value
 
   namelist /probin_charged/ electroneutral     ! use electroneutral diffusion fluxes
-  namelist /probin_charged/ induced_charge_eo     ! are we simulating ICEO?  
+  namelist /probin_charged/ induced_charge_eo     ! Are we simulating ICEO?  
+  namelist /probin_charged/ ac_iceo               ! If so, do we want to drive the flow with direct or alternating current? 
   namelist /probin_charged/ relxn_param_charge ! Used to prevent slow buildup of charge for electroneutral, keep at 1.0
   namelist /probin_charged/ zero_eps_on_wall_type ! set eps=0 on certain Dirichlet walls
                                                   ! if we want homogeneous Neumann bc's on 
@@ -113,6 +114,7 @@ contains
 
     electroneutral = .false.
     induced_charge_eo = .false.
+    ac_iceo = .false. 
     relxn_param_charge = 1.0d0
     zero_eps_on_wall_type = 0
     zero_charge_on_wall_type = 0
@@ -204,6 +206,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) induced_charge_eo
+
+       case ('--ac_iceo')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) ac_iceo 
 
        case ('--zero_eps_on_wall_type')
           farg = farg + 1

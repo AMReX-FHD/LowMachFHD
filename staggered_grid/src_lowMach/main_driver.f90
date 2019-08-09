@@ -43,9 +43,10 @@ subroutine main_driver()
                                   algorithm_type, variance_coef_mom, initial_variance_mom, &
                                   variance_coef_mass, barodiffusion_type, use_bl_rng, &
                                   density_weights, rhobar, rho0, analyze_conserved, rho_eos_form, &
-                                  molmass, k_B, reset_tavg_vals, reset_tavg_step, stat_save_type
+                                  molmass, k_B, stat_save_type
 
-  use probin_multispecies_module, only: Dbar, start_time, probin_multispecies_init, c_init, T_init, c_bc
+  use probin_multispecies_module, only: Dbar, start_time, probin_multispecies_init, c_init, &
+                                        T_init, c_bc, additive_noise
 
   use probin_gmres_module, only: probin_gmres_init
 
@@ -63,7 +64,7 @@ subroutine main_driver()
   ! quantities will be allocated with (nlevs,dm) components
   real(kind=dp_t), allocatable :: dx(:,:)
   real(kind=dp_t)              :: dt,time,runtime1,runtime2,Dbar_max,dt_diffusive
-  integer                      :: n,nlevs,i,dm,istep,ng_s,init_step,n_Dbar,m
+  integer                      :: n,nlevs,i,dm,istep,ng_s,init_step,n_Dbar,m,comp
   type(box)                    :: bx
   type(ml_boxarray)            :: mba
   type(ml_layout)              :: mla
@@ -103,6 +104,10 @@ subroutine main_driver()
 
   type(multifab), allocatable  :: chem_rate(:)
 
+  ! these are only for the inertial algorithm
+  type(multifab), allocatable  :: mass_fluxes(:,:)
+  type(multifab), allocatable  :: charge_fluxes(:,:)
+
   ! for writing time-averaged umac to plotfile
   type(multifab), allocatable :: umac_sum(:,:)
   type(multifab), allocatable :: umac_avg(:,:)
@@ -114,6 +119,12 @@ subroutine main_driver()
   ! for writing time-averaged Electric_field to plotfile
   type(multifab), allocatable :: Epot_sum(:) 
   type(multifab), allocatable :: Epot_avg(:) 
+
+  ! for writing time-averaged charge fluxes to plotfile, only if inertial algorithm is used
+  type(multifab), allocatable :: mass_fluxes_sum(:,:)
+  type(multifab), allocatable :: mass_fluxes_avg(:,:)
+  type(multifab), allocatable :: charge_fluxes_sum(:,:)
+  type(multifab), allocatable :: charge_fluxes_avg(:,:)
 
   ! For HydroGrid
   integer :: narg, farg, un, n_rngs_mass, n_rngs_mom, nscal
@@ -201,6 +212,12 @@ subroutine main_driver()
   allocate(Temp(nlevs))
   allocate(diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
   allocate(stoch_mass_flux(nlevs,dm))
+  allocate(mass_fluxes(nlevs,dm)) 
+  allocate(mass_fluxes_sum(nlevs,dm)) 
+  allocate(mass_fluxes_avg(nlevs,dm)) 
+  allocate(charge_fluxes(nlevs,dm)) 
+  allocate(charge_fluxes_sum(nlevs,dm))
+  allocate(charge_fluxes_avg(nlevs,dm))
   allocate(umac(nlevs,dm),mtemp(nlevs,dm),rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
   allocate(umac_sum(nlevs,dm))
   allocate(umac_avg(nlevs,dm))
@@ -241,18 +258,88 @@ subroutine main_driver()
 
      init_step = restart + 1
 
-
      ! build the ml_layout
      ! read in time and dt from checkpoint
-     ! build and fill rho, rhotot, pi, umac, and umac_sum
+     ! build and fill rho, rhotot, pi, umac, umac_sum, 
+     !       and mass_fluxes and mass_fluxes_sum if advection_type = 0
+     !       and Epot, Epot_sum, and grad_Epot_old if use_charged_fluid is on
      call initialize_from_restart(mla,time,dt,rho_old,rho_sum,rhotot_old,pi,umac,umac_sum,pmask, &
-                                  Epot,Epot_sum,grad_Epot_old) 
+                                  mass_fluxes,mass_fluxes_sum,Epot,Epot_sum,grad_Epot_old) 
 
      ! enabled a fixed_dt that is different from the previous run
      if (fixed_dt .gt. 0.d0) then
         dt = fixed_dt
      end if
+     
+     ! upon restart, if n_steps_skip is greater than or equal to the restart number, zero the
+     ! sums used to compute time-averaged quantities
+     ! this may be redundent if n_steps_skip was not reached in the earlier simulation
+     ! (since the sum are already zero) but it allows us to reset the sum on restart if
+     ! we retroactively decide to increase n_steps_skip
+     if (n_steps_skip .ge. restart) then
+        ! reset rho_sum, Epot_sum, umac_sum, and mass_fluxes_sum
+        do n=1,nlevs
+           call setval(rho_sum(n),0.d0)
+           if (use_charged_fluid) then
+              call setval(Epot_sum(n),0.d0, all=.true.) 
+           endif
+           do i=1,dm
+              call setval(umac_sum(n,i),0.d0)
+           end do
+           if (advection_type .eq. 0) then
+              do i=1,dm
+                 call setval(mass_fluxes_sum(n,i),0.d0) 
+              end do
+           end if
+        end do
+     end if
+     
+     ! Now we have mass_fluxes_sum (if advection_type = 0) and if use_charged_fluid,
+     ! then we'll build charge_fluxes and charge_fluxes_sum
+     ! and then convert mass_fluxes to charge_fluxes
+     !
+     ! First copy mass fluxes into charge fluxes multifab.
+     ! Then convert the mass fluxes to charge fluxes.
+     if (use_charged_fluid .and. algorithm_type.eq.0) then 
 
+        ! build charge fluxes
+        do n=1,nlevs
+           do i=1,dm
+              call multifab_build_edge(charge_fluxes(n,i),mla%la(n),nspecies+1,0,i)
+              call multifab_build_edge(charge_fluxes_sum(n,i),mla%la(n),nspecies+1,0,i)
+           enddo
+        enddo
+
+        ! populate charge_fluxes w/ mass fluxes
+        do n=1,nlevs
+           do i=1,dm
+              call multifab_copy_c(charge_fluxes(n,i),1,mass_fluxes(n,i),1,nspecies,0)
+              call multifab_copy_c(charge_fluxes_sum(n,i),1,mass_fluxes_sum(n,i),1,nspecies,0)
+           enddo
+        enddo        
+
+        ! convert each mass flux to a charge flux
+        do n=1,nlevs
+           do i=1,dm
+              do comp=1,nspecies  
+                 call multifab_mult_mult_s_c(charge_fluxes(n,i),comp,charge_per_mass(comp),1,0)
+                 call multifab_mult_mult_s_c(charge_fluxes_sum(n,i),comp,charge_per_mass(comp),1,0)
+              enddo
+           enddo
+        enddo        
+
+        ! now add up each individual charge flux for the total charge flux 
+        do n=1,nlevs 
+           do i=1,dm
+              call multifab_copy_c(charge_fluxes(n,i),nspecies+1,charge_fluxes(n,i),1,1,0)
+              call multifab_copy_c(charge_fluxes_sum(n,i),nspecies+1,charge_fluxes_sum(n,i),1,1,0)
+              do comp=2,nspecies
+                 call multifab_plus_plus_c(charge_fluxes(n,i),nspecies+1,charge_fluxes(n,i),comp,1,0)
+                 call multifab_plus_plus_c(charge_fluxes_sum(n,i),nspecies+1,charge_fluxes_sum(n,i),comp,1,0)
+              enddo
+           enddo
+        enddo
+     endif 
   else
 
      init_step = 1
@@ -308,7 +395,6 @@ subroutine main_driver()
            call setval(umac_sum(n,i),0.d0)
         end do
      end do
-
   end if
 
   ! data structures to help with reservoirs
@@ -401,28 +487,28 @@ subroutine main_driver()
                           dx_in=dx(n,:))
   end do
 
-if(.false.) then  
-  ! DONEV FIXME temporary debugging:
-  w_mol=(/0.0014d0,0.0053d0,0.0037d0/) ! Random values
-  if(nspecies==5) then
-      ! 1=HCl, 2=NaOH, 3=NaCl,        4=H2O
-      ! 1=Na+, 2=Cl-,  3=H+,   4=OH-, 5=H2O 
-      ! w_Na = m_Na / (m_Na+m_OH) * w_NaOH + m_Na / (m_Na+m_Cl) * w_NaCl
-      w_temp(1) = m_Na / (m_Na+m_OH) * w_mol(2) + m_Na / (m_Na+m_Cl) * w_mol(3)
-      ! w_Cl = m_Cl / (m_H+m_Cl) * w_HCl + m_Cl / (m_Na+m_Cl) * w_NaCl
-      w_temp(2) = m_Cl / (m_H+m_Cl) * w_mol(1) + m_Cl / (m_Na+m_Cl) * w_mol(3)
-      ! w_H = m_H / (m_H+m_Cl) * w_HCl
-      w_temp(3) = m_H / (m_H+m_Cl) * w_mol(1)
-      ! w_OH = m_OH / (m_Na+m_OH) * w_NaOH
-      w_temp(4) = m_OH / (m_Na+m_OH) * w_mol(2)
-  else
-      w_temp(1:3)=w_mol    
-  end if    
-  w_temp(nspecies) = 1.0d0 - sum(w_temp(1:nspecies))
-  call compute_rho_eos(w_temp(1:nspecies)*rho0, rho_temp)
-  write(*,*) " w_H2O=", w_temp(nspecies), " rho_eos=", rho_temp, " w=", w_temp(1:nspecies-1)
-  stop
-end if
+  if(.false.) then  
+     ! DONEV FIXME temporary debugging:
+     w_mol=(/0.0014d0,0.0053d0,0.0037d0/) ! Random values
+     if(nspecies==5) then
+        ! 1=HCl, 2=NaOH, 3=NaCl,        4=H2O
+        ! 1=Na+, 2=Cl-,  3=H+,   4=OH-, 5=H2O 
+        ! w_Na = m_Na / (m_Na+m_OH) * w_NaOH + m_Na / (m_Na+m_Cl) * w_NaCl
+        w_temp(1) = m_Na / (m_Na+m_OH) * w_mol(2) + m_Na / (m_Na+m_Cl) * w_mol(3)
+        ! w_Cl = m_Cl / (m_H+m_Cl) * w_HCl + m_Cl / (m_Na+m_Cl) * w_NaCl
+        w_temp(2) = m_Cl / (m_H+m_Cl) * w_mol(1) + m_Cl / (m_Na+m_Cl) * w_mol(3)
+        ! w_H = m_H / (m_H+m_Cl) * w_HCl
+        w_temp(3) = m_H / (m_H+m_Cl) * w_mol(1)
+        ! w_OH = m_OH / (m_Na+m_OH) * w_NaOH
+        w_temp(4) = m_OH / (m_Na+m_OH) * w_mol(2)
+     else
+        w_temp(1:3)=w_mol    
+     end if
+     w_temp(nspecies) = 1.0d0 - sum(w_temp(1:nspecies))
+     call compute_rho_eos(w_temp(1:nspecies)*rho0, rho_temp)
+     write(*,*) " w_H2O=", w_temp(nspecies), " rho_eos=", rho_temp, " w=", w_temp(1:nspecies-1)
+     stop
+  end if
 
   !=======================================================
   ! Build multifabs for all the variables
@@ -478,6 +564,43 @@ end if
      end do
   end if
 
+  ! Only build the mass flux to be kept track of below if advection type is centered explicit 
+  !
+  ! mass_fluxes contains nspecies+1 components--one for each species plus a component for 
+  ! all the species summed up. 
+  !
+  ! If use_charged_fluid is on, then we'll keep track of charge_fluxes as well,
+  !  where charge_flux = mass_flux * (charge/mass) 
+  if (advection_type.eq.0) then 
+     do n=1,nlevs
+        do i=1,dm
+
+           ! always build the averages
+           call multifab_build_edge(mass_fluxes_avg(n,i),mla%la(n),nspecies+1,0,i)
+           call setval(mass_fluxes_avg(n,i),0.d0)
+           if (use_charged_fluid) then 
+              call multifab_build_edge(charge_fluxes_avg(n,i),mla%la(n),nspecies+1,0,i)
+              call setval(charge_fluxes_avg(n,i),0.d0)
+           endif 
+
+           ! only build the mass/charge fluxes and their sums if a checkpoint file wasn't provided
+           if (restart .lt. 0) then                
+              call multifab_build_edge(mass_fluxes(n,i),mla%la(n),nspecies+1,1,i)
+              call multifab_build_edge(mass_fluxes_sum(n,i),mla%la(n),nspecies+1,0,i)
+              call setval(mass_fluxes(n,i),0.d0)
+              call setval(mass_fluxes_sum(n,i),0.d0)
+              if (use_charged_fluid) then 
+                 call multifab_build_edge(charge_fluxes(n,i),mla%la(n),nspecies+1,1,i)
+                 call multifab_build_edge(charge_fluxes_sum(n,i),mla%la(n),nspecies+1,0,i)
+                 call setval(charge_fluxes(n,i),0.d0)
+                 call setval(charge_fluxes_sum(n,i),0.d0)
+              end if
+           endif 
+
+        end do 
+     end do 
+  end if 
+
   if (use_charged_fluid) then
      do n=1,nlevs
         call multifab_build(charge_old(n)       ,mla%la(n),1,1)
@@ -529,6 +652,20 @@ end if
   ! Initialize values
   !=====================================================================
 
+  ! compute sqrtLonsgaer for additive noise
+  if (additive_noise) then
+     ! use rho_new as a temporary holding spot for the 'equilibrium' condition
+     call init_additive_sqrtLonsager(mla)
+     ! initialize rho and umac in valid region only
+     call init_rho_and_umac(mla,rho_new,umac,dx,time,the_bc_tower%bc_tower_array)
+     ! compute rhotot from rho in VALID REGION
+     call compute_rhotot(mla,rho_new,rhotot_new)
+     ! fill rho and rhotot ghost cells
+     call fill_rho_rhotot_ghost(mla,rho_new,rhotot_new,dx,the_bc_tower)
+     ! computer noise multiplier
+     call compute_sqrtLonsager_fc(mla,rho_new,rhotot_new,additive_sqrtLonsager_fc,dx)
+  end if
+
   if (use_charged_fluid) then
 
      ! set these to zero
@@ -552,6 +689,7 @@ end if
         end do
      end do
 
+
      if(electroneutral) then
         call dot_with_z(mla,rho_old,charge_old,abs_z=.true.)
         max_charge_abs = multifab_norm_inf(charge_old(1)) ! This will be saved for reuse
@@ -563,9 +701,13 @@ end if
      call dot_with_z(mla,rho_old,charge_old)
      ! multiply by total volume (all 3 dimensions, even for 2D problems)
     
-     if (print_debye_len) then ! NOTE: we are using rho = 1 here, so the below is a close approximation to debye len
-        debye_len =sqrt(dielectric_const*k_B*T_init(1)/(1.0*(c_init(1,1)*molmass(1)*charge_per_mass(1)*charge_per_mass(1) &
-                        + c_init(1,2)*molmass(2)*charge_per_mass(2)*charge_per_mass(2)))) 
+     if (use_charged_fluid.and.print_debye_len) then ! NOTE: we are using rho = 1 here, so the below is a close approximation to debye len
+        debye_len = 0.d0
+        do comp=1,nspecies  
+           debye_len = debye_len + c_init(1,comp)*molmass(comp)*charge_per_mass(comp)*charge_per_mass(comp)
+        enddo
+        debye_len = sqrt(dielectric_const*k_B*T_init(1)/debye_len)
+
         if (parallel_IOprocessor()) then 
            print*, 'Debye length $\lambda_D$ is approx: ', debye_len
         endif 
@@ -719,13 +861,26 @@ end if
            end if
 
            ! We will also pass temperature
-           call initialize_hydro_grid(mla,rho_old,dt,dx,namelist_file=un, & 
-                                      nspecies_in=nspecies, &
-                                      nscal_in=nscal, &
-                                      exclude_last_species_in=.false., &
-                                      analyze_velocity=.true., &
-                                      analyze_density=.true., &
-                                      analyze_temperature=.true.) 
+           if (use_charged_fluid) then
+              
+              call initialize_hydro_grid(mla,rho_old,dt,dx,namelist_file=un, & 
+                                         nspecies_in=nspecies, &
+                                         nscal_in=nscal, &
+                                         exclude_last_species_in=.false., &
+                                         analyze_velocity=.true., &
+                                         analyze_density=.true., &
+                                         analyze_temperature=.true., &
+                                         analyze_charge_fluxes=.true.) 
+           else
+              call initialize_hydro_grid(mla,rho_old,dt,dx,namelist_file=un, & 
+                                         nspecies_in=nspecies, &
+                                         nscal_in=nscal, &
+                                         exclude_last_species_in=.false., &
+                                         analyze_velocity=.true., &
+                                         analyze_density=.true., &
+                                         analyze_temperature=.true., &
+                                         analyze_charge_fluxes=.false.) 
+           endif
            
            close(unit=un)
            
@@ -799,19 +954,27 @@ end if
      ! Hydrogrid analysis and output for initial data
      !=====================================================================
 
-     do n=1,nlevs
-        do i=1,dm
-           call multifab_copy_c(umac_avg(n,i),1,umac(n,i),1,1,0)
+     if (n_steps_skip .eq. 0) then
+        do n=1,nlevs
+           do i=1,dm
+              call multifab_copy_c(umac_avg(n,i),1,umac(n,i),1,1,0)
+           end do
         end do
-     end do
+     else
+        do n=1,nlevs
+           do i=1,dm
+              call multifab_setval(umac_avg(n,i),0.d0,all=.true.)
+           end do
+        end do
+     end if
 
      ! write initial plotfile
      if (plot_int .gt. 0) then
         if (parallel_IOProcessor()) then
            write(*,*) 'writing initial plotfile 0'
         end if
-        call write_plotfile(mla,rho_old,rho_avg,rhotot_old,Temp,umac,umac_avg,pi,Epot, & 
-                            Epot_avg,grad_Epot_old,gradPhiApprox,0,dx,time)
+        call write_plotfile(mla,rho_old,rho_avg,rhotot_old,Temp,umac,umac_avg,pi,mass_fluxes,mass_fluxes_avg,Epot, & 
+                            Epot_avg,grad_Epot_old,gradPhiApprox,charge_fluxes,charge_fluxes_avg,0,dx,time)
      end if
 
      ! write initial checkpoint
@@ -819,13 +982,14 @@ end if
         if (parallel_IOProcessor()) then
            write(*,*) 'writing initial checkpoint 0'
         end if
-        call checkpoint_write(mla,rho_old,rho_sum,rhotot_old,pi,umac,umac_sum,Epot,Epot_sum,grad_Epot_old,time,dt,0) 
+        call checkpoint_write(mla,rho_old,rho_sum,rhotot_old,pi,umac,umac_sum,mass_fluxes,mass_fluxes_sum, &
+                              Epot,Epot_sum,grad_Epot_old,time,dt,0) 
      end if
      
      if (stats_int .gt. 0) then
         ! write initial vertical and horizontal averages (hstat and vstat files)   
         if (use_charged_fluid) then
-           call print_stats(mla,dx,0,time,umac=umac,rho=rho_old,temperature=Temp,scalars=Epot)
+           call print_stats(mla,dx,0,time,umac=umac,rho=rho_old,temperature=Temp,scalars=Epot,charge_fluxes=charge_fluxes)
         else
            call print_stats(mla,dx,0,time,umac=umac,rho=rho_old,temperature=Temp)
         end if
@@ -836,7 +1000,12 @@ end if
 
         ! Add this snapshot to the average in HydroGrid
         if (hydro_grid_int > 0) then
-           call analyze_hydro_grid(mla,dt,dx,istep,umac=umac,rho=rho_old,temperature=Temp)
+           if (use_charged_fluid) then
+              call analyze_hydro_grid(mla,dt,dx,0,umac=umac,rho=rho_old,temperature=Temp, &
+                                      scalars=Epot)
+           else
+              call analyze_hydro_grid(mla,dt,dx,0,umac=umac,rho=rho_old,temperature=Temp)
+           end if
         end if
 
         if (hydro_grid_int > 0 .and. n_steps_save_stats > 0) then
@@ -877,14 +1046,18 @@ end if
      ! diff/stoch_mass_fluxdiv could be built locally within the overdamped
      ! routine, but since we have them around anyway for inertial we pass them in
      if (algorithm_type .eq. 0) then
-        ! algorithm_type=0: inertial
+        ! algorithm_type=0: inertial                                                            !SC
+        ! in this case, we record the species' mass fluxes. After this function call, 
+        ! mass_fluxes is actually each individual species 
         call advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                        gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                        diff_mass_fluxdiv, stoch_mass_fluxdiv,stoch_mass_flux, &
+                                       mass_fluxes, & 
                                        dx,dt,time,the_bc_tower,istep, &
                                        grad_Epot_old,grad_Epot_new, &
                                        charge_old,charge_new,Epot, &
                                        permittivity)
+
      else if (algorithm_type .eq. 2) then
         ! algorithm_type=2: overdamped with 2 RNG
         call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
@@ -948,70 +1121,79 @@ end if
         end if
      end if
 
-        
+     ! If use charged fluid and inertial algorithm, first copy mass fluxes into charge fluxes multifab.
+     ! Then convert the mass fluxes to charge fluxes.
+     if (use_charged_fluid.and.(algorithm_type.eq.0)) then 
+        ! populate charge_fluxes w/ mass fluxes
+        do n=1,nlevs
+           do i=1,dm
+              call multifab_copy_c(charge_fluxes(n,i),1,mass_fluxes(n,i),1,nspecies,0)
+           enddo
+        enddo        
 
-     ! for writing time-averaged umac, rho, and Epot to plotfile
-     if (istep .gt. n_steps_skip) then
-        ! Note: reset time avg quantities is only possible if reset_tavg_step >= n_steps_skip
-        ! Also note: if reset is turned ON, and istep is between n_steps_skip and reset_tavg_step,
-        !            then the code below will not track the average (since it will get reset anyways)
-        !
-        ! TL;DR: don't turn reset_tavg_vals ON unless you want to use it. 
-        if (reset_tavg_vals .and. (reset_tavg_step.ge.n_steps_skip)) then
-           if (istep.eq.reset_tavg_step) then 
-              do n=1,nlevs
-                 ! reset rho_sum, epot_sum, and umac_sum to be 0
-                 call setval(rho_sum(n),0.d0)
-                 call setval(Epot_sum(n),0.d0, all=.true.) 
-                 do i=1,dm
-                    call setval(umac_sum(n,i),0.d0) 
-                 end do 
-              end do 
-           else if (istep .gt. reset_tavg_step) then
-              ! do the normal averaging, starting from the reset step
-              do n=1,nlevs
-                 ! first do rho
-                 call multifab_plus_plus_c(rho_sum(n),1,rho_new(n),1,nspecies,0)
-                 call multifab_copy_c(rho_avg(n),1,rho_sum(n),1,nspecies,0)
-                 call multifab_mult_mult_s_c(rho_avg(n),1,(1.d0/(istep-reset_tavg_step)),nspecies,0)
- 
-                 ! next do Epot
-                 if (use_charged_fluid) then
-                    call multifab_plus_plus_c(Epot_sum(n),1,Epot(n),1,1,0)
-                    call multifab_copy_c(Epot_avg(n),1,Epot_sum(n),1,1,0)
-                    call multifab_mult_mult_s_c(Epot_avg(n),1,(1.d0/(istep-reset_tavg_step)),1,0)
-                 end if
+        ! convert each mass flux to a charge flux
+        do n=1,nlevs
+           do i=1,dm
+              do comp=1,nspecies  
+                 call multifab_mult_mult_s_c(charge_fluxes(n,i),comp,charge_per_mass(comp),1,0)
+              enddo
+           enddo
+        enddo        
+
+        ! now add up each individual charge flux for the total charge flux 
+        do n=1,nlevs 
+           do i=1,dm
+              call multifab_copy_c(charge_fluxes(n,i),nspecies+1,charge_fluxes(n,i),1,1,0)
+              do comp=2,nspecies
+                 call multifab_plus_plus_c(charge_fluxes(n,i),nspecies+1,charge_fluxes(n,i),comp,1,0)
+              enddo
+           enddo
+        enddo
+     endif 
          
-                 ! lastly do umac
-                 do i=1,dm
-                    call multifab_plus_plus_c(umac_sum(n,i),1,umac(n,i),1,1,0)
-                    call multifab_copy_c(umac_avg(n,i),1,umac_sum(n,i),1,1,0)
-                    call multifab_mult_mult_s_c(umac_avg(n,i),1,(1.d0/(istep-reset_tavg_step)),1,0)
-                 end do
-              end do
-           end if
-        else  
-           do n=1,nlevs
-              ! first do rho
-              call multifab_plus_plus_c(rho_sum(n),1,rho_new(n),1,nspecies,0)
-              call multifab_copy_c(rho_avg(n),1,rho_sum(n),1,nspecies,0)
-              call multifab_mult_mult_s_c(rho_avg(n),1,(1.d0/(istep-n_steps_skip)),nspecies,0)
 
-              ! next do Epot
-              if (use_charged_fluid) then
-                 call multifab_plus_plus_c(Epot_sum(n),1,Epot(n),1,1,0)
-                 call multifab_copy_c(Epot_avg(n),1,Epot_sum(n),1,1,0)
-                 call multifab_mult_mult_s_c(Epot_avg(n),1,(1.d0/(istep-n_steps_skip)),1,0)
-              end if
-      
-              ! lastly do umac
-              do i=1,dm
-                 call multifab_plus_plus_c(umac_sum(n,i),1,umac(n,i),1,1,0)
-                 call multifab_copy_c(umac_avg(n,i),1,umac_sum(n,i),1,1,0)
-                 call multifab_mult_mult_s_c(umac_avg(n,i),1,(1.d0/(istep-n_steps_skip)),1,0)
-              end do
+     ! for writing time-averaged umac, rho, Epot, mass fluxes, and charge fluxes to plotfile
+     if (istep .gt. n_steps_skip) then
+        
+        do n=1,nlevs
+           ! first do rho
+           call multifab_plus_plus_c(rho_sum(n),1,rho_new(n),1,nspecies,0)
+           call multifab_copy_c(rho_avg(n),1,rho_sum(n),1,nspecies,0)
+           call multifab_mult_mult_s_c(rho_avg(n),1,(1.d0/(istep-n_steps_skip)),nspecies,0)
+
+           ! next do Epot
+           if (use_charged_fluid) then
+              call multifab_plus_plus_c(Epot_sum(n),1,Epot(n),1,1,0)
+              call multifab_copy_c(Epot_avg(n),1,Epot_sum(n),1,1,0)
+              call multifab_mult_mult_s_c(Epot_avg(n),1,(1.d0/(istep-n_steps_skip)),1,0)
+           end if
+
+           ! do umac
+           do i=1,dm
+              call multifab_plus_plus_c(umac_sum(n,i),1,umac(n,i),1,1,0)
+              call multifab_copy_c(umac_avg(n,i),1,umac_sum(n,i),1,1,0)
+              call multifab_mult_mult_s_c(umac_avg(n,i),1,(1.d0/(istep-n_steps_skip)),1,0)
            end do
-        end if
+
+           ! do mass fluxes
+           if (advection_type.eq.0) then
+              do i=1,dm
+                 call multifab_plus_plus_c(mass_fluxes_sum(n,i),1,mass_fluxes(n,i)    ,1,nspecies+1,0)
+                 call multifab_copy_c(     mass_fluxes_avg(n,i),1,mass_fluxes_sum(n,i),1,nspecies+1,0)
+                 call multifab_mult_mult_s_c(mass_fluxes_avg(n,i),1,(1.d0/(istep-n_steps_skip)),nspecies+1,0)
+              end do
+
+              ! do charge fluxes
+              if (use_charged_fluid) then 
+                 do i=1,dm
+                    call multifab_plus_plus_c(charge_fluxes_sum(n,i),1,charge_fluxes(n,i)    ,1,nspecies+1,0)
+                    call multifab_copy_c(     charge_fluxes_avg(n,i),1,charge_fluxes_sum(n,i),1,nspecies+1,0)
+                    call multifab_mult_mult_s_c(charge_fluxes_avg(n,i),1,(1.d0/(istep-n_steps_skip)),nspecies+1,0)
+                 enddo
+              endif
+           endif
+        end do
+
      end if
 
      time = time + dt
@@ -1065,8 +1247,8 @@ end if
         if (parallel_IOProcessor()) then
            write(*,*) 'writing plotfiles after timestep =', istep 
         end if
-        call write_plotfile(mla,rho_new,rho_avg,rhotot_new,Temp,umac,umac_avg,pi,Epot, & 
-                            Epot_avg,grad_Epot_new,gradPhiApprox,istep,dx,time)
+        call write_plotfile(mla,rho_new,rho_avg,rhotot_new,Temp,umac,umac_avg,pi,mass_fluxes,mass_fluxes_avg,Epot, & 
+                            Epot_avg,grad_Epot_new,gradPhiApprox,charge_fluxes,charge_fluxes_avg,istep,dx,time)
      end if
 
      ! write checkpoint at specific intervals
@@ -1075,7 +1257,8 @@ end if
         if (parallel_IOProcessor()) then
            write(*,*) 'writing checkpoint after timestep =', istep 
         end if
-        call checkpoint_write(mla,rho_new,rho_sum,rhotot_new,pi,umac,umac_sum,Epot,Epot_sum,grad_Epot_new,time,dt,istep)
+        call checkpoint_write(mla,rho_new,rho_sum,rhotot_new,pi,umac,umac_sum,mass_fluxes,mass_fluxes_sum, &
+                              Epot,Epot_sum,grad_Epot_new,time,dt,istep)
      end if
 
      ! print out projection (average) and variance
@@ -1084,19 +1267,25 @@ end if
 
         if (stat_save_type.eq.0) then  ! compute vertical/horizontal averages of instantaneous fields
            if (use_charged_fluid) then 
-              call print_stats(mla,dx,istep,time,umac=umac,rho=rho_new,temperature=Temp,scalars=Epot) 
+              call print_stats(mla,dx,istep,time,umac=umac,rho=rho_new,temperature=Temp, &
+                               scalars=Epot,charge_fluxes=charge_fluxes)
            else 
               call print_stats(mla,dx,istep,time,umac=umac,rho=rho_new,temperature=Temp) 
            endif 
         else                           ! compute vertical/horizontal averages of time averaged fields
-           if (istep.lt.n_steps_skip) then 
-              call bl_error("If stat_save_type is \ne 0, you cannot call print_stats until n_steps_skip has passed.")
-           end if 
-           if (use_charged_fluid) then 
-              call print_stats(mla,dx,istep,time,umac=umac_avg,rho=rho_avg,temperature=Temp,scalars=Epot_avg) 
-           else 
-              call print_stats(mla,dx,istep,time,umac=umac_avg,rho=rho_avg,temperature=Temp) 
-           endif 
+           if (istep.le.n_steps_skip) then 
+              if (parallel_IOProcessor()) then
+                 write(*,*) "WARNING: stat_save_type != 0 and we have not surpassed n_steps_skip yet"
+                 write(*,*) "Skipping the call to print_stats (to write hstat/vstat files)"
+              end if
+           else
+              if (use_charged_fluid) then 
+                 call print_stats(mla,dx,istep,time,umac=umac_avg,rho=rho_avg,temperature=Temp, &
+                                  scalars=Epot_avg,charge_fluxes=charge_fluxes_avg) 
+              else 
+                 call print_stats(mla,dx,istep,time,umac=umac_avg,rho=rho_avg,temperature=Temp) 
+              endif
+           end if
         end if  
      end if
 
@@ -1105,7 +1294,12 @@ end if
         ! Add this snapshot to the average in HydroGrid
         if ( (hydro_grid_int > 0) .and. &
              ( mod(istep,hydro_grid_int) .eq. 0 ) ) then
-           call analyze_hydro_grid(mla,dt,dx,istep,umac=umac,rho=rho_new,temperature=Temp)
+           if (use_charged_fluid) then
+              call analyze_hydro_grid(mla,dt,dx,istep,umac=umac,rho=rho_new,temperature=Temp, &
+                                      scalars=Epot)
+           else
+              call analyze_hydro_grid(mla,dt,dx,istep,umac=umac,rho=rho_new,temperature=Temp)
+           end if
         end if
 
         if ( (hydro_grid_int > 0) .and. &
@@ -1182,6 +1376,21 @@ end if
      end do
   end if
 
+  if (advection_type.eq.0) then  !SC
+     do n=1,nlevs
+        do i=1,dm
+           call multifab_destroy(mass_fluxes(n,i))
+           call multifab_destroy(mass_fluxes_avg(n,i))
+           call multifab_destroy(mass_fluxes_sum(n,i))
+           if (use_charged_fluid) then 
+              call multifab_destroy(charge_fluxes(n,i))
+              call multifab_destroy(charge_fluxes_sum(n,i))
+              call multifab_destroy(charge_fluxes_avg(n,i))
+           endif 
+        end do 
+     end do 
+  endif 
+
   if (use_charged_fluid) then
      do n=1,nlevs
         call multifab_destroy(charge_old(n))
@@ -1216,6 +1425,10 @@ end if
      end do
   end do
 
+  if (additive_noise) then
+     call destroy_additive_sqrtLonsager(mla)
+  end if
+
   deallocate(lo,hi,pmask)
   deallocate(rho_old,rhotot_old,pi)
   deallocate(rho_sum, rho_avg) 
@@ -1223,6 +1436,8 @@ end if
   deallocate(Temp)
   deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv)
   deallocate(stoch_mass_flux)
+  deallocate(mass_fluxes) !SC
+  deallocate(charge_fluxes) !SC
   deallocate(umac,mtemp,rhotot_fc,gradp_baro)
   deallocate(eta,kappa)
   deallocate(eta_ed)

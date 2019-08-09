@@ -94,7 +94,7 @@ contains
     ng_n = n_new(1)%ng
     ng_d = diff_coef_face(1,1)%ng
 
-    dv = product(dx(1,1:MAX_SPACEDIM))*volume_factor
+    dv = product(dx(1,1:MAX_SPACEDIM)*volume_factor)
 
     ! cannot use OpenMP with tiling since each cell is responsible for updating
     ! cells possibly outside of its file.  OpenMP could be added at the k loop level
