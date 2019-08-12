@@ -115,6 +115,9 @@ subroutine main_driver()
   type(multifab), allocatable :: Epot_sum(:) 
   type(multifab), allocatable :: Epot_avg(:) 
 
+  ! for algorithm_type=6, return total mass fluxes (diff + stoch + adv)
+  type(multifab), allocatable :: total_mass_flux(:,:)
+  
   ! For HydroGrid
   integer :: narg, farg, un, n_rngs_mass, n_rngs_mom, nscal
   character(len=128) :: fname
@@ -218,6 +221,8 @@ subroutine main_driver()
   allocate(Epot_sum(nlevs)) 
   allocate(Epot_avg(nlevs)) 
   allocate(gradPhiApprox(nlevs,dm))
+
+  allocate(total_mass_flux(nlevs,dm))
 
   allocate(chem_rate(nlevs))
 
@@ -499,6 +504,12 @@ end if
         end do
      end do
   end if
+
+  do n=1,nlevs
+     do i=1,dm
+        call multifab_build_edge( total_mass_flux(n,i),mla%la(n),nspecies,0,i)
+     end do
+  end do
 
   if (nreactions .gt. 0) then
      do n=1,nlevs
@@ -931,7 +942,8 @@ end if
                                     dx,dt,time,the_bc_tower,istep, &
                                     grad_Epot_old,grad_Epot_new, &
                                     charge_old,charge_new,Epot, &
-                                    permittivity)
+                                    permittivity, &
+                                    total_mass_flux)
      else
         call bl_error("Error: invalid algorithm_type")
      end if
@@ -1196,6 +1208,12 @@ end if
         end do
      end do
   end if
+
+  do n=1,nlevs
+     do i=1,dm
+        call multifab_destroy(total_mass_flux(n,i))
+     end do
+  end do
   
   if (nreactions .gt. 0) then
      do n=1,nlevs
@@ -1235,6 +1253,8 @@ end if
   deallocate(Epot)
   deallocate(Epot_sum, Epot_avg) 
   deallocate(gradPhiApprox)
+
+  deallocate(total_mass_flux)
 
   deallocate(chem_rate)
 
