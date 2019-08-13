@@ -222,7 +222,9 @@ subroutine main_driver()
   allocate(Epot_avg(nlevs)) 
   allocate(gradPhiApprox(nlevs,dm))
 
-  allocate(total_mass_flux(nlevs,dm))
+  if (algorithm_type .eq. 6) then
+     allocate(total_mass_flux(nlevs,dm))
+  end if   
 
   allocate(chem_rate(nlevs))
 
@@ -958,9 +960,7 @@ end if
               print*,''
            end if
         end if
-     end if
-
-        
+     end if        
 
      ! for writing time-averaged umac, rho, and Epot to plotfile
      if (istep .gt. n_steps_skip) then
@@ -1209,11 +1209,13 @@ end if
      end do
   end if
 
-  do n=1,nlevs
-     do i=1,dm
-        call multifab_destroy(total_mass_flux(n,i))
+  if (algorithm_type .eq. 6) then
+     do n=1,nlevs
+        do i=1,dm
+           call multifab_destroy(total_mass_flux(n,i))
+        end do
      end do
-  end do
+  end if
   
   if (nreactions .gt. 0) then
      do n=1,nlevs
@@ -1254,7 +1256,7 @@ end if
   deallocate(Epot_sum, Epot_avg) 
   deallocate(gradPhiApprox)
 
-  deallocate(total_mass_flux)
+  if (algorithm_type .eq. 6) deallocate(total_mass_flux)
 
   deallocate(chem_rate)
 
