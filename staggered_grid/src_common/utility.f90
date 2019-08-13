@@ -66,7 +66,7 @@ contains
     if (dm .eq. 2) then
        call planar_cut_2d(mla,mf,comp,dir)
     else if (dm .eq. 3) then
-       call bl_error("planar_cut_3d not written yet")
+       call planar_cut_3d(mla,mf,comp,dir)
     end if
 
     contains
@@ -140,6 +140,115 @@ contains
         end if
 
       end subroutine planar_cut_fill_2d
+
+      subroutine planar_cut_3d(mla,mf,comp,dir)
+
+        type(ml_layout), intent(in   ) :: mla
+        type(multifab) , intent(in   ) :: mf(:)
+        integer        , intent(in   ) :: comp
+        integer        , intent(in   ) :: dir
+
+        ! local
+        integer :: lo(mla%dim),hi(mla%dim)
+
+        real(kind=dp_t), allocatable :: cut(:,:)
+        real(kind=dp_t), allocatable :: cut_proc(:,:)
+        real(kind=dp_t), pointer :: mp(:,:,:,:)
+
+        integer :: i,j,ng
+
+        if (dir .eq. 1) then
+           allocate(cut     (0:n_cells(2)-1,0:n_cells(3)-1))
+           allocate(cut_proc(0:n_cells(2)-1,0:n_cells(3)-1))
+        else if (dir .eq. 2) then
+           allocate(cut     (0:n_cells(1)-1,0:n_cells(3)-1))
+           allocate(cut_proc(0:n_cells(1)-1,0:n_cells(3)-1))
+        else if (dir .eq. 3) then
+           allocate(cut     (0:n_cells(1)-1,0:n_cells(2)-1))
+           allocate(cut_proc(0:n_cells(1)-1,0:n_cells(2)-1))
+        end if
+
+        cut(:,:) = 0.d0
+        cut_proc(:,:) = 0.d0
+
+        ng = mf(1)%ng
+
+        do i=1,nfabs(mf(1))
+           mp => dataptr(mf(1),i)
+           lo = lwb(get_box(mf(1),i))
+           hi = upb(get_box(mf(1),i))
+           call planar_cut_fill_3d(lo,hi,mp(:,:,:,comp),ng,dir,cut_proc)
+        end do
+
+        if (dir .eq. 1) then
+           do i=0,n_cells(3)-1
+              call parallel_reduce(cut(:,i),cut_proc(:,i),MPI_SUM)
+           end do
+        else if (dir .eq. 2) then
+           do i=0,n_cells(3)-1
+              call parallel_reduce(cut(:,i),cut_proc(:,i),MPI_SUM)
+           end do
+        else
+           do i=0,n_cells(2)-1
+              call parallel_reduce(cut(:,i),cut_proc(:,i),MPI_SUM)
+           end do
+        end if
+
+        if (parallel_IOProcessor()) then
+        
+           if (dir .eq. 1) then
+              do i=0,n_cells(3)-1
+                 print*,cut(:,i)
+              end do
+           else if (dir .eq. 2) then
+              do i=0,n_cells(3)-1
+                 print*,cut(:,i)
+              end do
+           else
+              do i=0,n_cells(2)-1
+                 print*,cut(:,i)
+              end do
+           end if
+
+        end if           
+        
+      end subroutine planar_cut_3d
+
+      subroutine planar_cut_fill_3d(lo,hi,mf,ng,dir,cut)
+
+        integer        , intent(in   ) :: lo(:),hi(:),ng,dir
+        real(kind=dp_t), intent(in   ) :: mf(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)
+        real(kind=dp_t), intent(inout) :: cut(0:,0:)
+
+        integer :: i,j,k
+
+        if (dir .eq. 1) then
+           if (lo(1) .eq. 0) then
+              do k=lo(3),hi(3)
+              do j=lo(2),hi(2)
+                 cut(j,k) = mf(0,j,k)
+              end do
+              end do
+           end if
+        else if (dir .eq. 2) then
+           if (lo(2) .eq. 0) then
+              do k=lo(3),hi(3)
+              do i=lo(1),hi(1)
+                 cut(i,k) = mf(i,0,k)
+              end do
+              end do
+           end if
+        else if (dir .eq. 3) then
+           if (lo(3) .eq. 0) then
+              do j=lo(2),hi(2)
+              do i=lo(1),hi(1)
+                 cut(i,j) = mf(i,j,0)
+              end do
+              end do
+           end if
+        end if
+
+      end subroutine planar_cut_fill_3d
 
     end subroutine planar_cut
 
