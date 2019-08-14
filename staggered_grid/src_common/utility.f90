@@ -3,6 +3,7 @@ module utility_module
   use multifab_module
   use ml_layout_module
   use user_analysis
+  use parallel
 
   implicit none
 
@@ -90,14 +91,14 @@ contains
 
         if (dir .eq. 1) then
            allocate(cut     (0:n_cells(2)-1,1))
-           allocate(cut_proc(0:n_cells(2)-1),1)
+           allocate(cut_proc(0:n_cells(2)-1,1))
         else if (dir .eq. 2) then
-           allocate(cut     (0:n_cells(1)-1),1)
-           allocate(cut_proc(0:n_cells(1)-1),1)
+           allocate(cut     (0:n_cells(1)-1,1))
+           allocate(cut_proc(0:n_cells(1)-1,1))
         end if
 
-        cut(:) = 0.d0
-        cut_proc(:) = 0.d0
+        cut = 0.d0
+        cut_proc = 0.d0
 
         ng = mf(1)%ng
 
@@ -108,7 +109,9 @@ contains
            call planar_cut_fill_2d(lo,hi,mp(:,:,1,comp),ng,dir,cut_proc(:,1))
         end do
 
-        call parallel_reduce(cut,cut_proc,MPI_SUM)
+        do i=0,size(cut,dim=2)
+           call parallel_reduce(cut(:,i),cut_proc(:,i),MPI_SUM)
+        end do
         
         call analyze_planar_cut(cut)
 
@@ -177,19 +180,9 @@ contains
            call planar_cut_fill_3d(lo,hi,mp(:,:,:,comp),ng,dir,cut_proc)
         end do
 
-        if (dir .eq. 1) then
-           do i=0,n_cells(3)-1
-              call parallel_reduce(cut(:,i),cut_proc(:,i),MPI_SUM)
-           end do
-        else if (dir .eq. 2) then
-           do i=0,n_cells(3)-1
-              call parallel_reduce(cut(:,i),cut_proc(:,i),MPI_SUM)
-           end do
-        else
-           do i=0,n_cells(2)-1
-              call parallel_reduce(cut(:,i),cut_proc(:,i),MPI_SUM)
-           end do
-        end if
+        do i=0,size(cut,dim=2)
+           call parallel_reduce(cut(:,i),cut_proc(:,i),MPI_SUM)
+        end do
 
         call analyze_planar_cut(cut)
         

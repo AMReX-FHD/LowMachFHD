@@ -3,8 +3,10 @@ module user_analysis
   ! Right not this only analyses fluxes on a planar cut through the domain
 
   use bl_types
-  use bl_error_module 
-  use probin_common
+  use bl_error_module
+  use parallel
+  use probin_common_module
+  
   implicit none
 
   private
@@ -20,13 +22,16 @@ contains
   end subroutine
 
   subroutine analyze_planar_cut(cut)
+
     real(kind=dp_t), allocatable :: cut(:,:) ! Cut through a plane
 
+    integer :: i
+    
     call bl_warn("using default analyze_planar_cut; printing average values to screen")
     call bl_warn("each application code should have its own copy")
 
     if (parallel_IOProcessor()) then      
-      do i=1,size(cut,1)
+      do i=1,size(cut,dim=1)
          write(*,*) cut(i,:)
       end do
     end if
