@@ -14,3 +14,4 @@ f90sources += restart.f90
 f90sources += utility.f90
 f90sources += write_plotfile.f90
 f90sources += zero_edgeval.f90
+f90sources += user_analysis.f90

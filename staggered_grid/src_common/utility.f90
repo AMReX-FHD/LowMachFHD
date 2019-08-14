@@ -2,6 +2,7 @@ module utility_module
 
   use multifab_module
   use ml_layout_module
+  use user_analysis
 
   implicit none
 
@@ -81,18 +82,18 @@ contains
         ! local
         integer :: lo(mla%dim),hi(mla%dim)
 
-        real(kind=dp_t), allocatable :: cut(:)
-        real(kind=dp_t), allocatable :: cut_proc(:)
+        real(kind=dp_t), allocatable :: cut(:,:) ! Use the same rank for 2D and 3D to simplify
+        real(kind=dp_t), allocatable :: cut_proc(:,:)
         real(kind=dp_t), pointer :: mp(:,:,:,:)
 
         integer :: i,ng
 
         if (dir .eq. 1) then
-           allocate(cut     (0:n_cells(2)-1))
-           allocate(cut_proc(0:n_cells(2)-1))
+           allocate(cut     (0:n_cells(2)-1,1))
+           allocate(cut_proc(0:n_cells(2)-1),1)
         else if (dir .eq. 2) then
-           allocate(cut     (0:n_cells(1)-1))
-           allocate(cut_proc(0:n_cells(1)-1))
+           allocate(cut     (0:n_cells(1)-1),1)
+           allocate(cut_proc(0:n_cells(1)-1),1)
         end if
 
         cut(:) = 0.d0
@@ -104,16 +105,12 @@ contains
            mp => dataptr(mf(1),i)
            lo = lwb(get_box(mf(1),i))
            hi = upb(get_box(mf(1),i))
-           call planar_cut_fill_2d(lo,hi,mp(:,:,1,comp),ng,dir,cut_proc)
+           call planar_cut_fill_2d(lo,hi,mp(:,:,1,comp),ng,dir,cut_proc(:,1))
         end do
 
         call parallel_reduce(cut,cut_proc,MPI_SUM)
-
-        do i=0,size(cut)-1
-           if (parallel_IOProcessor()) then
-              print*,i,cut(i)
-           end if
-        end do
+        
+        call analyze_planar_cut(cut)
 
       end subroutine planar_cut_2d
 
@@ -194,23 +191,7 @@ contains
            end do
         end if
 
-        if (parallel_IOProcessor()) then
-        
-           if (dir .eq. 1) then
-              do i=0,n_cells(3)-1
-                 print*,cut(:,i)
-              end do
-           else if (dir .eq. 2) then
-              do i=0,n_cells(3)-1
-                 print*,cut(:,i)
-              end do
-           else
-              do i=0,n_cells(2)-1
-                 print*,cut(:,i)
-              end do
-           end if
-
-        end if           
+        call analyze_planar_cut(cut)
         
       end subroutine planar_cut_3d
 
