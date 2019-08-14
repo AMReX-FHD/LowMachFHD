@@ -49,8 +49,8 @@ module probin_charged_module
                                                ! temporal discretization for potential term
   namelist /probin_charged/ num_pot_iters
   namelist /probin_charged/ dpdt_factor
-  namelist /probin_charged/ E_ext_type         ! external electric field
-  namelist /probin_charged/ E_ext_value
+  namelist /probin_charged/ E_ext_type         ! if 1, sets an external E field to E_ext_value
+  namelist /probin_charged/ E_ext_value        ! spacedim-vector specifying external E field
 
   namelist /probin_charged/ electroneutral     ! use electroneutral diffusion fluxes
   namelist /probin_charged/ induced_charge_eo     ! are we simulating ICEO?  
