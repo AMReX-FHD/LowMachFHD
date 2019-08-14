@@ -23,16 +23,18 @@ contains
 
   subroutine analyze_planar_cut(cut)
 
-    real(kind=dp_t), allocatable :: cut(:,:) ! Cut through a plane
+    real(kind=dp_t), intent(in   ) :: cut(0:,0:,1:) ! Cut through a plane
 
-    integer :: i
+    integer :: i,j
     
-    call bl_warn("using default analyze_planar_cut; printing average values to screen")
+    call bl_warn("using default analyze_planar_cut; printing values to screen")
     call bl_warn("each application code should have its own copy")
 
-    if (parallel_IOProcessor()) then      
-      do i=1,size(cut,dim=1)
-         write(*,*) cut(i,:)
+    if (parallel_IOProcessor()) then
+      do j=0,size(cut,dim=2)-1
+      do i=0,size(cut,dim=1)-1
+         write(*,*) i,j,cut(i,j,:)
+      end do
       end do
     end if
 
