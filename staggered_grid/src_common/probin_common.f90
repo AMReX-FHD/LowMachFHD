@@ -45,6 +45,7 @@ module probin_common_module
 
   integer(kind=ll_t)      :: n_cells_long(MAX_SPACEDIM)
   integer(kind=ll_t),save :: total_volume
+  real(dp_t), save :: dt_saved, dx_saved(MAX_SPACEDIM) ! Actual time step and grid size
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments

@@ -41,8 +41,8 @@ subroutine main_driver()
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
-                                  probin_common_init, print_int, nspecies, &
-                                  advection_type, fixed_dt, max_step, cfl, &
+                                  probin_common_init, print_int, nspecies, dx_saved, &
+                                  advection_type, fixed_dt, dt_saved, max_step, cfl, &
                                   algorithm_type, variance_coef_mom, initial_variance_mom, &
                                   variance_coef_mass, barodiffusion_type, use_bl_rng, &
                                   density_weights, rhobar, rho0, analyze_conserved, rho_eos_form, &
@@ -350,6 +350,8 @@ subroutine main_driver()
   do n=2,nlevs
      dx(n,:) = dx(n-1,:) / mba%rr(n-1,1)
   end do
+  
+  dx_saved(1:dm) = dx(1,1:dm) ! Store this in the module so anyone can access it
 
   !=======================================================
   ! Setup boundary condition bc_tower
@@ -582,9 +584,9 @@ end if
      call dot_with_z(mla,rho_old,charge_old)
      ! multiply by total volume (all 3 dimensions, even for 2D problems)
     
-     if (print_debye_len) then ! NOTE: we are using rho = 1 here, so the below is a close approximation to debye len
-        debye_len =sqrt(dielectric_const*k_B*T_init(1)/(1.0*(c_init(1,1)*molmass(1)*charge_per_mass(1)*charge_per_mass(1) &
-                        + c_init(1,2)*molmass(2)*charge_per_mass(2)*charge_per_mass(2)))) 
+     if (use_charged_fluid) then ! NOTE: we are using rho = 1 here, so the below is a close approximation to debye length
+        debye_len =sqrt(dielectric_const*k_B*T_init(1)/ &
+           (rho0*sum(c_init(1,1:nspecies)*molmass(1:nspecies)*charge_per_mass(1:nspecies)**2))) 
         if (parallel_IOprocessor()) then 
            print*, 'Debye length $\lambda_D$ is approx: ', debye_len
         endif 
@@ -712,10 +714,14 @@ end if
         n_Dbar = nspecies*(nspecies-1)/2
         Dbar_max = maxval(Dbar(1:n_Dbar))
         dt_diffusive = cfl*dx(1,1)**2/(2*dm*Dbar_max)
+        if (parallel_IOProcessor()) write(*,*) &
+           "Estimated dt_diff=", dt_diffusive, " dt_adv=", dt, " setting dt=", min(dt,dt_diffusive)
         dt = min(dt,dt_diffusive)
      end if
      
   end if
+  
+  dt_saved = dt ! Store this in a module so anyone can access it
 
   !=====================================================================
   ! Initialize HydroGrid for analysis
