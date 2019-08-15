@@ -53,31 +53,33 @@ contains
 
   ! takes a planar cut of a staggered multifab in the dir direction
   ! at the lo (index 0) side of the domain
-  subroutine planar_cut(mla,mf,dir)
+  subroutine planar_cut(mla,mf,dir,id)
 
     use probin_common_module, only: n_cells
 
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(in   ) :: mf(:)
+    type(multifab) , intent(in   ) :: mf
     integer        , intent(in   ) :: dir
+    integer, intent(in), optional  :: id
 
     integer :: dm
 
     dm = mla%dim
 
     if (dm .eq. 2) then
-       call planar_cut_2d(mla,mf,dir)
+       call planar_cut_2d(mla,mf,dir,id)
     else if (dm .eq. 3) then
-       call planar_cut_3d(mla,mf,dir)
+       call planar_cut_3d(mla,mf,dir,id)
     end if
 
     contains
 
-      subroutine planar_cut_2d(mla,mf,dir)
+      subroutine planar_cut_2d(mla,mf,dir,id)
 
         type(ml_layout), intent(in   ) :: mla
-        type(multifab) , intent(in   ) :: mf(:)
+        type(multifab) , intent(in   ) :: mf
         integer        , intent(in   ) :: dir
+        integer, intent(in), optional  :: id
 
         ! local
         integer :: lo(mla%dim),hi(mla%dim)
@@ -99,7 +101,7 @@ contains
            ncell1 = n_cells(1)
         end if
         ncell2 = 1
-        ncomp = mf(1)%nc
+        ncomp = mf%nc
 
         if (dir .eq. 1) then
            allocate(cut     (0:ncell1-1,0:ncell2-1,1:ncomp))
@@ -112,12 +114,12 @@ contains
         cut = 0.d0
         cut_proc = 0.d0
 
-        ng = mf(1)%ng
+        ng = mf%ng
 
-        do i=1,nfabs(mf(1))
-           mp => dataptr(mf(1),i)
-           lo = lwb(get_box(mf(1),i))
-           hi = upb(get_box(mf(1),i))
+        do i=1,nfabs(mf)
+           mp => dataptr(mf,i)
+           lo = lwb(get_box(mf,i))
+           hi = upb(get_box(mf,i))
            call planar_cut_fill_2d(lo,hi,mp(:,:,1,:),ng,dir,ncomp,cut_proc)
         end do
 
@@ -127,7 +129,7 @@ contains
         end do
         end do
         
-        call analyze_planar_cut(cut)
+        call analyze_planar_cut(cut,id)
 
       end subroutine planar_cut_2d
 
@@ -159,11 +161,12 @@ contains
            
       end subroutine planar_cut_fill_2d
 
-      subroutine planar_cut_3d(mla,mf,dir)
+      subroutine planar_cut_3d(mla,mf,dir,id)
 
         type(ml_layout), intent(in   ) :: mla
-        type(multifab) , intent(in   ) :: mf(:)
+        type(multifab) , intent(in   ) :: mf
         integer        , intent(in   ) :: dir
+        integer, intent(in), optional  :: id
 
         ! local
         integer :: lo(mla%dim),hi(mla%dim)
@@ -187,7 +190,7 @@ contains
            ncell1 = n_cells(1)
            ncell2 = n_cells(2)
         end if
-        ncomp = mf(1)%nc
+        ncomp = mf%nc
 
         allocate(cut     (0:ncell1-1,0:ncell2-1,1:ncomp))
         allocate(cut_proc(0:ncell1-1,0:ncell2-1,1:ncomp))
@@ -195,12 +198,12 @@ contains
         cut = 0.d0
         cut_proc = 0.d0
 
-        ng = mf(1)%ng
+        ng = mf%ng
 
-        do i=1,nfabs(mf(1))
-           mp => dataptr(mf(1),i)
-           lo = lwb(get_box(mf(1),i))
-           hi = upb(get_box(mf(1),i))
+        do i=1,nfabs(mf)
+           mp => dataptr(mf,i)
+           lo = lwb(get_box(mf,i))
+           hi = upb(get_box(mf,i))
            call planar_cut_fill_3d(lo,hi,mp(:,:,:,:),ng,dir,ncomp,cut_proc)
         end do
 
@@ -210,7 +213,7 @@ contains
         end do
         end do
 
-        call analyze_planar_cut(cut)
+        call analyze_planar_cut(cut,id)
         
       end subroutine planar_cut_3d
 

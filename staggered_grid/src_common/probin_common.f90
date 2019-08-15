@@ -41,6 +41,7 @@ module probin_common_module
   logical,save    :: plot_averaged_vel, plot_shifted_vel 
   logical,save    :: plot_umac_tavg, plot_Epot_tavg, plot_rho_tavg
   logical,save    :: plot_debug
+  integer         :: analyze_cuts
 
   integer(kind=ll_t)      :: n_cells_long(MAX_SPACEDIM)
   integer(kind=ll_t),save :: total_volume
@@ -223,6 +224,7 @@ module probin_common_module
                                                ! (does not work well)
   namelist /probin_common/ center_snapshots    ! Should we use cell-centered momenta for the analysis
                                                ! (will smooth fluctuations)
+  namelist /probin_common/ analyze_cuts        ! If positive, analyze mass fluxes through a planar cut along dim=analyze_cuts
   
   ! These are mostly used for reaction-diffusion:             
   namelist /probin_common/ histogram_unit      ! If positive, write the values of the densities to a file for histogramming
@@ -349,6 +351,7 @@ contains
     reset_tavg_step = 0 
     analyze_conserved = .false.
     center_snapshots = .false.
+    analyze_cuts = 0
     histogram_unit=-1
     density_weights=0.0d0 ! By default compute rho=\sum_i rho_i
 
@@ -827,6 +830,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) center_snapshots
+
+       case ('--analyze_cuts')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) analyze_cuts
 
        case ('--histogram_unit')
           farg = farg + 1

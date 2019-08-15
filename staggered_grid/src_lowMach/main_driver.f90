@@ -1,6 +1,7 @@
 subroutine main_driver()
 
   use bl_IO_module
+  use bl_error_module
   use init_lowmach_module
   use compute_mixture_properties_module
   use initial_projection_module
@@ -35,6 +36,8 @@ subroutine main_driver()
   use restart_module
   use checkpoint_module
   use reservoir_bc_fill_module
+  use utility_module
+  use user_analysis
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
@@ -43,7 +46,7 @@ subroutine main_driver()
                                   algorithm_type, variance_coef_mom, initial_variance_mom, &
                                   variance_coef_mass, barodiffusion_type, use_bl_rng, &
                                   density_weights, rhobar, rho0, analyze_conserved, rho_eos_form, &
-                                  molmass, k_B, reset_tavg_vals, reset_tavg_step, stat_save_type
+                                  molmass, k_B, reset_tavg_vals, reset_tavg_step, stat_save_type, analyze_cuts
 
   use probin_multispecies_module, only: Dbar, start_time, probin_multispecies_init, c_init, T_init, c_bc
 
@@ -222,7 +225,8 @@ subroutine main_driver()
   allocate(Epot_avg(nlevs)) 
   allocate(gradPhiApprox(nlevs,dm))
 
-  if (algorithm_type .eq. 6) then
+  if (analyze_cuts>0) then
+     if(algorithm_type /= 6) call bl_error("To analyze fluxes on a cut you must use Boussinesq algorithm_type=6")
      allocate(total_mass_flux(nlevs,dm))
   end if   
 
@@ -507,11 +511,13 @@ end if
      end do
   end if
 
-  do n=1,nlevs
-     do i=1,dm
-        call multifab_build_edge( total_mass_flux(n,i),mla%la(n),nspecies,0,i)
+  if (analyze_cuts>0) then
+     do n=1,nlevs
+        do i=1,dm
+           call multifab_build_edge( total_mass_flux(n,i),mla%la(n),nspecies,0,i)
+        end do
      end do
-  end do
+  end if   
 
   if (nreactions .gt. 0) then
      do n=1,nlevs
@@ -766,7 +772,7 @@ end if
         end if
      end if
   end if
-
+  
   ! this routine is only called for all inertial simulations (both restart and non-restart)
   ! it does the following:
   ! 1. fill mass random numbers
@@ -859,6 +865,11 @@ end if
      end if
 
   end if
+  
+  if(analyze_cuts>0) then
+     call initialize_planar_cut()
+  end if
+  
 
   !=======================================================
   ! Begin time stepping loop
@@ -937,15 +948,23 @@ end if
                                                 permittivity)
      else if (algorithm_type .eq. 6) then
         ! algorithm_type=6: boussinesq
-        call advance_timestep_bousq(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+        if (analyze_cuts>0) then
+           call advance_timestep_bousq(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                     gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                     diff_mass_fluxdiv,stoch_mass_fluxdiv,stoch_mass_flux, &
-                                    chem_rate, &
-                                    dx,dt,time,the_bc_tower,istep, &
+                                    chem_rate, dx,dt,time,the_bc_tower,istep, &
                                     grad_Epot_old,grad_Epot_new, &
                                     charge_old,charge_new,Epot, &
-                                    permittivity, &
-                                    total_mass_flux)
+                                    permittivity, total_mass_flux)
+           call planar_cut(mla, mf=total_mass_flux(1,analyze_cuts), dir=analyze_cuts, id=istep)      
+        else
+           call advance_timestep_bousq(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                    gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                    diff_mass_fluxdiv,stoch_mass_fluxdiv,stoch_mass_flux, &
+                                    chem_rate, dx,dt,time,the_bc_tower,istep, &
+                                    grad_Epot_old,grad_Epot_new, &
+                                    charge_old,charge_new,Epot,permittivity)        
+        end if                            
      else
         call bl_error("Error: invalid algorithm_type")
      end if
@@ -1110,6 +1129,7 @@ end if
               call print_stats(mla,dx,istep,time,umac=umac_avg,rho=rho_avg,temperature=Temp) 
            endif 
         end if  
+        
      end if
 
      if (istep .ge. n_steps_skip) then
@@ -1209,12 +1229,13 @@ end if
      end do
   end if
 
-  if (algorithm_type .eq. 6) then
+  if (analyze_cuts>0) then
      do n=1,nlevs
         do i=1,dm
            call multifab_destroy(total_mass_flux(n,i))
         end do
      end do
+     call destroy_planar_cut()
   end if
   
   if (nreactions .gt. 0) then
