@@ -195,7 +195,7 @@ contains
 
     ! if prob_type = 16 and dm = 3, then we should read in the 1d values of 
     ! c1,c2,c3,u
-    if (prob_type.eq.16 .and. dm.eq.3) then 
+    if (prob_type.eq.16) then 
        if (nspecies.ne.3) then 
           call bl_error("Only nspecies = 3 is currently supported for prob_type 16")
        endif 
