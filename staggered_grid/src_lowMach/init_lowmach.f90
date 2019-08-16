@@ -121,14 +121,16 @@ module init_lowmach_module
   ! assumes the final species is the dominant component
 
   !=========================================================
-  ! case 15:
-  ! Discontinuous band in central 50% of domain
+  ! case +/-15, 16: Supported only in 2D for now, mostly for testing electrodiffusion
+  ! Discontinuous band in central 1/2 (case 15) or 1/3 (case 16) of domain
   ! c=c_init(1,:) inside; c=c_init(2,:) outside
   ! if prob_type=-15, add another tanh along other dimension for last two species (two stripes crossing)
+  ! Donev: prob_type = -15: a special case for doing ternary diffusion NaCl + KCl square test
+  ! Here the last two species have a tanh profile in both x and y (species are Na+,Cl-,K+,water)   
 
   !=========================================================
-  ! case 16:
-  ! Concentrations and streamwise vel. u only depend on wall normal variable, ie the fields are homogeneous in the 
+  ! case 17: For electro-osmotic and other channel flows (2D and 3D)
+  ! Concentrations and streamwise vel. u only depend on wall normal variable y, ie the fields are homogeneous in the 
   ! x and z directions. The values for the fields are read in from .txt files. Also, v = w = 0.
   ! Note that currently only nspecies=3 is supported. 
 
@@ -193,11 +195,11 @@ contains
     delta  = 0.5d0 
     sigma  = (prob_hi(1)-prob_lo(1))/10.0d0  ! variance of gaussian distribution
 
-    ! if prob_type = 16 and dm = 3, then we should read in the 1d values of 
+    ! if prob_type = 17 and dm = 3, then we should read in the 1d values of 
     ! c1,c2,c3,u
-    if (prob_type.eq.16) then 
+    if (prob_type.eq.17) then 
        if (nspecies.ne.3) then 
-          call bl_error("Only nspecies = 3 is currently supported for prob_type 16")
+          call bl_error("Only nspecies = 3 is currently supported for prob_type 17")
        endif 
        open(unit=34,file="c1_1d_vals.txt")
        open(unit=35,file="c2_1d_vals.txt")
@@ -209,8 +211,11 @@ contains
           read(36,*) c3_1d_arr(j)
           read(37,*) u_1d_arr(j)
        end do 
-    end if 
-    
+       close(34)
+       close(35)
+       close(36)
+       close(37)
+    end if     
 
     ! looping over boxes 
     do n=1,nlevs
@@ -225,7 +230,8 @@ contains
           case (2)
              call init_rho_and_umac_2d(dp(:,:,1,:),ng_c,rp(:,:,1,:),ng_r, &
                                        up(:,:,1,1),vp(:,:,1,1),ng_u, &
-                                       lo,hi,dx(n,:),time)
+                                       lo,hi,dx(n,:),time,c1_1d_arr,c2_1d_arr, &
+                                       c3_1d_arr,u_1d_arr)
           case (3)
              wp => dataptr(umac(n,3),i)
              call init_rho_and_umac_3d(dp(:,:,:,:),ng_c,rp(:,:,:,:),ng_r, &
@@ -244,7 +250,8 @@ contains
 
   end subroutine init_rho_and_umac
 
-  subroutine init_rho_and_umac_2d(c,ng_c,rho,ng_r,u,v,ng_u,lo,hi,dx,time)
+  subroutine init_rho_and_umac_2d(c,ng_c,rho,ng_r,u,v,ng_u,lo,hi,dx,time, &
+                                  c1_file,c2_file,c3_file,u_file)
 
     integer          :: lo(2), hi(2), ng_c, ng_u, ng_r
     real(kind=dp_t)  ::   c(lo(1)-ng_c:,lo(2)-ng_c:,:)
@@ -253,7 +260,13 @@ contains
     real(kind=dp_t)  ::   v(lo(1)-ng_u:,lo(2)-ng_u:)
     real(kind=dp_t)  :: dx(:)
     real(kind=dp_t)  :: time 
- 
+
+    ! These are only used if prob_type = 17...
+    real(kind=dp_t)  :: c1_file(0:n_cells(2)-1)
+    real(kind=dp_t)  :: c2_file(0:n_cells(2)-1)
+    real(kind=dp_t)  :: c3_file(0:n_cells(2)-1)
+    real(kind=dp_t)  :: u_file(0:n_cells(2)-1) 
+
     ! local varables
     integer          :: i,j,n
     real(kind=dp_t)  :: x,y,rad,L(2),sumtot,r,r1,r2,y1,y2,c_loc,x1,x2,coeff
@@ -625,7 +638,7 @@ contains
     case (15,16)
 
        !=========================================================
-       ! Discontinuous band in central 50% of domain
+       ! Discontinuous band in central 1/2 (type=15) or 1/3 (type=16) of domain
        ! c=c_init(1,:) inside; c=c_init(2,:) outside
        !=============================================================
 
@@ -782,6 +795,23 @@ contains
 
        end if
 
+    case (17)
+
+       !=============================================================
+       ! Here we restart from a (statistically) 1d state where
+       ! the values rho_i and u only depend on the wall normal 
+       ! coordinate. 
+       !=============================================================
+
+       ! flow only nonzero in first component
+       v = 0.d0 
+       do j =lo(2), hi(2)
+          c(:,j,1) = c1_file(j)
+          c(:,j,2) = c2_file(j) 
+          c(:,j,3) = c3_file(j)
+          u(:,j)   = u_file(j) 
+          write(*,*) "1=", n, j, c(1,j,:)
+       end do
 
     case default
 
@@ -795,6 +825,7 @@ contains
           ! set final c_i such that sumtot(c_i) = 1 to within roundoff
           sumtot = 0.d0
           do n=1,nspecies-1
+             write(*,*) "2=", n, i, j, c(i,j,n)
              sumtot = sumtot + c(i,j,n)
           end do
           c(i,j,nspecies) = 1.d0 - sumtot
@@ -843,7 +874,8 @@ contains
     
   end subroutine init_rho_and_umac_2d
 
-  subroutine init_rho_and_umac_3d(c,ng_c,rho,ng_r,u,v,w,ng_u,lo,hi,dx,time,c1_file,c2_file,c3_file,u_file)
+  subroutine init_rho_and_umac_3d(c,ng_c,rho,ng_r,u,v,w,ng_u,lo,hi,dx,time, &
+                                  c1_file,c2_file,c3_file,u_file)
     
     integer          :: lo(3), hi(3), ng_c, ng_u, ng_r
     real(kind=dp_t)  ::   c(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:,:)
@@ -854,7 +886,7 @@ contains
     real(kind=dp_t)  :: dx(:)
     real(kind=dp_t)  :: time 
 
-    ! These are only used if prob_type = 16...
+    ! These are only used if prob_type = 17...
     real(kind=dp_t)  :: c1_file(0:n_cells(2)-1)
     real(kind=dp_t)  :: c2_file(0:n_cells(2)-1)
     real(kind=dp_t)  :: c3_file(0:n_cells(2)-1)
@@ -1273,24 +1305,23 @@ contains
           enddo
        enddo
 
-    case (16) !SC
-    
-    !=============================================================
-    ! Here we restart from a (statistically) 1d state where
-    ! the values rho_i and u only depend on the wall normal 
-    ! coordinate. 
-    !=============================================================
-   
-    ! flow only nonzero in first component
-    v = 0.d0 
-    w = 0.d0 
-    do j =lo(2), hi(2)
-       c(:,j,:,1) = c1_file(j)
-       c(:,j,:,2) = c2_file(j) 
-       c(:,j,:,3) = c3_file(j)
-       u(:,j,:)   = u_file(j) 
-    end do 
+    case (17)
 
+       !=============================================================
+       ! Here we restart from a (statistically) 1d state where
+       ! the values rho_i and u only depend on the wall normal 
+       ! coordinate. 
+       !=============================================================
+
+       ! flow only nonzero in first component
+       v = 0.d0 
+       w = 0.d0 
+       do j =lo(2), hi(2)
+          c(:,j,:,1) = c1_file(j)
+          c(:,j,:,2) = c2_file(j) 
+          c(:,j,:,3) = c3_file(j)
+          u(:,j,:)   = u_file(j) 
+       end do
 
     case default
 
