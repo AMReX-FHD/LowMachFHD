@@ -184,7 +184,16 @@ contains
     do n=1,nlevs
        call multifab_build(conc(n),mla%la(n),nspecies,rho(n)%ng)
     end do
-
+    
+    ! with mixed boundary conditions some of the corner umac ghost cells that
+    ! never affect the solution aren't filled, causing segfaults on some compilers
+    ! this prevents segfaults
+    do n=1,nlevs
+       do i=1,dm
+          call setval(umac(n,i),0.d0,all=.true.)
+       end do
+    end do
+           
     ng_u = umac(1,1)%ng
     ng_c = conc(1)%ng
     ng_r = rho(1)%ng
