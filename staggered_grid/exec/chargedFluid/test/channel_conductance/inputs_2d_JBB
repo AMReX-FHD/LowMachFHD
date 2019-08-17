@@ -5,19 +5,23 @@
   !----------------------
   dim_in = 2                               ! 2D or 3D  
   prob_lo(1:3) = 0.e0 0.e0 0.e0            ! physical lo coordinate
-  ! John's big example
-  !prob_hi(1:3) = 1.28d-4 1.28d-4 2.e-3     ! physical hi coordinate
-  !n_cells(1:2) = 128 128                   ! number of cells in domain
   ! Smaller deterministic text example
-  prob_hi(1:3) =  4.0d-6 1.28d-4 2.e-3     ! physical hi coordinate
+  ! Ny=128 cells (should be close to thin Debye layer approximation)
+  prob_hi(1:3) =  4.0e-6 1.28e-4 2.e-3     ! physical hi coordinate
   n_cells(1:2) = 4 128                   ! number of cells in domain
+  ! Ny=48 cells (Debye layers don't overlap but not thin)
+  !prob_hi(1:3) =  4.0e-6 0.48e-4 2.e-3     ! physical hi coordinate
+  !n_cells(1:2) = 4 48                   ! number of cells in domain
+  ! Ny=32 cells (Debye layers starting to overlap)
+  prob_hi(1:3) =  4.0e-6 0.32e-4 2.e-3     ! physical hi coordinate
+  n_cells(1:2) = 4 32                   ! number of cells in domain
   
   !max_grid_size(1:2) = 64 64               ! max number of cells in a box
   max_grid_size(1:2) = 32 32
 
   ! Time-step control
   !----------------------
-  fixed_dt = .25d-9                  ! time step (if positive, fixed)
+  fixed_dt = .25e-9                  ! time step (if positive, fixed)
   cfl = 0.5d0                      ! advective cfl number (used if fixed_dt<0) to determine time step
 
   ! Controls for number of steps between actions (for HydroGrid see below)
@@ -38,7 +42,7 @@
   !--------------------
   nspecies = 3
   grav(1:2) = 0.e0 0.e0               ! gravity vector (negative is downwards)
-  molmass(1:3) = 3.82d-23 5.89d-23 3.35d-23  ! sodium: 3.82e-23 g, Cl: 5.89e-23 g
+  molmass(1:3) = 3.82e-23 5.89e-23 3.35e-23  ! sodium: 3.82e-23 g, Cl: 5.89e-23 g
   !rhobar(1:3) =   3.17d0 3.17d0 1.e0 ! Only for low Mach (weakly compressible) model
   ! Constant density (incompressible) model:
   rho0=1.0
@@ -47,7 +51,7 @@
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
   variance_coef_mom = 0.e0
   variance_coef_mass = 0.e0
-  k_B = 1.3806488d-16       ! Boltzmann's constant
+  k_B = 1.3806488e-16       ! Boltzmann's constant
 
 
   ! Algorithm control / selection
@@ -84,7 +88,7 @@
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
   visc_type = 2
-  visc_coef = 1.05d-2       ! momentum diffusion coefficient 'eta'   
+  visc_coef = 1.05e-2       ! momentum diffusion coefficient 'eta'   
 
   advection_type = 0 ! 0 = centered explicit
                      ! 1 = unlimited bilinear bds in space and time
@@ -168,8 +172,8 @@
   temp_type = 0 ! for initializing temperature
 
   ! initial values for CONCENTRATIONS
-  c_init(1,1:3) = 1.70d-5  2.6245d-5 .9999567879581158d0  ! those values because 2720*0.168 = 4200*0.0108
-  c_init(2,1:3) = 1.70d-5  2.6245d-5 .9999567879581158d0
+  c_init(1,1:3) = 1.70e-5  2.6245e-5 .9999567879581158d0  ! those values because 2720*0.168 = 4200*0.0108
+  c_init(2,1:3) = 1.70e-5  2.6245e-5 .9999567879581158d0
 
   ! Thermodynamic and transport properties:
   !----------------------
@@ -178,7 +182,7 @@
   ! Number of elements is (nspecies*(nspecies-1)/2)
   ! The values are read row by row starting from top going down (this allows easy addition/deletion of new species/rows)
   ! So D_12; D_13, D_23; D_14, D_24, D_34; ...
-  Dbar(1:3) = 1.17d-5 1.33d-5 2.03d-5  ! diffusion of Na: 13.3e-6 ; Cl: 20.3e-6; water: 2.3e-5
+  Dbar(1:3) = 1.17e-5 1.33e-5 2.03e-5  ! diffusion of Na: 13.3e-6 ; Cl: 20.3e-6; water: 2.3e-5
   Dtherm(1:1) = 0.e0       ! thermo-diffusion coefficients, only differences among elements matter
   H_offdiag(1:1) = 0.e0    ! Off diagonal elements of H=d^2F/dx^2  
   H_diag(1:1) = 0.e0       ! Diagonal of H=d^2F/dx^2, these are vectors of length nspecies
@@ -192,7 +196,7 @@
 &probin_charged
  
   use_charged_fluid = T
-  dielectric_const = 6.91d-19    ! relative permitivity ~ 78, vacuum permitivity ~ 8.854d-21
+  dielectric_const = 6.91e-19    ! relative permitivity ~ 78, vacuum permitivity ~ 8.854e-21
   charge_per_mass(1:3) = 4.2d3 -2.72d3 0.e0
 
   ! 1 = Dirichlet (fixed potential)
@@ -200,8 +204,16 @@
   Epot_wall_bc_type(1,2) = 2
   Epot_wall_bc_type(2,2) = 2
   ! Values for the inhomogeneous BCs, corresponding to the surface charge density
-  Epot_wall(1,2) = 1.259623754680220d9
-  Epot_wall(2,2) = 1.259623754680220d9
+  ! Ny=128
+  !Epot_wall(1,2) = 1.259623754680220e9
+  !Epot_wall(2,2) = 1.259623754680220e9
+  ! Ny=48
+  !Epot_wall(1,2) = 1.259532567044911e9
+  !Epot_wall(2,2) = 1.259532567044911e9
+  ! Ny=32
+  Epot_wall(1,2) = 1.259393962037676e9
+  Epot_wall(2,2) = 1.259393962037676e9
+  
   ! External electric field
   E_ext_type = 1
   E_ext_value(1:3) = 6.e12 0.e0 0.e0
@@ -260,7 +272,7 @@
   stag_mg_nsmooths_up = 2     ! number of smooths at each level on the way up
   stag_mg_nsmooths_bottom = 8 ! number of smooths at the bottom
   stag_mg_max_bottom_nlevels = 10 ! for stag_mg_bottom_solver=4, number of additional levels of multigrid
-  stag_mg_omega = 1.e0        ! weighted-jacobi omega coefficient
+  stag_mg_omega = 1.e0        ! weightee-jacobi omega coefficient
   stag_mg_smoother = 1        ! 0 = jacobi; 1 = 2*dm-color Gauss-Seidel
   stag_mg_rel_tol = 1.e-10    ! relative tolerance stopping criteria
 

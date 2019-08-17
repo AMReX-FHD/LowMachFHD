@@ -819,7 +819,6 @@ contains
           c(:,j,2) = c2_file(j) 
           c(:,j,3) = c3_file(j)
           u(:,j)   = u_file(j) 
-          write(*,*) "1=", n, j, c(1,j,:)
        end do
 
     case default
@@ -834,7 +833,6 @@ contains
           ! set final c_i such that sumtot(c_i) = 1 to within roundoff
           sumtot = 0.d0
           do n=1,nspecies-1
-             write(*,*) "2=", n, i, j, c(i,j,n)
              sumtot = sumtot + c(i,j,n)
           end do
           c(i,j,nspecies) = 1.d0 - sumtot
