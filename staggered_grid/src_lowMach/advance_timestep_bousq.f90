@@ -808,9 +808,19 @@ contains
 
                 ! now *subtract* off half of these advective fluxes from total_mass_flux
                 call multifab_saxpy_3_cc(total_mass_flux(n,i),1,-0.5d0,adv_mass_flux(n,i),1,nspecies)
+                
+                ! multiply the total mass flux w adv by -1, so that we take the 
+                ! standard convention that the mass flux has the same sign as the fluid flow 
+                call multifab_mult_mult_s_c(total_mass_flux(n,i),1,-1.d0,nspecies,0)
 
              enddo
           end do
+
+       do n=1,nlevs
+          do i=1,dm
+                
+          enddo
+       enddo        
 
        end if
 

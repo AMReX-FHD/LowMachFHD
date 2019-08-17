@@ -36,9 +36,10 @@ contains
     real(kind=dp_t) :: velocities(n_cells(2)) ! Assume velocity is a function of y only (slit channel or 2D)
     character(len=32) :: id_string
     
-    step=id
+    step=id-1 ! We associate this with the beginning of the step so that the initial condition is written out
     
-    if (parallel_IOProcessor()) then
+    if (parallel_IOProcessor() .and. &
+       (stats_int > 0) .and. (mod(step,stats_int)==0)) then
     
        do i=1,nspecies ! Compute average species fluxes
           species_fluxes(i)=sum(cut(:,:,i))/size(cut(:,:,i))
@@ -55,7 +56,7 @@ contains
        if(.true.) then
           ! Now compute the velocity as a function of y to check
           velocity_unit = unit_new()
-          write(id_string,"(I8.8)") id
+          write(id_string,"(I8.8)") step
           open(unit=velocity_unit, file = "velocities-"//trim(ADJUSTL(id_string))//".dat", status = 'unknown', action = 'write')
 
           do j=0,size(cut,1)-1
