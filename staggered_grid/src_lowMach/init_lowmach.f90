@@ -1420,12 +1420,13 @@ contains
     ! P=(I-W*M*z*z^T / (z^T*W*M*z))
     dc = factor*sqrt(c0*molmass(1:nspecies)/rho_tot)*z ! Unprojected mass fluctuations
 
-    if(use_charged_fluid .and. electroneutral) then ! Project onto z^T*w=0 first
+    if(use_charged_fluid .and. (electroneutral.or.(initial_variance_mass<0.0d0))) then ! Project onto z^T*w=0 first
        factor = sum(molmass(1:nspecies)*c0*(charge_per_mass(1:nspecies)**2)) ! Related to Debye length
        ! Project onto z^T*w=0
        dc = dc - sum(dc*charge_per_mass(1:nspecies))/factor * molmass(1:nspecies)*c0*charge_per_mass(1:nspecies)
        ! Project onto 1^T*w=1
        dc = dc - sum(dc)*c0 ! Make it sum to zero
+       !write(*,*) c, " charge=", sum(dc*charge_per_mass(1:nspecies))
        c = c + dc ! add the fluctuations -- this can produce negative values
        ! We don't try to make them positive since charge neutrality has to be obeyed strictly
     else

@@ -13,7 +13,7 @@ module user_analysis
 
   private
 
-  integer :: flux_unit, velocity_unit
+  integer :: av_fluxes_unit, fluxes_unit
 
   public :: analyze_planar_cut, initialize_planar_cut, destroy_planar_cut
 
@@ -22,8 +22,8 @@ contains
   subroutine initialize_planar_cut()
     ! One can use this to open files for output, allocate/initialize averages over time, etc.
        
-    flux_unit = unit_new()
-    open(unit=flux_unit, file = "fluxes.dat", status = 'unknown', action = 'write')
+    av_fluxes_unit = unit_new()
+    open(unit=av_fluxes_unit, file = "fluxes.dat", status = 'unknown', action = 'write')
   
   end subroutine
 
@@ -33,13 +33,14 @@ contains
 
     integer :: i,j,k,step
     real(kind=dp_t) :: species_fluxes(nspecies), mass_flux, current
-    real(kind=dp_t) :: velocities(n_cells(2)) ! Assume velocity is a function of y only (slit channel or 2D)
+    real(kind=dp_t) :: fluxes(0:n_cells(2),1:nspecies) ! Assume velocity is a function of y only (slit channel or 2D)
     character(len=32) :: id_string
     
     step=id-1 ! We associate this with the beginning of the step so that the initial condition is written out
     
-    if (parallel_IOProcessor() .and. &
-       (stats_int > 0) .and. (mod(step,stats_int)==0)) then
+    ! Maybe add clause if(istep>=n_steps_skip) to skip the beginning?
+    
+    if (parallel_IOProcessor()) then
     
        do i=1,nspecies ! Compute average species fluxes
           species_fluxes(i)=sum(cut(:,:,i))/size(cut(:,:,i))
@@ -48,21 +49,27 @@ contains
 
        if (use_charged_fluid) then
           current = sum(species_fluxes*charge_per_mass(1:nspecies))
-          write(flux_unit,'(1000g17.9)') step*dt_saved, current, mass_flux/rho0, species_fluxes
+          write(av_fluxes_unit,'(1000g17.9)') step*dt_saved, current, mass_flux/rho0, species_fluxes
        else
-          write(flux_unit,'(1000g17.9)') step*dt_saved, mass_flux/rho0, species_fluxes
+          write(av_fluxes_unit,'(1000g17.9)') step*dt_saved, mass_flux/rho0, species_fluxes
        end if
 
-       if(.true.) then
+       if((stats_int > 0) .and. (mod(step,stats_int)==0)) then
           ! Now compute the velocity as a function of y to check
-          velocity_unit = unit_new()
+          fluxes_unit = unit_new()
           write(id_string,"(I8.8)") step
-          open(unit=velocity_unit, file = "velocities-"//trim(ADJUSTL(id_string))//".dat", status = 'unknown', action = 'write')
+          open(unit=fluxes_unit, file = "fluxes-"//trim(ADJUSTL(id_string))//".dat", status = 'unknown', action = 'write')
 
           do j=0,size(cut,1)-1
-             mass_flux=sum(cut(j,:,:))/size(cut,dim=2)
-             write(velocity_unit,'(1000g17.9)') j*dx_saved(2), mass_flux/rho0 
+             fluxes(j,:)=sum(cut(j,:,:),dim=1)/size(cut,dim=2)             
+             if (use_charged_fluid) then
+               current = sum(fluxes(j,:)*charge_per_mass(1:nspecies))
+               write(fluxes_unit,'(1000g17.9)') j*dx_saved(2), current, sum(fluxes(j,:))/rho0, fluxes(j,:)
+             end if  
           end do
+          
+          close(unit=fluxes_unit)
+          
        end if   
     
     end if
@@ -72,7 +79,7 @@ contains
   subroutine destroy_planar_cut()
     ! One can use this to close files for output, deallocate averages over time, etc.
   
-    close(flux_unit)
+    close(av_fluxes_unit)
   
   end subroutine
 

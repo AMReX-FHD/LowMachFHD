@@ -169,6 +169,7 @@ module probin_common_module
   namelist /probin_common/ initial_variance_mom         ! multiplicative factor for initial momentum fluctuations
                                                         ! (if negative, total momentum is set to zero)
   namelist /probin_common/ initial_variance_mass        ! multiplicative factor for initial mass fluctuations
+                                                        ! (if negative, charge fluctuations are initialized to be locally electroneutral)  
 
   ! Boundary conditions
   !----------------------
