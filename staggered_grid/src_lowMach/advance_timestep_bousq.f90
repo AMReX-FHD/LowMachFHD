@@ -327,6 +327,9 @@ contains
                               charge_old,grad_Epot_old,Epot, &
                               permittivity)
 
+! KATIE here is a reasonable place to call something to compute in irreversible stress term
+!  In this case want to get divergence so it looks like a add to rhs for stokes solver
+
     if (use_charged_fluid) then
 
        ! compute old Lorentz force

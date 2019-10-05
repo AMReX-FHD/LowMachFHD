@@ -126,6 +126,10 @@ contains
     call compute_grad(mla, molarconc, diff_mass_flux, dx, 1, mol_frac_bc_comp, 1, nspecies, & 
                       the_bc_tower%bc_tower_array)
 
+!  KATIE  here is at least one potentail place to compute higher-order derivatives as addition to flux
+!  you can use compute_grad (which is in src_common/div_and_grad.f90) as a template
+
+
     ! compute face-centered Gama from cell-centered values 
     if (any(shift_cc_to_boundary(:,:) .eq. 1)) then
        call shift_cc_to_boundary_face(nlevs, Gama, Gama_face, 1, tran_bc_comp, &

@@ -341,6 +341,8 @@ contains
     integer                                       :: row,column
     real(kind=dp_t), dimension(nspecies,nspecies) :: I, X_xxT
 
+!  KATIE -- local to define Gamma matrix
+
     ! Identity matrix
     I = 0.d0
     do row=1,nspecies
