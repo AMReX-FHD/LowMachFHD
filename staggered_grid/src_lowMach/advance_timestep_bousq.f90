@@ -327,8 +327,22 @@ contains
                               charge_old,grad_Epot_old,Epot, &
                               permittivity)
 
-! KATIE here is a reasonable place to call something to compute in irreversible stress term
+! KATIE here is a reasonable place to call something to compute in reversible stress term
 !  In this case want to get divergence so it looks like a add to rhs for stokes solver
+
+    if(use_multi_phase) then
+
+      !compute reversible stress tensor ---added term
+      call compute_div_reversible_stres()
+
+       ! add divergence of reversible stress to gmres_rhs_v
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_saxpy_3(gmres_rhs_v(n,i),1.d0,div_reversible_stress(n,i))
+          end do
+       end do
+
+    end if
 
     if (use_charged_fluid) then
 
