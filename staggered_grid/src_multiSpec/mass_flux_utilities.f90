@@ -340,32 +340,39 @@ contains
     ! local variables
     integer                                       :: row,column
     real(kind=dp_t), dimension(nspecies,nspecies) :: I, X_xxT
+    real(kind=dp_t) :: alpha  !set as paramter KATIE
 
 !  KATIE -- local to define Gamma matrix
 
     ! Identity matrix
+    alpha = 4 !spinodal decomposition
     I = 0.d0
     do row=1,nspecies
        I(row, row) = 1.d0        
     end do
 
-    ! populate X_xxT
-    if (is_ideal_mixture) then
-       X_xxT = 0.d0
-    else
-       do row=1, nspecies  
-          ! diagonal entries
-          X_xxT(row,row) = molarconc(row) - molarconc(row)**2 
-          do column=1, row-1
-             ! off-diagnoal entries
-             X_xxT(row,column)   = -molarconc(row)*molarconc(column)  ! form x*transpose(x) off diagonals 
-             X_xxT(column, row)  = X_xxT(row, column)                 ! symmetric
-          end do
-       end do
-    end if
-  
-    ! compute Gama 
-    Gama = I + matmul(X_xxT, Hessian)     
+    Gama = I
+    Gama(1,2)=alpha*molarconc(1)
+    Gama(2,1)=alpha*molarconc(2)
+
+   !more general care below
+!    ! populate X_xxT
+!    if (is_ideal_mixture) then
+!       X_xxT = 0.d0
+!    else
+!       do row=1, nspecies  
+!          ! diagonal entries
+!          X_xxT(row,row) = molarconc(row) - molarconc(row)**2 
+!          do column=1, row-1
+!             ! off-diagnoal entries
+!             X_xxT(row,column)   = -molarconc(row)*molarconc(column)  ! form x*transpose(x) off diagonals 
+!             X_xxT(column, row)  = X_xxT(row, column)                 ! symmetric
+!          end do
+!       end do
+!    end if
+!  
+!    ! compute Gama 
+!    Gama = I + matmul(X_xxT, Hessian)     
  
   end subroutine compute_Gama_local
 

@@ -144,7 +144,11 @@ contains
        do i=1,dm
           call matvec_mul(mla, diff_mass_flux(n,i), Gama_face(n,i), nspecies)
        end do
-    end do    
+    end do   
+
+    call compute_higher_order_term(mla, molarconc, diff_mass_flux, dx, 1, mol_frac_bc_comp, 1, nspecies, & 
+                      the_bc_tower%bc_tower_array)
+     
 
     if(is_nonisothermal) then
     
