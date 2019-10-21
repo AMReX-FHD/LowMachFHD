@@ -145,6 +145,8 @@ contains
         cx_local_minus = 0.25*(node_grad_cx(i,j)+node_grad_cx(i,j+1)+node_grad_cx(i-1,j+1)+node_grad_cx(i-1,j))
         cy_local_minus = 0.25*(node_grad_cy(i,j)+node_grad_cy(i,j+1)+node_grad_cy(i-1,j+1)+node_grad_cy(i-1,j))\
 
+!should first line below be ... -node_grad_cx*node_grad_cy ? first term is grad(cxcy) right? also need to check signs 
+!also have not added k_c anywhere--need to fix
         forcex(i,j) = (node_grad_cx(i,j+1)*node_grad_cy(i,j+1) - node_grad_cx(i,j)*node_grad_cx(i,j))/dx(2) &
            (0.5*(cy_local_plus*cy_local_plus-cx_local_plus*cx_local_plus) &
            -0.5*(cy_local_minus*cy_local_minus-cx_local_minus*cx_local_minus))/(dx(1)) 
@@ -219,7 +221,13 @@ contains
          cy_local_minus = (.125)*(node_grad_cy(i,j,k)+node_grad_cy(i,j+1,k)+node_grad_cy(i-1,j+1,k)+node_grad_cy(i-1,j,k)+node_grad_cy(i,j,k+1)+node_grad_cy(i,j+1,k+1)+node_grad_cy(i-1,j+1,k+1)+node_grad_cy(i-1,j,k+1))
          cz_local_minus = (.125)*(node_grad_cz(i,j,k)+node_grad_cz(i,j+1,k)+node_grad_cz(i-1,j+1,k)+node_grad_cz(i-1,j,k)+node_grad_cz(i,j,k+1)+node_grad_cz(i,j+1,k+1)+node_grad_cz(i-1,j+1,k+1)+node_grad_cz(i-1,j,k+1))
 
+
+        forcex(i,j) = (node_grad_cx(i,j+1)*node_grad_cy(i,j+1) - node_grad_cx(i,j)*node_grad_cx(i,j))/dx(2) &
+           (0.5*(cy_local_plus*cy_local_plus-cx_local_plus*cx_local_plus) &
+           -0.5*(cy_local_minus*cy_local_minus-cx_local_minus*cx_local_minus))/(dx(1)) 
+
          forcex(i,j,k) =
+
          end do
         end do
        end do
