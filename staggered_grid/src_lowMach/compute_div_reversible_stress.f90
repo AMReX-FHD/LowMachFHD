@@ -123,14 +123,14 @@ contains
       ! local variables
       integer :: i,j 
       real(kind=dp_t) :: kc
-      real(kind=dp_t) :: cx_local, cy_local, cx_local_plus, cy_local_mius
+      real(kind=dp_t) :: cx_local_plus, cy_local_plus, cx_local_minus, cy_local_minus
 
 
       kc = 1.d-4 !make parameter
 
       !grad x & y
       do j=lo(2),hi(2)
-       do i=lo(1),hi(1)+1
+       do i=lo(1),hi(1)+1 !!does the plus one matter here?
 
               node_grad_cx(i,j) = (c(i,j)-c(i-1,j)+c(i,j-1)-c(i-1,j-1))/(2*dx(1))
               node_grad_cy(i,j) = (c(i,j)-c(i,j-1)+c(i-1,j)-c(i-1,j-1))/(2*dx(2))
@@ -174,14 +174,90 @@ contains
       real(kind=dp_t) :: forcex(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
       real(kind=dp_t) :: forcey(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
       real(kind=dp_t) :: forcez(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
-      real(kind=dp_t) ::     Ex(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)
-      real(kind=dp_t) ::     Ey(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)
-      real(kind=dp_t) ::     Ez(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)
+      real(kind=dp_t) :: node_grad_cx(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_1:)
+      real(kind=dp_t) :: node_grad_cy(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_1:)
+      real(kind=dp_t) :: node_grad_cz(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_1:)
+      real(kind=dp_t) :: Ex(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)
+      real(kind=dp_t) :: Ey(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)
+      real(kind=dp_t) :: Ez(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)
       real(kind=dp_t) ::   perm(lo(1)-ng_3:,lo(2)-ng_3:,lo(3)-ng_3:)
       real(kind=dp_t) :: dx(:)
 
       ! local variables
       integer :: i,j,k
+
+
+      ! local variables
+      integer :: i,j 
+      real(kind=dp_t) :: kc
+      real(kind=dp_t) :: cx_local_plus, cy_local_plus, cz_local_plus, cx_local_minus, cy_local_minus, cz_local_minus
+
+
+      kc = 1.d-4 !make parameter
+
+      !grad x & y & z
+      do k=lo(3),hi(3)
+       do j=lo(2),hi(2)
+        do i=lo(1),hi(1)+1 !! again, is this correct placement for +1?
+
+        end do
+       end do 
+      end do
+
+      do k=lo(3),hi(3)
+       do j=lo(2),hi(2)
+        do i=lo(1),hi(1)+1
+         cx_local_plus = (.125)*(node_grad_cx(i,j,k)+node_grad_cx(i,j+1,k)+node_grad_cx(i+1,j+1,k)+node_grad_cx(i+1,j,k)+node_grad_cx(i+1,j+1,k+1)+node_grad_cx(i,j,k+1)+node_grad_cx(i,j+1,k+1)+node_grad_cx(i+1,j,k+1))
+         cy_local_plus = (.125)*(node_grad_cy(i,j,k)+node_grad_cy(i,j+1,k)+node_grad_cy(i+1,j+1,k)+node_grad_cy(i+1,j,k)+node_grad_cy(i+1,j+1,k+1)+node_grad_cy(i,j,k+1)+node_grad_cy(i,j+1,k+1)+node_grad_cy(i+1,j,k+1))
+         cz_local_plus = (.125)*(node_grad_cz(i,j,k)+node_grad_cz(i,j+1,k)+node_grad_cz(i+1,j+1,k)+node_grad_cz(i+1,j,k)+node_grad_cz(i+1,j+1,k+1)+node_grad_cz(i,j,k+1)+node_grad_cz(i,j+1,k+1)+node_grad_cz(i+1,j,k+1))
+
+         cx_local_minus = (.125)*(node_grad_cx(i,j,k)+node_grad_cx(i,j+1,k)+node_grad_cx(i-1,j+1,k)+node_grad_cx(i-1,j,k)+node_grad_cx(i,j,k+1)+node_grad_cx(i,j+1,k+1)+node_grad_cx(i-1,j+1,k+1)+node_grad_cx(i-1,j,k+1))
+         cy_local_minus = (.125)*(node_grad_cy(i,j,k)+node_grad_cy(i,j+1,k)+node_grad_cy(i-1,j+1,k)+node_grad_cy(i-1,j,k)+node_grad_cy(i,j,k+1)+node_grad_cy(i,j+1,k+1)+node_grad_cy(i-1,j+1,k+1)+node_grad_cy(i-1,j,k+1))
+         cz_local_minus = (.125)*(node_grad_cz(i,j,k)+node_grad_cz(i,j+1,k)+node_grad_cz(i-1,j+1,k)+node_grad_cz(i-1,j,k)+node_grad_cz(i,j,k+1)+node_grad_cz(i,j+1,k+1)+node_grad_cz(i-1,j+1,k+1)+node_grad_cz(i-1,j,k+1))
+
+         forcex(i,j,k) =
+         end do
+        end do
+       end do
+
+
+      do k=lo(3),hi(3)
+      do j=lo(2),hi(2)+1
+      do i=lo(1),hi(1)
+
+         cx_local_plus = (.125)*(node_grad_cx(i,j,k)+node_grad_cx(i,j+1,k)+node_grad_cx(i+1,j+1,k)+node_grad_cx(i+1,j,k)+node_grad_cx(i+1,j+1,k+1)+node_grad_cx(i,j,k+1)+node_grad_cx(i,j+1,k+1)+node_grad_cx(i+1,j,k+1))
+         cy_local_plus = (.125)*(node_grad_cy(i,j,k)+node_grad_cy(i,j+1,k)+node_grad_cy(i+1,j+1,k)+node_grad_cy(i+1,j,k)+node_grad_cy(i+1,j+1,k+1)+node_grad_cy(i,j,k+1)+node_grad_cy(i,j+1,k+1)+node_grad_cy(i+1,j,k+1))
+         cz_local_plus = (.125)*(node_grad_cz(i,j,k)+node_grad_cz(i,j+1,k)+node_grad_cz(i+1,j+1,k)+node_grad_cz(i+1,j,k)+node_grad_cz(i+1,j+1,k+1)+node_grad_cz(i,j,k+1)+node_grad_cz(i,j+1,k+1)+node_grad_cz(i+1,j,k+1))
+
+         cx_local_minus = (.125)*(node_grad_cx(i,j,k)+node_grad_cx(i,j-1,k)+node_grad_cx(i+1,j-1,k)+node_grad_cx(i+1,j,k)+node_grad_cx(i,j,k+1)+node_grad_cx(i,j-1,k+1)+node_grad_cx(i+1,j-1,k+1)+node_grad_cx(i+1,j,k+1))
+         cy_local_minus = (.125)*(node_grad_cy(i,j,k)+node_grad_cy(i,j-1,k)+node_grad_cy(i+1,j-1,k)+node_grad_cy(i+1,j,k)+node_grad_cy(i,j,k+1)+node_grad_cy(i,j-1,k+1)+node_grad_cy(i+1,j-1,k+1)+node_grad_cy(i+1,j,k+1))
+         cz_local_minus = (.125)*(node_grad_cz(i,j,k)+node_grad_cz(i,j-1,k)+node_grad_cz(i+1,j-1,k)+node_grad_cz(i+1,j,k)+node_grad_cz(i,j,k+1)+node_grad_cz(i,j-1,k+1)+node_grad_cz(i+1,j-1,k+1)+node_grad_cz(i+1,j,k+1))
+
+        forcey(i,j,k) = 
+
+      end do
+      end do
+      end do
+
+      do k=lo(3),hi(3)+1
+      do j=lo(2),hi(2)
+      do i=lo(1),hi(1)
+
+         cx_local_plus = (.125)*(node_grad_cx(i,j,k)+node_grad_cx(i,j+1,k)+node_grad_cx(i+1,j+1,k)+node_grad_cx(i+1,j,k)+node_grad_cx(i+1,j+1,k+1)+node_grad_cx(i,j,k+1)+node_grad_cx(i,j+1,k+1)+node_grad_cx(i+1,j,k+1))
+         cy_local_plus = (.125)*(node_grad_cy(i,j,k)+node_grad_cy(i,j+1,k)+node_grad_cy(i+1,j+1,k)+node_grad_cy(i+1,j,k)+node_grad_cy(i+1,j+1,k+1)+node_grad_cy(i,j,k+1)+node_grad_cy(i,j+1,k+1)+node_grad_cy(i+1,j,k+1))
+         cz_local_plus = (.125)*(node_grad_cz(i,j,k)+node_grad_cz(i,j+1,k)+node_grad_cz(i+1,j+1,k)+node_grad_cz(i+1,j,k)+node_grad_cz(i+1,j+1,k+1)+node_grad_cz(i,j,k+1)+node_grad_cz(i,j+1,k+1)+node_grad_cz(i+1,j,k+1))
+
+         cx_local_minus = (.125)*(node_grad_cx(i,j,k)+node_grad_cx(i,j+1,k)+node_grad_cx(i+1,j+1,k)+node_grad_cx(i+1,j,k)+node_grad_cx(i,j,k-1)+node_grad_cx(i,j+1,k-1)+node_grad_cx(i+1,j+1,k-1)+node_grad_cx(i+1,j,k-1))
+         cy_local_minus = (.125)*(node_grad_cy(i,j,k)+node_grad_cy(i,j+1,k)+node_grad_cy(i+1,j+1,k)+node_grad_cy(i+1,j,k)+node_grad_cy(i,j,k-1)+node_grad_cy(i,j+1,k-1)+node_grad_cy(i+1,j+1,k-1)+node_grad_cy(i+1,j,k-1))
+         cz_local_minus = (.125)*(node_grad_cz(i,j,k)+node_grad_cz(i,j+1,k)+node_grad_cz(i+1,j+1,k)+node_grad_cz(i+1,j,k)+node_grad_cz(i,j,k-1)+node_grad_cz(i,j+1,k-1)+node_grad_cz(i+1,j+1,k-1)+node_grad_cz(i+1,j,k-1))
+
+        forcez(i,j,k) = 
+
+      end do
+      end do
+      end do
+
+!!!!old code
 
       do k=lo(3),hi(3)
       do j=lo(2),hi(2)
@@ -216,9 +292,9 @@ contains
       end do
       end do
 
-    end subroutine Lorentz_force_gradeps_3d
+    end subroutine compute_div_reversible_stress_3d
 
-  end subroutine compute_Lorentz_force
+  end subroutine compute_div_reversible_stress
 
   subroutine compute_E_ext(mla,E_ext)
 
