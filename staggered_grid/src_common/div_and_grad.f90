@@ -125,23 +125,24 @@ contains
       ! local
       integer :: i,j
       real(kind=dp_t) :: dxinv,twodxinvi, kc
-      real(kind=dp_t) :: lap(lo(1)-ng_g:,lo(2)-ng_g:)
+      real(kind=dp_t) :: lapx(xlo(1)-1:xhi(1),xlo(2):xhi(2))
+      real(kind=dp_t) :: lapy(ylo(1):yhi(1),ylo(2)-1:yhi(2))
 
       dxinv = 1.d0/dx(1)
       twodxinv = 2.d0*dxinv
       kc = 1.d-4 !need to figure out good value
 
       ! laplacian
-      do j=xlo(2)-1,xhi(2)+1
-         do i=xlo(1)-1,xhi(1)+1
-            lap(i,j) = ( phi(i+1,j)-2*phi(i,j)+phi(i-1,j) + phi(i,j+1)-2*phi(i,j)+phi(i,j-1) ) * (dxinv*dxinv)
+      do j=xlo(2),xhi(2)
+         do i=xlo(1)-1,xhi(1)
+            lapx(i,j) = ( phi(i+1,j)-2*phi(i,j)+phi(i-1,j) + phi(i,j+1)-2*phi(i,j)+phi(i,j-1) ) * (dxinv*dxinv)
          end do
       end do
 !!!!!!
       ! x-faces
       do j=xlo(2),xhi(2)
          do i=xlo(1),xhi(1)
-            gpx(i,j) = gpx(i,j) - kc*(phi(i,j)+phi(i-1,j))*.5*( lap(i,j)-lap(i-1,j) ) * dxinv
+            gpx(i,j) = gpx(i,j) - kc*(phi(i,j)+phi(i-1,j))*.5*( lapx(i,j)-lapx(i-1,j) ) * dxinv
          end do
       end do
    
@@ -163,6 +164,13 @@ contains
       end if
       end if
 
+      ! laplacian
+      do j=ylo(2)-1,yhi(2)
+         do i=ylo(1),yhi(1)
+            lapy(i,j) = ( phi(i+1,j)-2*phi(i,j)+phi(i-1,j) + phi(i,j+1)-2*phi(i,j)+phi(i,j-1) ) * (dxinv*dxinv)
+         end do
+      end do
+      
       ! y-faces
       do j=ylo(2),yhi(2)
          do i=ylo(1),yhi(1)

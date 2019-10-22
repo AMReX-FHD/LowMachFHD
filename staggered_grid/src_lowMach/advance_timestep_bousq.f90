@@ -123,6 +123,8 @@ contains
     ! only used when use_charged_fluid=T
     type(multifab) :: Lorentz_force(mla%nlevel,mla%dim)
 
+    type(multifab) :: div_reversible_stress(mla%nlevel,mla%dim)
+
     ! only needed if total_mass_flux is passed in
     ! this a temporary used to hold the advective mass fluxes
     type(multifab) :: adv_mass_flux(mla%nlevel,mla%dim)
@@ -217,6 +219,14 @@ contains
        do n=1,nlevs
           do i=1,dm
              call multifab_build_edge(Lorentz_force(n,i),mla%la(n),1,0,i)
+          end do
+       end do
+    end if
+
+    if (use_multi_phase) then
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_build_edge(div_reversible_stress(n,i),mla%la(n),1,0,i)
           end do
        end do
     end if
@@ -333,7 +343,7 @@ contains
     if(use_multi_phase) then
 
       !compute reversible stress tensor ---added term
-      call compute_div_reversible_stres()
+      call compute_div_reversible_stress(mla,div_reversible_stress,rhotot_old,rho_old,dx,the_bc_tower)
 
        ! add divergence of reversible stress to gmres_rhs_v
        do n=1,nlevs
@@ -1152,6 +1162,14 @@ contains
        do n=1,nlevs
           do i=1,dm
              call multifab_destroy(Lorentz_force(n,i))
+          end do
+       end do
+    end if
+
+    if (use_multi_phase) then
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_destroy(div_reversible_stress(n,i))
           end do
        end do
     end if
