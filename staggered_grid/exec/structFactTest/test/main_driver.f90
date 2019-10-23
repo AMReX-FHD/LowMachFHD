@@ -13,7 +13,7 @@ subroutine main_driver()
   ! quantities will be allocated with (nlevs,dm) components
   real(kind=dp_t), allocatable :: dx(:,:)
   real(kind=dp_t)              :: dt,time
-  integer                      :: n,nlevs,i,dm,step
+  integer                      :: n,nlevs,i,dm,step,id
   type(box)                    :: bx
   type(ml_boxarray)            :: mba
   type(ml_layout)              :: mla
@@ -21,6 +21,8 @@ subroutine main_driver()
   
   ! will be allocated on nlevels
   type(multifab), allocatable  :: rho(:)
+
+  real(kind=dp_t), pointer :: dp(:,:,:,:)
   
   ! For HydroGrid
   integer :: narg, farg, un
@@ -82,13 +84,12 @@ subroutine main_driver()
   ! don't need this anymore - free up memory
   call destroy(mba)
 
+  ! 2 species hard coded
   allocate(rho(nlevs))
   do n=1,nlevs
      call multifab_build(rho(n),mla%la(n),2,0)
   end do
-
-  dt = 1.d0
-  
+ 
   ! set grid spacing at each level
   allocate(dx(nlevs,dm))
   dx(1,1:dm) = (prob_hi(1:dm)-prob_lo(1:dm)) / n_cells(1:dm)
@@ -119,9 +120,18 @@ subroutine main_driver()
   !=====================================================================
 
   do n=1,nlevs
-     call setval(rho(n),0.d0)
+     do i=1,nfabs(rho(n))
+        dp => dataptr(rho(n),i)
+        lo = lwb(get_box(rho(n),i))
+        hi = upb(get_box(rho(n),i))
+        select case (dm)
+        case (2)
+        case (3)
+           dp => dataptr(rho(n),i)
+           call init_rho_3d(dp(:,:,:,:),lo,hi)
+        end select
+     end do
   end do
-  
 
   !=====================================================================
   ! Initialize HydroGrid for analysis
@@ -129,40 +139,86 @@ subroutine main_driver()
   narg = command_argument_count()
   farg = 1
   if (narg >= 1) then
-        call get_command_argument(farg, value = fname)
-        inquire(file = fname, exist = lexist )
-        if ( lexist ) then
-           un = unit_new()
-           open(unit=un, file = fname, status = 'old', action = 'read')
+     call get_command_argument(farg, value = fname)
+     inquire(file = fname, exist = lexist )
+     if ( lexist ) then
+        un = unit_new()
+        open(unit=un, file = fname, status = 'old', action = 'read')
 
-           ! We will also pass temperature
-           call initialize_hydro_grid(mla,rho,dt,dx,namelist_file=un, & 
-                                      nspecies_in=2, &
-                                      nscal_in=0, &
-                                      exclude_last_species_in=.false., &
-                                      analyze_velocity=.false., &
-                                      analyze_density=.true., &
-                                      analyze_temperature=.false.) 
-           
-           close(unit=un)
-           
-        else
-        
-           call bl_error('HydroGrid initialization requires a namelist in an input file')
-           
-        end if
+        ! We will also pass temperature
+        call initialize_hydro_grid(mla,rho,dt,dx,namelist_file=un, & 
+                                   nspecies_in=2, &
+                                   nscal_in=0, &
+                                   exclude_last_species_in=.false., &
+                                   analyze_velocity=.false., &
+                                   analyze_density=.true., &
+                                   analyze_temperature=.false.) 
+
+        close(unit=un)
+
+     else
+
+        call bl_error('HydroGrid initialization requires a namelist in an input file')
+
      end if
+  end if
 
+  dt = 1.d0
+  step = 0
+  id = 0
 
-     step = 0
-     
-     ! Add this snapshot to the average in HydroGrid
-     call analyze_hydro_grid(mla,dt,dx,step,rho=rho)
+  ! Add this snapshot to the average in HydroGrid
+  call analyze_hydro_grid(mla,dt,dx,step,rho=rho)
 
-     ! increment id each time you call this
-     ! step is for the output filename
-     call save_hydro_grid(id=0, step=0)
+  ! increment id each time you call this
+  ! step is for the output filename
+  call save_hydro_grid(id,step)
+  id = id+1
+  step = step+1
+
+  ! now set rho to zero
+  do n=1,nlevs
+     call setval(rho(n),0.d0)
+  end do
+
+  ! Add this snapshot to the average in HydroGrid
+  call analyze_hydro_grid(mla,dt,dx,step,rho=rho)
+
+  ! increment id each time you call this
+  ! step is for the output filename
+  call save_hydro_grid(id,step)
+  id = id+1
+  step = step+1
+
+  ! cleanup
+
+  do n=1,nlevs
+     call multifab_destroy(rho(n))
+  end do
   
+  call finalize_hydro_grid()
   call destroy(mla)
 
+contains
+
+  subroutine init_rho_3d(rho,lo,hi)
+
+    integer :: lo(3), hi(3)
+    real(kind=dp_t) :: rho(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3),1:2)
+
+    integer :: i,j,k
+
+    do k=lo(3),hi(3)
+    do j=lo(2),hi(2)
+    do i=lo(1),hi(1)
+
+       rho(i,j,k,1) = i+j+k
+       rho(i,j,k,2) = sqrt(dble(i+j+k))
+       
+    end do
+    end do
+    end do
+
+  end subroutine init_rho_3d  
+  
 end subroutine main_driver
