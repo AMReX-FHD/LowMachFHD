@@ -137,11 +137,14 @@ contains
     type(multifab) ::   umac_tmp(mla%nlevel,mla%dim)
 
     integer :: i,dm,n,nlevs,proj_type,comp
+    logical :: use_multi_phase
     
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in, relxn_param_charge_in
     real(kind=dp_t) :: weights(2)
 
     real(kind=dp_t), parameter :: mattingly_lin_comb_coef(1:2) = (/-1.d0, 2.d0/)
+
+    use_multi_phase = .true.
 
     if (barodiffusion_type .ne. 0) then
        call bl_error("advance_timestep_bousq: barodiffusion not supported yet")
