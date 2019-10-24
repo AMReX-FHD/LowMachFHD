@@ -23,10 +23,7 @@ module reversible_stress_module
 
   private
 
-  public :: dot_with_z, dot_with_z_face, compute_charge_coef, &
-            enforce_charge_neutrality, implicit_potential_coef, modify_S, &
-            compute_permittivity, compute_Lorentz_force, compute_E_ext, &
-            zero_eps_on_wall
+  public :: compute_div_reversible_stress
   
 contains
 
@@ -322,91 +319,4 @@ contains
 
   end subroutine compute_div_reversible_stress
 
-  subroutine compute_E_ext(mla,E_ext)
-
-    type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(inout) :: E_ext(:,:)
-
-    integer :: n, nlevs, dm, i
-
-    nlevs = mla%nlevel
-    dm = mla%dim
-
-    if (E_ext_type .eq. 1) then
-
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_setval(E_ext(n,i),E_ext_value(i),all=.true.)
-          end do
-       end do
-
-    end if
-
-  end subroutine compute_E_ext
-
-  subroutine zero_eps_on_wall(mla,beta,dx)
-
-    type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(in   ) :: beta(:,:)
-    real(kind=dp_t), intent(in   ) :: dx(:,:)
-
-    integer :: i,dm,nlevs,n,ng_b
-    integer :: lo(mla%dim),hi(mla%dim)
-
-    real(kind=dp_t), pointer :: bpx(:,:,:,:)
-    real(kind=dp_t), pointer :: bpy(:,:,:,:)
-    real(kind=dp_t), pointer :: bpz(:,:,:,:)
-
-    nlevs = mla%nlevel
-    dm = mla%dim
-
-    ng_b = beta(1,1)%ng
-
-    do n=1,nlevs
-       do i=1,nfabs(beta(n,1))
-          lo = lwb(get_box(beta(n,1),i))
-          hi = upb(get_box(beta(n,1),i))
-          bpy => dataptr(beta(n,2),i)
-          select case (dm)
-          case (2)
-             call zero_eps_on_wall_2d(bpy(:,:,1,1),ng_b,lo,hi,dx(n,:))
-          case (3)
-             call bl_error("zero_eps_on_wall_3d not written yet")
-          end select
-       end do
-    end do
-
-  end subroutine zero_eps_on_wall
-
-  subroutine zero_eps_on_wall_2d(betay,ng_b,lo,hi,dx)
-      
-    integer         :: lo(:),hi(:),ng_b
-    real(kind=dp_t) :: betay(lo(1)-ng_b:,lo(2)-ng_b:)
-    real(kind=dp_t) :: dx(:)
-
-    integer :: i,j
-
-    real(kind=dp_t) :: x,y,Lx
-
-    Lx = prob_hi(1) - prob_lo(1)    
-
-    if (zero_eps_on_wall_type .eq. 1) then
-
-       ! y-faces
-       do j=lo(2),hi(2)+1
-          y = prob_lo(2) + dx(2)*j
-          do i=lo(1),hi(1)
-             x = prob_lo(1) + dx(1)*(i+0.5d0)
-
-             if (y .eq. 0.d0 .and. (x .le. zero_eps_on_wall_left_end*Lx .or. x .ge. zero_eps_on_wall_right_start*Lx) ) then
-                betay(i,j) = 0.d0
-             end if
-
-          end do
-       end do
-
-    end if
-
-  end subroutine zero_eps_on_wall_2d
-
-end module fluid_charge_module
+end module reversible_stress_module
