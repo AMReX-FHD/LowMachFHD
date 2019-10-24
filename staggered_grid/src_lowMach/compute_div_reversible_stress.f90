@@ -34,7 +34,7 @@ contains
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: div_reversible_stress(:,:)
     type(multifab) , intent(in   ) :: rhotot(:)
-    type(multifab) , intent(in   ) :: rho   (:)
+    type(multifab) , intent(inout) :: rho   (:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
 

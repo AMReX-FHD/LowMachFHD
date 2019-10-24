@@ -29,6 +29,7 @@ module advance_timestep_bousq_module
   use fluid_charge_module
   use mk_grav_force_module
   use bds_module
+  use reversible_stress_module
   use project_onto_eos_module
   use probin_common_module, only: advection_type, grav, variance_coef_mass, &
                                   variance_coef_mom, barodiffusion_type, project_eos_int, &
