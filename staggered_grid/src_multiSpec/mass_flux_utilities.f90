@@ -345,7 +345,8 @@ contains
 !  KATIE -- local to define Gamma matrix
 
     ! Identity matrix
-    alpha = 4 !spinodal decomposition
+    ! alpha = 4 !spinodal decomposition
+    alpha = 0 !spinodal decomposition
     I = 0.d0
     do row=1,nspecies
        I(row, row) = 1.d0        

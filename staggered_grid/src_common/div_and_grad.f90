@@ -130,7 +130,8 @@ contains
 
       dxinv = 1.d0/dx(1)
       twodxinv = 2.d0*dxinv
-      kc = 1.d-4 !need to figure out good value
+      !kc = 1.d-6 !need to figure out good value
+      kc = 0.d-6 !need to figure out good value
 
       ! laplacian
       do j=xlo(2),xhi(2)
@@ -220,7 +221,7 @@ contains
       
       dxinv = 1.d0/dx(1)
       twodxinv = 2.d0*dxinv
-      kc = 1.d-4 !need to figure out good value
+      kc = 1.d-6 !need to figure out good value
 
 !      ! laplacian
 !      do j=xlo(2),xhi(2)

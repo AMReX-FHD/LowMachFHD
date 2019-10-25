@@ -124,7 +124,7 @@ contains
       allocate(node_grad_cx(lo(1)-1:hi(1)+2,lo(2)-1:hi(2)+2))
       allocate(node_grad_cy(lo(1)-1:hi(1)+2,lo(2)-1:hi(2)+2))
 
-      kc = 1.d-4 !make parameter
+      kc = 1.d-6 !make parameter
 
       !grad x & y
       do j=lo(2)-1,hi(2)+2
@@ -192,7 +192,7 @@ contains
       allocate(node_grad_cy(lo(1)-1:hi(1)+2,lo(2)-1:hi(2)+2,lo(3)-1:hi(3)+2))
       allocate(node_grad_cz(lo(1)-1:hi(1)+2,lo(2)-1:hi(2)+2,lo(3)-1:hi(3)+2))
       
-      kc = 1.d-4 !make parameter
+      kc = 1.d-6 !make parameter
 
       !grad x & y & z
       do k=lo(3)-1,hi(3)+2

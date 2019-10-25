@@ -347,14 +347,14 @@ contains
     if(use_multi_phase) then
 
       !compute reversible stress tensor ---added term
-      call compute_div_reversible_stress(mla,div_reversible_stress,rhotot_old,rho_old,dx,the_bc_tower)
+!     call compute_div_reversible_stress(mla,div_reversible_stress,rhotot_old,rho_old,dx,the_bc_tower)
 
-       ! add divergence of reversible stress to gmres_rhs_v
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_saxpy_3(gmres_rhs_v(n,i),1.d0,div_reversible_stress(n,i))
-          end do
-       end do
+!      ! add divergence of reversible stress to gmres_rhs_v
+!      do n=1,nlevs
+!         do i=1,dm
+!            call multifab_saxpy_3(gmres_rhs_v(n,i),1.d0,div_reversible_stress(n,i))
+!         end do
+!      end do
 
     end if
 
