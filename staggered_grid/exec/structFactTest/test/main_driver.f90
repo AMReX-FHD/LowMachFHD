@@ -5,6 +5,8 @@ subroutine main_driver()
   use analyze_spectra_module
   use probin_common_module, only: probin_common_init, prob_lo, prob_hi, n_cells, dim_in, max_grid_size
 
+  use fabio_module
+
   implicit none
 
   ! quantities will be allocated with dm components
@@ -21,6 +23,8 @@ subroutine main_driver()
   
   ! will be allocated on nlevels
   type(multifab), allocatable  :: rho(:)
+  type(multifab), allocatable  :: Temp(:)
+  type(multifab), allocatable  :: umac(:,:)
 
   real(kind=dp_t), pointer :: dp(:,:,:,:)
   
@@ -89,7 +93,6 @@ subroutine main_driver()
   do n=1,nlevs
      call multifab_build(rho(n),mla%la(n),2,0)
   end do
- 
   ! set grid spacing at each level
   allocate(dx(nlevs,dm))
   dx(1,1:dm) = (prob_hi(1:dm)-prob_lo(1:dm)) / n_cells(1:dm)
@@ -132,7 +135,9 @@ subroutine main_driver()
         end select
      end do
   end do
-
+  
+  call fabio_ml_multifab_write_d(rho,mla%mba%rr(:,1),"a_rho")
+  
   !=====================================================================
   ! Initialize HydroGrid for analysis
   !=====================================================================
@@ -144,7 +149,7 @@ subroutine main_driver()
      if ( lexist ) then
         un = unit_new()
         open(unit=un, file = fname, status = 'old', action = 'read')
-
+        
         ! We will also pass temperature
         call initialize_hydro_grid(mla,rho,dt,dx,namelist_file=un, & 
                                    nspecies_in=2, &
@@ -152,8 +157,8 @@ subroutine main_driver()
                                    exclude_last_species_in=.false., &
                                    analyze_velocity=.false., &
                                    analyze_density=.true., &
-                                   analyze_temperature=.false.) 
-
+                                   analyze_temperature=.false.)
+        
         close(unit=un)
 
      else
@@ -166,7 +171,7 @@ subroutine main_driver()
   dt = 1.d0
   step = 0
   id = 0
-
+  
   ! Add this snapshot to the average in HydroGrid
   call analyze_hydro_grid(mla,dt,dx,step,rho=rho)
 
@@ -177,18 +182,18 @@ subroutine main_driver()
   step = step+1
 
   ! now set rho to zero
-  do n=1,nlevs
-     call setval(rho(n),0.d0)
-  end do
+!  do n=1,nlevs
+!     call setval(rho(n),0.d0)
+!  end do
 
   ! Add this snapshot to the average in HydroGrid
-  call analyze_hydro_grid(mla,dt,dx,step,rho=rho)
+!  call analyze_hydro_grid(mla,dt,dx,step,rho=rho)
 
   ! increment id each time you call this
   ! step is for the output filename
-  call save_hydro_grid(id,step)
-  id = id+1
-  step = step+1
+!  call save_hydro_grid(id,step)
+!  id = id+1
+!  step = step+1
 
   ! cleanup
 
@@ -212,8 +217,8 @@ contains
     do j=lo(2),hi(2)
     do i=lo(1),hi(1)
 
-       rho(i,j,k,1) = i+j+k
-       rho(i,j,k,2) = sqrt(dble(i+j+k))
+       rho(i,j,k,1) = (i+j+k)
+       rho(i,j,k,2) = 0.5*sqrt(dble(i+j+k))
        
     end do
     end do
