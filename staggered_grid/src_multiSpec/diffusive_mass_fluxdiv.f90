@@ -4,7 +4,7 @@ module diffusive_mass_fluxdiv_module
   use define_bc_module
   use bc_module
   use div_and_grad_module
-  use probin_multispecies_module, only: is_nonisothermal, correct_flux
+  use probin_multispecies_module, only: is_nonisothermal, correct_flux, use_multiphase
   use probin_common_module, only: barodiffusion_type, nspecies, shift_cc_to_boundary
   use mass_flux_utilities_module
   use ml_layout_module
@@ -126,9 +126,6 @@ contains
     call compute_grad(mla, molarconc, diff_mass_flux, dx, 1, mol_frac_bc_comp, 1, nspecies, & 
                       the_bc_tower%bc_tower_array)
 
-!  KATIE  here is at least one potentail place to compute higher-order derivatives as addition to flux
-!  you can use compute_grad (which is in src_common/div_and_grad.f90) as a template
-
 
     ! compute face-centered Gama from cell-centered values 
     if (any(shift_cc_to_boundary(:,:) .eq. 1)) then
@@ -146,8 +143,12 @@ contains
        end do
     end do   
 
-    call compute_higher_order_term(mla, molarconc, diff_mass_flux, dx, 1, mol_frac_bc_comp, 1, nspecies, & 
+    if(use_multiphase)then
+
+        call compute_higher_order_term(mla, molarconc, diff_mass_flux, dx, 1, mol_frac_bc_comp, 1, nspecies, & 
                       the_bc_tower%bc_tower_array)
+
+    endif
      
 
     if(is_nonisothermal) then

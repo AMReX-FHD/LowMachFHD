@@ -14,6 +14,7 @@ module reversible_stress_module
   use fill_rho_ghost_cells_module
   use convert_rhoc_to_c_module
   use probin_common_module, only: molmass, k_B, rhobar, nspecies, prob_lo, prob_hi
+  use probin_multispecies_module, only: kc_tension
   use probin_charged_module, only: charge_per_mass, dpdt_factor, &
                                    dielectric_const, dielectric_type, &
                                    E_ext_type, E_ext_value, zero_eps_on_wall_type, &
@@ -115,7 +116,7 @@ contains
 
       ! local variables
       integer :: i,j 
-      real(kind=dp_t) :: kc
+      ! real(kind=dp_t) :: kc
       real(kind=dp_t) :: cx_local_plus, cy_local_plus, cx_local_minus, cy_local_minus
 
       real(kind=dp_t) , allocatable :: node_grad_cx(:,:)
@@ -124,7 +125,8 @@ contains
       allocate(node_grad_cx(lo(1)-1:hi(1)+2,lo(2)-1:hi(2)+2))
       allocate(node_grad_cy(lo(1)-1:hi(1)+2,lo(2)-1:hi(2)+2))
 
-      kc = 1.d-6 !make parameter
+      ! kc = 1.d-2 !make parameter
+
 
       !grad x & y
       do j=lo(2)-1,hi(2)+2
@@ -147,7 +149,7 @@ contains
         forcex(i,j) = -(node_grad_cx(i,j+1)*node_grad_cy(i,j+1) - node_grad_cx(i,j)*node_grad_cy(i,j))/dx(2) &
            +(0.5*(cy_local_plus*cy_local_plus-cx_local_plus*cx_local_plus) &
            -0.5*(cy_local_minus*cy_local_minus-cx_local_minus*cx_local_minus))/(dx(1)) 
-        forcex(i,j) = kc*forcex(i,j)
+        forcex(i,j) = kc_tension*forcex(i,j)
       end do
       end do
 
@@ -163,7 +165,7 @@ contains
         forcey(i,j) = -(node_grad_cx(i+1,j)*node_grad_cy(i+1,j) - node_grad_cx(i,j)*node_grad_cy(i,j))/dx(1) &
            +(0.5*(cy_local_plus*cy_local_plus-cx_local_plus*cx_local_plus) &
            -0.5*(cy_local_minus*cy_local_minus-cx_local_minus*cx_local_minus))/(dx(2)) 
-        forcey(i,j) = kc*forcey(i,j)
+        forcey(i,j) = kc_tension*forcey(i,j)
       end do
       end do
 
@@ -181,7 +183,7 @@ contains
       ! local variables
       integer :: i,j,k
 
-      real(kind=dp_t) :: kc
+      !  real(kind=dp_t) :: kc
       real(kind=dp_t) :: cx_local_plus, cy_local_plus, cz_local_plus, cx_local_minus, cy_local_minus, cz_local_minus
 
       real(kind=dp_t),  allocatable :: node_grad_cx(:,:,:)
@@ -192,7 +194,7 @@ contains
       allocate(node_grad_cy(lo(1)-1:hi(1)+2,lo(2)-1:hi(2)+2,lo(3)-1:hi(3)+2))
       allocate(node_grad_cz(lo(1)-1:hi(1)+2,lo(2)-1:hi(2)+2,lo(3)-1:hi(3)+2))
       
-      kc = 1.d-6 !make parameter
+      !  kc = 1.d-6 !make parameter
 
       !grad x & y & z
       do k=lo(3)-1,hi(3)+2
@@ -240,7 +242,7 @@ contains
                  cx_local_minus*cx_local_minus))/(dx(1)) & 
            -(node_grad_cx(i,j,k+1)*node_grad_cz(i,j,k+1) -&
                   node_grad_cx(i,j,k)*node_grad_cz(i,j,k))/dx(3)
-         forcex(i,j,k) = kc*forcex(i,j,k)
+         forcex(i,j,k) = kc_tension*forcex(i,j,k)
 
          end do
         end do
@@ -275,7 +277,7 @@ contains
            +(0.5*(cx_local_plus*cx_local_plus+cz_local_plus*cz_local_plus-cy_local_plus*cy_local_plus) &
            -0.5*(cx_local_minus*cx_local_minus+cz_local_minus*cz_local_minus-cy_local_minus*cy_local_minus))/(dx(2)) & 
            -(node_grad_cy(i,j,k+1)*node_grad_cz(i,j,k+1) - node_grad_cy(i,j,k)*node_grad_cz(i,j,k))/dx(3)
-         forcey(i,j,k) = kc*forcey(i,j,k)
+         forcey(i,j,k) = kc_tension*forcey(i,j,k)
 
       end do
       end do
@@ -309,7 +311,7 @@ contains
            +(0.5*(cx_local_plus*cx_local_plus+cy_local_plus*cy_local_plus-cz_local_plus*cz_local_plus) &
            -0.5*(cx_local_minus*cx_local_minus+cy_local_minus*cy_local_minus-cz_local_minus*cz_local_minus))/(dx(3)) & 
            -(node_grad_cy(i,j+1,k)*node_grad_cz(i,j+1,k) - node_grad_cy(i,j,k)*node_grad_cz(i,j,k))/dx(2)
-         forcez(i,j,k) = kc*forcez(i,j,k)
+         forcez(i,j,k) = kc_tension*forcez(i,j,k)
 
       end do
       end do

@@ -35,7 +35,7 @@ module advance_timestep_bousq_module
                                   variance_coef_mom, barodiffusion_type, project_eos_int, &
                                   molmass, use_bl_rng, nspecies, plot_int, max_step
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
-  use probin_multispecies_module, only: midpoint_stoch_mass_flux_type, is_ideal_mixture
+  use probin_multispecies_module, only: midpoint_stoch_mass_flux_type, is_ideal_mixture, use_multiphase
   use probin_charged_module, only: use_charged_fluid, electroneutral, relxn_param_charge
   use probin_chemistry_module, only: nreactions, use_Poisson_rng, include_discrete_LMA_correction, &
                                      exclude_solvent_comput_rates, use_mole_frac_LMA
@@ -138,14 +138,12 @@ contains
     type(multifab) ::   umac_tmp(mla%nlevel,mla%dim)
 
     integer :: i,dm,n,nlevs,proj_type,comp
-    logical :: use_multi_phase
     
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in, relxn_param_charge_in
     real(kind=dp_t) :: weights(2)
 
     real(kind=dp_t), parameter :: mattingly_lin_comb_coef(1:2) = (/-1.d0, 2.d0/)
 
-    use_multi_phase = .true.
 
     if (barodiffusion_type .ne. 0) then
        call bl_error("advance_timestep_bousq: barodiffusion not supported yet")
@@ -227,7 +225,7 @@ contains
        end do
     end if
 
-    if (use_multi_phase) then
+    if (use_multiphase) then
        do n=1,nlevs
           do i=1,dm
              call multifab_build_edge(div_reversible_stress(n,i),mla%la(n),1,0,i)
@@ -344,17 +342,18 @@ contains
 ! KATIE here is a reasonable place to call something to compute in reversible stress term
 !  In this case want to get divergence so it looks like a add to rhs for stokes solver
 
-    if(use_multi_phase) then
 
-      !compute reversible stress tensor ---added term
-!     call compute_div_reversible_stress(mla,div_reversible_stress,rhotot_old,rho_old,dx,the_bc_tower)
+    if(use_multiphase) then
 
-!      ! add divergence of reversible stress to gmres_rhs_v
-!      do n=1,nlevs
-!         do i=1,dm
-!            call multifab_saxpy_3(gmres_rhs_v(n,i),1.d0,div_reversible_stress(n,i))
-!         end do
-!      end do
+     !compute reversible stress tensor ---added term
+     call compute_div_reversible_stress(mla,div_reversible_stress,rhotot_old,rho_old,dx,the_bc_tower)
+
+      ! add divergence of reversible stress to gmres_rhs_v
+      do n=1,nlevs
+         do i=1,dm
+            call multifab_saxpy_3(gmres_rhs_v(n,i),1.d0,div_reversible_stress(n,i))
+         end do
+      end do
 
     end if
 
@@ -1170,7 +1169,7 @@ contains
        end do
     end if
 
-    if (use_multi_phase) then
+    if (use_multiphase) then
        do n=1,nlevs
           do i=1,dm
              call multifab_destroy(div_reversible_stress(n,i))
