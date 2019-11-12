@@ -185,7 +185,8 @@ contains
       if (bc(2,1) .eq. FOEXTRAP .or. bc(2,1) .eq. HOEXTRAP .or. bc(2,1) .eq. EXT_DIR) then
          j=lo(2)
          do i=lo(1),hi(1)
-            gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) * twodxinv
+          !  gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) * twodxinv
+            gpy(i,j) = 0 
          end do
       end if
       end if
@@ -195,7 +196,8 @@ contains
       if (bc(2,2) .eq. FOEXTRAP .or. bc(2,2) .eq. HOEXTRAP .or. bc(2,2) .eq. EXT_DIR) then
          j=hi(2)+1
          do i=lo(1),hi(1)
-            gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) * twodxinv
+          !  gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) * twodxinv
+            gpy(i,j) = 0 
          end do
       end if
       end if

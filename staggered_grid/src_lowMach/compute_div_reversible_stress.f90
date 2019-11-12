@@ -130,7 +130,7 @@ contains
 
       !grad x & y
       do j=lo(2)-1,hi(2)+2
-       do i=lo(1)-1,hi(1)+2 !!does the plus one matter here?
+       do i=lo(1)-1,hi(1)+2 
 
               node_grad_cx(i,j) = (c(i,j)-c(i-1,j)+c(i,j-1)-c(i-1,j-1))/(2*dx(1))
               node_grad_cy(i,j) = (c(i,j)-c(i,j-1)+c(i-1,j)-c(i-1,j-1))/(2*dx(2))
