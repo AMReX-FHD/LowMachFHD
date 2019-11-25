@@ -6,7 +6,7 @@ module mass_flux_utilities_module
   use probin_common_module, only: k_B, molmass, rhobar, molmass, nspecies
   use probin_multispecies_module, only: use_lapack, fraction_tolerance, &
                                         is_ideal_mixture, inverse_type, is_nonisothermal, &
-                                        chi_iterations, avg_type
+                                        chi_iterations, avg_type, use_multiphase, alpha_gex
   use matrix_utilities 
   use compute_mixture_properties_module
   use F95_LAPACK ! Donev: Disabled LAPACK so this builds more easily on different systems
@@ -345,34 +345,38 @@ contains
 !  KATIE -- local to define Gamma matrix
 
     ! Identity matrix
-    alpha = 4 !spinodal decomposition
-    I = 0.d0
-    do row=1,nspecies
-       I(row, row) = 1.d0        
-    end do
+    if(use_multiphase) then
+         !    alpha = 4 !spinodal decomposition
+        I = 0.d0
+        do row=1,nspecies
+           I(row, row) = 1.d0        
+        end do
 
-    Gama = I
-    Gama(1,2)=alpha*molarconc(1)
-    Gama(2,1)=alpha*molarconc(2)
+        Gama = I
+        Gama(1,2)=alpha_gex*molarconc(1)
+        Gama(2,1)=alpha_gex*molarconc(2)
 
-   !more general care below
-!    ! populate X_xxT
-!    if (is_ideal_mixture) then
-!       X_xxT = 0.d0
-!    else
-!       do row=1, nspecies  
-!          ! diagonal entries
-!          X_xxT(row,row) = molarconc(row) - molarconc(row)**2 
-!          do column=1, row-1
-!             ! off-diagnoal entries
-!             X_xxT(row,column)   = -molarconc(row)*molarconc(column)  ! form x*transpose(x) off diagonals 
-!             X_xxT(column, row)  = X_xxT(row, column)                 ! symmetric
-!          end do
-!       end do
-!    end if
-!  
-!    ! compute Gama 
-!    Gama = I + matmul(X_xxT, Hessian)     
+     else
+
+        !more general care below
+        ! populate X_xxT
+        if (is_ideal_mixture) then
+           X_xxT = 0.d0
+        else
+           do row=1, nspecies  
+              ! diagonal entries
+              X_xxT(row,row) = molarconc(row) - molarconc(row)**2 
+              do column=1, row-1
+                 ! off-diagnoal entries
+                 X_xxT(row,column)   = -molarconc(row)*molarconc(column)  ! form x*transpose(x) off diagonals 
+                 X_xxT(column, row)  = X_xxT(row, column)                 ! symmetric
+              end do
+           end do
+        end if
+   
+        ! compute Gama 
+        Gama = I + matmul(X_xxT, Hessian)     
+     endif
  
   end subroutine compute_Gama_local
 
@@ -730,9 +734,10 @@ contains
        chi(1,2) = -tmp
        chi(2,1) = -tmp
        chi(2,2) = tmp*W(1)/W(2)
-
+     !  print*, chi
        return
     end if
+
 
     ! compute chi either selecting inverse/pseudoinverse or iterative methods 
     if (use_lapack) then
@@ -1581,6 +1586,7 @@ contains
           rhoWchi(row,column) = rho(row)*chi(row,column)  
        end do
     end do
+    print*, rhoWchi
 
   end subroutine compute_rhoWchi_from_chi_local
 

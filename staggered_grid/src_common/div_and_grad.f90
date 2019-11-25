@@ -4,6 +4,7 @@ module div_and_grad_module
   use ml_layout_module
   use define_bc_module
   use bc_module
+  use probin_multispecies_module, only : kc_tension
 
   implicit none
 
@@ -124,13 +125,14 @@ contains
 
       ! local
       integer :: i,j
-      real(kind=dp_t) :: dxinv,twodxinvi, kc
+      real(kind=dp_t) :: dxinv,twodxinv  !, kc
       real(kind=dp_t) :: lapx(xlo(1)-1:xhi(1),xlo(2):xhi(2))
       real(kind=dp_t) :: lapy(ylo(1):yhi(1),ylo(2)-1:yhi(2))
 
       dxinv = 1.d0/dx(1)
       twodxinv = 2.d0*dxinv
-      kc = 1.d-4 !need to figure out good value
+      !kc = 1.d-2 !need to figure out good value
+
 
       ! laplacian
       do j=xlo(2),xhi(2)
@@ -142,7 +144,7 @@ contains
       ! x-faces
       do j=xlo(2),xhi(2)
          do i=xlo(1),xhi(1)
-            gpx(i,j) = gpx(i,j) - kc*(phi(i,j)+phi(i-1,j))*.5*( lapx(i,j)-lapx(i-1,j) ) * dxinv
+            gpx(i,j) = gpx(i,j) - kc_tension*(phi(i,j)+phi(i-1,j))*.5*( lapx(i,j)-lapx(i-1,j) ) * dxinv
          end do
       end do
    
@@ -174,7 +176,7 @@ contains
       ! y-faces
       do j=ylo(2),yhi(2)
          do i=ylo(1),yhi(1)
-            gpy(i,j) = gpy(i,j) - kc*(phi(i,j)+phi(i,j-1))*0.5*( lap(i,j)-lap(i,j-1) ) * dxinv
+            gpy(i,j) = gpy(i,j) - kc_tension*(phi(i,j)+phi(i,j-1))*0.5*( lapy(i,j)-lapy(i,j-1) ) * dxinv
          end do
       end do
 
@@ -183,7 +185,8 @@ contains
       if (bc(2,1) .eq. FOEXTRAP .or. bc(2,1) .eq. HOEXTRAP .or. bc(2,1) .eq. EXT_DIR) then
          j=lo(2)
          do i=lo(1),hi(1)
-            gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) * twodxinv
+          !  gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) * twodxinv
+            gpy(i,j) = 0 
          end do
       end if
       end if
@@ -193,12 +196,13 @@ contains
       if (bc(2,2) .eq. FOEXTRAP .or. bc(2,2) .eq. HOEXTRAP .or. bc(2,2) .eq. EXT_DIR) then
          j=hi(2)+1
          do i=lo(1),hi(1)
-            gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) * twodxinv
+          !  gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) * twodxinv
+            gpy(i,j) = 0 
          end do
       end if
       end if
 
-    end subroutine compute_higher_order_term
+    end subroutine compute_higher_order_term_2d
 
     subroutine compute_higher_order_term_3d(phi,ng_p,gpx,gpy,gpz,ng_g,lo,hi,dx,bc,xlo,xhi,ylo,yhi,zlo,zhi)
 
@@ -213,16 +217,27 @@ contains
 
       ! local
       integer :: i,j,k
-      real(kind=dp_t) :: dxinv,twodxinv
+      real(kind=dp_t) :: dxinv,twodxinv             !kc
+      real(kind=dp_t) :: lapx(xlo(1)-1:xhi(1),xlo(2):xhi(3),xlo(3):xhi(3))
+      real(kind=dp_t) :: lapy(ylo(1):yhi(1),ylo(2)-1:yhi(3),ylo(3):yhi(3))
+      real(kind=dp_t) :: lapz(zlo(1):zhi(1),zlo(2):zhi(3),zlo(3)-1:zhi(3))
       
       dxinv = 1.d0/dx(1)
       twodxinv = 2.d0*dxinv
+!     kc = 1.d-6 !need to figure out good value
+
+!      ! laplacian
+!      do j=xlo(2),xhi(2)
+!         do i=xlo(1)-1,xhi(1)
+!            lapx(i,j) = ( phi(i+1,j)-2*phi(i,j)+phi(i-1,j) + phi(i,j+1)-2*phi(i,j)+phi(i,j-1) ) * (dxinv*dxinv)
+!         end do
+!      end do
 
       ! laplacian
-      do k=xlo(2)-1,xhi(2)+1
-        do j=xlo(2)-1,xhi(2)+1
-           do i=xlo(1)-1,xhi(1)+1
-              lap(i,j) = ( phi(i+1,j,k)-2*phi(i,j,k)+phi(i-1,j,k) + phi(i,j+1,k)-2*phi(i,j,k)+phi(i,j-1,k) &
+      do k=xlo(2),xhi(2)
+        do j=xlo(2),xhi(2)
+           do i=xlo(1)-1,xhi(1)
+              lapx(i,j,k) = ( phi(i+1,j,k)-2*phi(i,j,k)+phi(i-1,j,k) + phi(i,j+1,k)-2*phi(i,j,k)+phi(i,j-1,k) &
                   + phi(i,j,k+1)-2*phi(i,j,k)+phi(i,j,k-1) ) * (dxinv*dxinv)
            end do
         end do
@@ -232,7 +247,7 @@ contains
       do k=xlo(3),xhi(3)
          do j=xlo(2),xhi(2)
             do i=xlo(1),xhi(1)
-               gpx(i,j,k) = gpx(i,j) - kc*0.5*( phi(i,j,k)+phi(i-1,j,k) )*( lap(i,j,k)-lap(i-1,j,k) ) * dxinv
+               gpx(i,j,k) = gpx(i,j,k) - kc_tension*0.5*( phi(i,j,k)+phi(i-1,j,k) )*( lapx(i,j,k)-lapx(i-1,j,k) ) * dxinv
             end do
          end do
       end do
@@ -259,11 +274,21 @@ contains
       end if
       end if
 
+      !y laplacaian
+      do k=xlo(2),xhi(2)
+        do j=xlo(2)-1,xhi(2)
+           do i=xlo(1),xhi(1)
+              lapy(i,j,k) = ( phi(i+1,j,k)-2*phi(i,j,k)+phi(i-1,j,k) + phi(i,j+1,k)-2*phi(i,j,k)+phi(i,j-1,k) &
+                  + phi(i,j,k+1)-2*phi(i,j,k)+phi(i,j,k-1) ) * (dxinv*dxinv)
+           end do
+        end do
+      end do
+
       ! y-faces
       do k=ylo(3),yhi(3)
          do j=ylo(2),yhi(2)
             do i=ylo(1),yhi(1)
-               gpy(i,j,k) = gpy(i,j) - kc*0.5*( phi(i,j,k)+phi(i,j-1,k) )( lap(i,j,k)-lap(i,j-1,k) ) * dxinv
+               gpy(i,j,k) = gpy(i,j,k) - kc_tension*0.5*( phi(i,j,k)+phi(i,j-1,k) )*( lapy(i,j,k)-lapy(i,j-1,k) ) * dxinv
             end do
          end do
       end do
@@ -290,11 +315,21 @@ contains
       end if
       end if
 
+      !y laplacaian
+      do k=xlo(2)-1,xhi(2)
+        do j=xlo(2),xhi(2)
+           do i=xlo(1),xhi(1)
+              lapz(i,j,k) = ( phi(i+1,j,k)-2*phi(i,j,k)+phi(i-1,j,k) + phi(i,j+1,k)-2*phi(i,j,k)+phi(i,j-1,k) &
+                  + phi(i,j,k+1)-2*phi(i,j,k)+phi(i,j,k-1) ) * (dxinv*dxinv)
+           end do
+        end do
+      end do
+
       ! z-faces
       do k=zlo(3),zhi(3)
          do j=zlo(2),zhi(2)
             do i=zlo(1),zhi(1)
-               gpz(i,j,k) = gpz(i,j,k) - 0.5*kc*( phi(i,j,k)+phi(i,j,k-1) )*( lap(i,j,k)-lap(i,j,k-1) ) * dxinv
+               gpz(i,j,k) = gpz(i,j,k) - 0.5*kc_tension*( phi(i,j,k)+phi(i,j,k-1) )*( lapz(i,j,k)-lapz(i,j,k-1) ) * dxinv
             end do
          end do
       end do

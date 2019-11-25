@@ -4,20 +4,20 @@
   ! Problem specification
   !----------------------
   dim_in = 2                            ! 2D or 3D  
-  prob_type = 1                         ! const conc grad along y (see src_lowMach/init_lowmach.f90)
+  prob_type = 18                         ! const conc grad along y (see src_lowMach/init_lowmach.f90)
   prob_lo(1:3) = 0.    0.    0.         ! physical lo coordinate
-  prob_hi(1:3) = 1.e-2 1.e-2 1.e1      ! physical hi coordinate
-  n_cells(1:2) = 32    32           ! number of cells in domain
+  prob_hi(1:3) = 4.e-2 4.e-2 4.e-2      ! physical hi coordinate
+  n_cells(1:2) = 128 128
   max_grid_size(1:3) = 32 32         ! max number of cells in a box
 
   ! Time-step control
   !----------------------
-  fixed_dt = 1.e-10                         ! time step (if positive, fixed)
+  fixed_dt = 2.e-10                         ! time step (if positive, fixed)
   cfl = 0.5                             ! advective cfl number (used if fixed_dt<0) to determine time step
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 1                    ! maximum number of time steps
+  max_step = 100000                    ! maximum number of time steps
   plot_int = 100                       ! Interval for writing a plotfile (for visit/amrvis)
   plot_shifted_vel = T
   chk_int = 1000                          ! Interval for writing a checkpoint
@@ -134,7 +134,7 @@
 
   use_multiphase = .true.
   alpha_gex = 4.
-  kc_tension = 1.d-2
+  kc_tension = 1.d-7
   
   ! Thermodynamic and transport properties:
   !----------------------
@@ -143,7 +143,8 @@
   ! Number of elements is (nspecies*(nspecies-1)/2)
   ! The values are red row by row starting from top going down (this allows easy addition/deletion of new species/rows)
   ! So D_12; D_13, D_23; D_14, D_24, D_34; ...
-  Dbar(1) = 1.d-4                          ! Maxwell-Stefan diffusion constant  
+  ! Dbar(1) = 1.d-1                          ! Maxwell-Stefan diffusion constant  
+  Dbar(1) = 1.0d                          ! Maxwell-Stefan diffusion constant  
 
   ! Algorithmic options:
   !----------------------
@@ -165,12 +166,11 @@
 
 &probin_charged
 
-  use_charged_fluid = F
 
-!  use_charged_fluid = T
+   use_charged_fluid = F
   ! dielectric_const = 6.91d-19    ! relative permitivity ~ 78, vacuum permitivity ~ 8.854d-21
   dielectric_const = 2.d-19    ! relative permitivity ~ 78, vacuum permitivity ~ 8.854d-21
-  charge_per_mass(1:3) = 0.d0 0.d0 0.d0
+  charge_per_mass(1:2) = 0.d-1 -0.d-1 
 
   ! 1 = Dirichlet (fixed potential)
   ! 2 = Neumann (fixed charge density)
@@ -188,8 +188,8 @@
   Epot_wall(1,2) = 389001450.485d0
   Epot_wall(2,2) = 389001450.485d0
 
-  E_ext_type = 1
-  E_ext_value(1:2) = 1.d11 0.d0
+  E_ext_type = 0
+  E_ext_value(1:2) = 0.d11 0.d0
 
 
 /
