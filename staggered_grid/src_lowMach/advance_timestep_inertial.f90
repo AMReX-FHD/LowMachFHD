@@ -33,6 +33,7 @@ module advance_timestep_inertial_module
                                   use_bl_rng, nspecies
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_charged_module, only: use_charged_fluid
+  use debug_module
 
   implicit none
 
@@ -117,6 +118,8 @@ contains
 
     call build(bpt, "advance_timestep_inertial")
 
+    call print_edge(umac,1,3,5,1)
+    
     weights(1) = 1.d0
 
     nlevs = mla%nlevel
