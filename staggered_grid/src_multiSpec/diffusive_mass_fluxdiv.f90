@@ -3,6 +3,7 @@ module diffusive_mass_fluxdiv_module
   use multifab_module
   use define_bc_module
   use bc_module
+  use debug_module
   use div_and_grad_module
   use probin_multispecies_module, only: is_nonisothermal, correct_flux, use_multiphase
   use probin_common_module, only: barodiffusion_type, nspecies, shift_cc_to_boundary
@@ -118,6 +119,14 @@ contains
                                nspecies**2, the_bc_tower%bc_tower_array, .false.) 
     end if
 
+!    print*, 'rhoWchi'
+!    call print_edge(rhoWchi_face,2,8,1,1)
+!    call print_edge(rhoWchi_face,2,8,1,2)
+!    call print_edge(rhoWchi_face,2,8,1,3)
+!    call print_edge(rhoWchi_face,2,8,1,4)
+  !!  print*, 'rhoWchi'
+  !!  print*, rhoWchi
+
     !==================================!
     ! compute flux-piece from molarconc
     !==================================! 
@@ -126,6 +135,8 @@ contains
     call compute_grad(mla, molarconc, diff_mass_flux, dx, 1, mol_frac_bc_comp, 1, nspecies, & 
                       the_bc_tower%bc_tower_array)
 
+!    print*, 'diff mass flux at grad x'
+!    call print_edge(diff_mass_flux,2,8,1,1)
 
     ! compute face-centered Gama from cell-centered values 
     if (any(shift_cc_to_boundary(:,:) .eq. 1)) then
@@ -135,6 +146,11 @@ contains
        call average_cc_to_face(nlevs, Gama, Gama_face, 1, tran_bc_comp, &
                                nspecies**2, the_bc_tower%bc_tower_array, .false.)
     end if
+!    print*, 'Gama face'
+!    call print_edge(Gama_face,2,8,1,1)
+!    call print_edge(Gama_face,2,8,1,2)
+!    call print_edge(Gama_face,2,8,1,3)
+!    call print_edge(Gama_face,2,8,1,4)
 
     ! compute Gama*grad(molarconc): Gama is nspecies^2 matrix; grad(x) is nspecies component vector 
     do n=1,nlevs
@@ -142,6 +158,9 @@ contains
           call matvec_mul(mla, diff_mass_flux(n,i), Gama_face(n,i), nspecies)
        end do
     end do   
+ 
+!    print*, 'diff mass flux at GAMA grad x'
+!    call print_edge(diff_mass_flux,2,8,1,1)
 
     if(use_multiphase)then
 
@@ -233,6 +252,9 @@ contains
           call matvec_mul(mla, diff_mass_flux(n,i), rhoWchi_face(n,i), nspecies)
        end do
     end do    
+ 
+!    print*, 'diff mass flux at rhowchi GAMA grad x'
+!!    call print_edge(diff_mass_flux,2,8,1,1)
 
     ! If there are walls with zero-flux boundary conditions
     if(is_nonisothermal) then

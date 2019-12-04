@@ -207,11 +207,11 @@ contains
                                nspecies**2, the_bc_tower%bc_tower_array, .false.) 
     end if
     
-    print*, 'rhoWchi_face'
-    call print_edge(rhoWchi_face,2,8,1,1)
-    call print_edge(rhoWchi_face,2,8,1,2)
-    call print_edge(rhoWchi_face,2,8,1,3)
-    call print_edge(rhoWchi_face,2,8,1,4)
+!    print*, 'rhoWchi_face'
+!    call print_edge(rhoWchi_face,2,8,1,1)
+!    call print_edge(rhoWchi_face,2,8,1,2)
+!    call print_edge(rhoWchi_face,2,8,1,3)
+!    call print_edge(rhoWchi_face,2,8,1,4)
 
     ! solve poisson equation for phi (the electric potential)
     ! -del dot epsilon grad Phi = charge
@@ -451,12 +451,12 @@ contains
 
     end if
 
-    print *,'gradient of Epot'
+!    print *,'gradient of Epot'
     ! compute the gradient of the electric potential
     call compute_grad(mla,Epot,grad_Epot,dx,1,Epot_bc_comp,1,1,the_bc_tower%bc_tower_array)
-    print *,'done with gradient of Epot'
+!    print *,'done with gradient of Epot'
 
-    call print_edge(grad_Epot,2,8,1,1)
+!    call print_edge(grad_Epot,2,8,1,1)
 
     if (E_ext_type .ne. 0) then
        ! add external electric field
@@ -492,9 +492,9 @@ contains
                                the_bc_tower%bc_tower_array,.true.)
     end if
 
-    print *,'charge coefficient'
-    call print_edge(electro_mass_flux,2,8,1,1)
-    call print_edge(electro_mass_flux,2,8,1,2)
+ !   print *,'charge coefficient'
+ !   call print_edge(electro_mass_flux,2,8,1,1)
+ !   call print_edge(electro_mass_flux,2,8,1,2)
 
     ! multiply flux coefficient by gradient of electric potential
     do n=1,nlevs
@@ -505,17 +505,16 @@ contains
        end do
     end do
 
-    print *,'electric driving force'
-    call print_edge(electro_mass_flux,2,8,1,1)
-    call print_edge(electro_mass_flux,2,8,1,2)
+!    print *,'electric driving force'
+!    call print_edge(electro_mass_flux,2,8,1,1)
+!    call print_edge(electro_mass_flux,2,8,1,2)
 
-    !! KK insert here
 
     call limit_emf(rho, electro_mass_flux, grad_Epot)
 
-    print *,'electric driving force after limiting'
-    call print_edge(electro_mass_flux,2,8,1,1)
-    call print_edge(electro_mass_flux,2,8,1,2)
+!    print *,'electric driving force after limiting'
+!    call print_edge(electro_mass_flux,2,8,1,1)
+!    call print_edge(electro_mass_flux,2,8,1,2)
 
     ! compute -rhoWchi * (... ) on faces
     do n=1,nlevs
@@ -524,9 +523,9 @@ contains
        end do
     end do
 
-    print *,'electric flux'
-    call print_edge(electro_mass_flux,2,8,1,1)
-    call print_edge(electro_mass_flux,2,8,1,2)
+!    print *,'electric flux'
+!    call print_edge(electro_mass_flux,2,8,1,1)
+!    call print_edge(electro_mass_flux,2,8,1,2)
 
     if (.false..and.electroneutral) then
        ! Print some fluxes for debugging
