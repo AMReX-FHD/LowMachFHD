@@ -353,8 +353,10 @@ contains
         end do
 
         Gama = I
-        Gama(1,2)=alpha_gex*molarconc(1)
-        Gama(2,1)=alpha_gex*molarconc(2)
+        Gama(1,2)=8*8*alpha_gex*(molarconc(1)**7)*(molarconc(2)**7)
+        Gama(2,1)=8*8*alpha_gex*(molarconc(2)**7)*(molarconc(1)**7)
+        Gama(1,1)=7*8*alpha_gex*(molarconc(1)**6)*(molarconc(2)**8)
+        Gama(2,2)=7*8*alpha_gex*(molarconc(2)**6)*(molarconc(1)**8)
 
      else
 
