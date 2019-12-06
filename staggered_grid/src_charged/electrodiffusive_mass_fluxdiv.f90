@@ -1189,35 +1189,25 @@ contains
     print *," in limiter routine"
     
     do j = lo(2),hi(2)
-
         do i = lo(1),hi(1)
-
             do n=1,nspecies
 
                 if(rho(i,j,n) .le. 0) then            
 
                     if(electro_mass_fluxx(i,j,n)>0) then
-
                         electro_mass_fluxx(i,j,1:nspecies) = 0
-
                     end if
 
                     if(electro_mass_fluxx(i+1,j,n)<0) then
-
                         electro_mass_fluxx(i+1,j,1:nspecies) = 0
-
                     end if
 
                     if(electro_mass_fluxy(i,j,n)>0) then
-
                         electro_mass_fluxy(i,j,1:nspecies) = 0
-
                     end if
 
                     if(electro_mass_fluxy(i,j+1,n)<0) then
-
                         electro_mass_fluxy(i,j+1,1:nspecies) = 0
-
                     end if
 
                 end if

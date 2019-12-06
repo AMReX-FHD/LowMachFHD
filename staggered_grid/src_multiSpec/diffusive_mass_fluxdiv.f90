@@ -146,6 +146,11 @@ contains
        call average_cc_to_face(nlevs, Gama, Gama_face, 1, tran_bc_comp, &
                                nspecies**2, the_bc_tower%bc_tower_array, .false.)
     end if
+
+    !KK I think we need to insert Gama limiting here
+
+    call limit_Gama(molarconc,Gama_face)
+
 !    print*, 'Gama face'
 !    call print_edge(Gama_face,2,8,1,1)
 !    call print_edge(Gama_face,2,8,1,2)
@@ -284,5 +289,84 @@ contains
     call destroy(bpt)
 
   end subroutine diffusive_mass_flux
+
+!make Gama identity for small concentrations
+  subroutine limit_Gama(molarconc, Gama)
+
+    type(multifab) , intent(inout) :: Gama(:,:)
+    type(multifab) , intent(in) :: molarconc(:)
+
+    ! Local
+    integer                  :: lo(get_dim(molarconc(1))),hi(get_dim(molarconc(1)))
+    integer                  :: ng_m,ng_G,i,dm
+    real(kind=dp_t), pointer :: mp(:,:,:,:)
+    real(kind=dp_t), pointer :: Gpx(:,:,:,:), Gpy(:,:,:,:), Gpz(:,:,:,:)
+
+    dm = get_dim(molarconc(1))
+    ng_m = nghost(molarconc(1))
+    ng_G = nghost(Gama(1,1))
+    
+    do i=1,nfabs(molarconc(1))
+        mp => dataptr(molarconc(1),i)
+       Gpx => dataptr(Gama(1,1),i)
+       Gpy => dataptr(Gama(1,2),i)
+
+       lo = lwb(get_box(molarconc(1),i))
+       hi = upb(get_box(molarconc(1),i))
+          select case (dm)
+          case (2)
+             call limit_Gama_2d(mp(:,:,1,:), ng_m, &
+                                          Gpx(:,:,1,:), Gpy(:,:,1,:), ng_G, &
+                                          lo, hi)
+          case (3)
+             Gpz => dataptr(Gama(1,3),i)
+            call bl_error("WRITE LIMIT GAMA 3D")
+          end select
+    end do
+ 
+  end subroutine limit_Gama
+
+  subroutine limit_Gama_2d(molarconc, ng_m,Gpx,Gpy,ng_G, &
+                                     lo,hi)
+
+    integer        , intent(in   ) :: lo(:),hi(:),ng_m,ng_G
+    real(kind=dp_t), intent(in) :: molarconc(lo(1)-ng_m:,lo(2)-ng_m:,:)
+    real(kind=dp_t), intent(inout) :: Gpx(lo(1)-ng_G:,lo(2)-ng_G:,:)
+    real(kind=dp_t), intent(inout) :: Gpy(lo(1)-ng_G:,lo(2)-ng_G:,:)
+
+    integer i,j,n
+    real(kind=dp_t) eepsilon
+
+    eepsilon = 0.0001
+
+    print *," in limiter GAMA routine"
+    do j = lo(2),hi(2)
+        do i = lo(1),hi(1)
+            do n=1,nspecies
+
+                if(min(molarconc(i,j,n),molarconc(i-1,j,n)) .le. eepsilon) then !need to make this an input parameter?            
+
+                    Gpx(i,j,1)=1.d0
+                    Gpx(i,j,2)=0.d0
+                    Gpx(i,j,3)=0.d0
+                    Gpx(i,j,4)=1.d0
+
+                endif
+
+                if(min(molarconc(i,j,n),molarconc(i,j-1,n)) .le. eepsilon) then !need to make this an input parameter?            
+                    Gpy(i,j,1)=1.d0
+                    Gpy(i,j,2)=0.d0
+                    Gpy(i,j,3)=0.d0
+                    Gpy(i,j,4)=1.d0
+
+                end if
+
+                end do
+            end do
+        end do       
+    
+
+    end subroutine limit_Gama_2d
+
 
 end module diffusive_mass_fluxdiv_module
