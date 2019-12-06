@@ -218,9 +218,9 @@ contains
       ! local
       integer :: i,j,k
       real(kind=dp_t) :: dxinv,twodxinv             !kc
-      real(kind=dp_t) :: lapx(xlo(1)-1:xhi(1),xlo(2):xhi(3),xlo(3):xhi(3))
-      real(kind=dp_t) :: lapy(ylo(1):yhi(1),ylo(2)-1:yhi(3),ylo(3):yhi(3))
-      real(kind=dp_t) :: lapz(zlo(1):zhi(1),zlo(2):zhi(3),zlo(3)-1:zhi(3))
+      real(kind=dp_t) :: lapx(xlo(1)-1:xhi(1),xlo(2):xhi(2),xlo(3):xhi(3))
+      real(kind=dp_t) :: lapy(ylo(1):yhi(1),ylo(2)-1:yhi(2),ylo(3):yhi(3))
+      real(kind=dp_t) :: lapz(zlo(1):zhi(1),zlo(2):zhi(2),zlo(3)-1:zhi(3))
       
       dxinv = 1.d0/dx(1)
       twodxinv = 2.d0*dxinv
@@ -234,11 +234,11 @@ contains
 !      end do
 
       ! laplacian
-      do k=xlo(2),xhi(2)
+      do k=xlo(3),xhi(3)
         do j=xlo(2),xhi(2)
            do i=xlo(1)-1,xhi(1)
-              lapx(i,j,k) = ( phi(i+1,j,k)-2*phi(i,j,k)+phi(i-1,j,k) + phi(i,j+1,k)-2*phi(i,j,k)+phi(i,j-1,k) &
-                  + phi(i,j,k+1)-2*phi(i,j,k)+phi(i,j,k-1) ) * (dxinv*dxinv)
+              lapx(i,j,k) = ( phi(i+1,j,k)-2.d0*phi(i,j,k)+phi(i-1,j,k) + phi(i,j+1,k)-2.d0*phi(i,j,k)+phi(i,j-1,k) &
+                  + phi(i,j,k+1)-2.d0*phi(i,j,k)+phi(i,j,k-1) ) * (dxinv*dxinv)
            end do
         end do
       end do
@@ -275,11 +275,11 @@ contains
       end if
 
       !y laplacaian
-      do k=xlo(2),xhi(2)
-        do j=xlo(2)-1,xhi(2)
-           do i=xlo(1),xhi(1)
-              lapy(i,j,k) = ( phi(i+1,j,k)-2*phi(i,j,k)+phi(i-1,j,k) + phi(i,j+1,k)-2*phi(i,j,k)+phi(i,j-1,k) &
-                  + phi(i,j,k+1)-2*phi(i,j,k)+phi(i,j,k-1) ) * (dxinv*dxinv)
+      do k=ylo(3),yhi(3)
+        do j=ylo(2)-1,yhi(2)
+           do i=ylo(1),yhi(1)
+              lapy(i,j,k) = ( phi(i+1,j,k)-2.d0*phi(i,j,k)+phi(i-1,j,k) + phi(i,j+1,k)-2.d0*phi(i,j,k)+phi(i,j-1,k) &
+                  + phi(i,j,k+1)-2.d0*phi(i,j,k)+phi(i,j,k-1) ) * (dxinv*dxinv)
            end do
         end do
       end do
@@ -315,12 +315,12 @@ contains
       end if
       end if
 
-      !y laplacaian
-      do k=xlo(2)-1,xhi(2)
-        do j=xlo(2),xhi(2)
-           do i=xlo(1),xhi(1)
-              lapz(i,j,k) = ( phi(i+1,j,k)-2*phi(i,j,k)+phi(i-1,j,k) + phi(i,j+1,k)-2*phi(i,j,k)+phi(i,j-1,k) &
-                  + phi(i,j,k+1)-2*phi(i,j,k)+phi(i,j,k-1) ) * (dxinv*dxinv)
+      !z laplacaian
+      do k=zlo(3)-1,zhi(3)
+        do j=zlo(2),zhi(2)
+           do i=zlo(1),zhi(1)
+              lapz(i,j,k) = ( phi(i+1,j,k)-2.d0*phi(i,j,k)+phi(i-1,j,k) + phi(i,j+1,k)-2.d0*phi(i,j,k)+phi(i,j-1,k) &
+                  + phi(i,j,k+1)-2.d0*phi(i,j,k)+phi(i,j,k-1) ) * (dxinv*dxinv)
            end do
         end do
       end do

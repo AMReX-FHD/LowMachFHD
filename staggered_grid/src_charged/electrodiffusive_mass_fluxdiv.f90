@@ -352,8 +352,14 @@ contains
           ! for Dirichlet conditions, temporarily set the numerical values to zero
           ! so we can put the Neumann boundaries into homogeneous form
           do comp=1,dm
-             if (Epot_wall_bc_type(comp,1) .eq. 1) then
-                Epot_wall(comp,1) = 0.d0
+!            if (Epot_wall_bc_type(comp,1) .eq. 1) then
+!               Epot_wall(comp,1) = 0.d0
+!            end if
+             if (Epot_wall_bc_type(1,comp) .eq. 1) then
+                Epot_wall(1,comp) = 0.d0
+             end if
+             if (Epot_wall_bc_type(2,comp) .eq. 1) then
+                Epot_wall(2,comp) = 0.d0
              end if
           end do
 
@@ -1157,11 +1163,15 @@ contains
           case (3)
              epz => dataptr(electro_mass_flux(1,3),i)
              gpz => dataptr(grad_Epot(1,3),i)
-            call bl_error("WRITE LIMIT EMF 3D")
+             call limit_emf_3d(rp(:,:,:,:), ng_r, &
+                                          epx(:,:,:,:), epy(:,:,:,:), epz(:,:,:,:), ng_e, &
+                                          gpx(:,:,:,1), gpy(:,:,:,1), gpz(:,:,:,1), ng_g, &
+                                          lo, hi)
           end select
     end do
  
   end subroutine limit_emf
+
 
   subroutine limit_emf_2d(rho, ng_r,electro_mass_fluxx,electro_mass_fluxy,ng_e, &
                                      grad_Epotx,grad_Epoty,ng_g, &
@@ -1177,6 +1187,7 @@ contains
     integer i,j,n
 
     print *," in limiter routine"
+    
     do j = lo(2),hi(2)
 
         do i = lo(1),hi(1)
@@ -1216,6 +1227,79 @@ contains
         end do       
     
 
+
     end subroutine limit_emf_2d
+
+  subroutine limit_emf_3d(rho, ng_r,electro_mass_fluxx,electro_mass_fluxy,electro_mass_fluxz,ng_e, &
+                                     grad_Epotx,grad_Epoty,grad_Epotz,ng_g, &
+                                     lo,hi)
+
+    integer        , intent(in   ) :: lo(:),hi(:),ng_e,ng_g,ng_r
+    real(kind=dp_t), intent(in) :: rho(lo(1)-ng_r:,lo(2)-ng_r:,lo(3)-ng_r:,:)
+    real(kind=dp_t), intent(inout) :: electro_mass_fluxx(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
+    real(kind=dp_t), intent(inout) :: electro_mass_fluxy(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
+    real(kind=dp_t), intent(inout) :: electro_mass_fluxz(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
+    real(kind=dp_t), intent(in) ::         grad_Epotx(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
+    real(kind=dp_t), intent(in) ::         grad_Epoty(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
+    real(kind=dp_t), intent(in) ::         grad_Epotz(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
+
+    integer i,j,k,n
+
+
+    print *," in E limiter routine"
+
+    do k = lo(3),hi(3)
+    do j = lo(2),hi(2)
+
+        do i = lo(1),hi(1)
+
+            do n=1,nspecies
+
+                if(rho(i,j,k,n) .le. 0) then            
+
+                    if(electro_mass_fluxx(i,j,k,n)>0) then
+
+                        electro_mass_fluxx(i,j,k,1:nspecies) = 0
+
+                    end if
+
+                    if(electro_mass_fluxx(i+1,j,k,n)<0) then
+
+                        electro_mass_fluxx(i+1,j,k,1:nspecies) = 0
+
+                    end if
+
+                    if(electro_mass_fluxy(i,j,k,n)>0) then
+
+                        electro_mass_fluxy(i,j,k,1:nspecies) = 0
+
+                    end if
+
+                    if(electro_mass_fluxy(i,j+1,k,n)<0) then
+
+                        electro_mass_fluxy(i,j+1,k,1:nspecies) = 0
+
+                    end if
+
+                    if(electro_mass_fluxz(i,j,k,n)>0) then
+
+                        electro_mass_fluxz(i,j,k,1:nspecies) = 0
+
+                    end if
+
+                    if(electro_mass_fluxz(i,j,k+1,n)<0) then
+
+                        electro_mass_fluxz(i,j,k+1,1:nspecies) = 0
+
+                    end if
+
+                end if
+            
+                end do
+            end do
+        end do       
+        end do       
+
+    end subroutine limit_emf_3d
 
 end module electrodiffusive_mass_fluxdiv_module
