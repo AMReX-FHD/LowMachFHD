@@ -320,7 +320,9 @@ contains
                                           lo, hi)
           case (3)
              Gpz => dataptr(Gama(1,3),i)
-            call bl_error("WRITE LIMIT GAMA 3D")
+             call limit_Gama_3d(mp(:,:,:,:), ng_m, &
+                                          Gpx(:,:,:,:), Gpy(:,:,:,:), Gpz(:,:,:,:), ng_G, &
+                                          lo, hi)
           end select
     end do
  
@@ -367,6 +369,60 @@ contains
     
 
     end subroutine limit_Gama_2d
+
+  subroutine limit_Gama_3d(molarconc, ng_m,Gpx,Gpy,Gpz,ng_G, &
+                                     lo,hi)
+
+    integer        , intent(in   ) :: lo(:),hi(:),ng_m,ng_G
+    real(kind=dp_t), intent(in) :: molarconc(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:,:)
+    real(kind=dp_t), intent(inout) :: Gpx(lo(1)-ng_G:,lo(2)-ng_G:,lo(3)-ng_G:,:)
+    real(kind=dp_t), intent(inout) :: Gpy(lo(1)-ng_G:,lo(2)-ng_G:,lo(3)-ng_G:,:)
+    real(kind=dp_t), intent(inout) :: Gpz(lo(1)-ng_G:,lo(2)-ng_G:,lo(3)-ng_G:,:)
+
+    integer i,j,k,n
+    real(kind=dp_t) eepsilon
+
+    eepsilon = 0.0001
+
+    print *," in limiter GAMA routine"
+    do k = lo(3),hi(3)
+    do j = lo(2),hi(2)
+        do i = lo(1),hi(1)
+            do n=1,nspecies
+
+                if(min(molarconc(i,j,k,n),molarconc(i-1,j,k,n)) .le. eepsilon) then !need to make this an input parameter?            
+
+                    Gpx(i,j,k,1)=1.d0
+                    Gpx(i,j,k,2)=0.d0
+                    Gpx(i,j,k,3)=0.d0
+                    Gpx(i,j,k,4)=1.d0
+
+                endif
+
+                if(min(molarconc(i,j,k,n),molarconc(i,j-1,k,n)) .le. eepsilon) then !need to make this an input parameter?            
+                    Gpy(i,j,k,1)=1.d0
+                    Gpy(i,j,k,2)=0.d0
+                    Gpy(i,j,k,3)=0.d0
+                    Gpy(i,j,k,4)=1.d0
+
+                end if
+
+                if(min(molarconc(i,j,k,n),molarconc(i,j,k-1,n)) .le. eepsilon) then !need to make this an input parameter?            
+                    Gpz(i,j,k,1)=1.d0
+                    Gpz(i,j,k,2)=0.d0
+                    Gpz(i,j,k,3)=0.d0
+                    Gpz(i,j,k,4)=1.d0
+
+                end if
+
+                end do
+            end do
+        end do       
+        end do       
+    
+
+    end subroutine limit_Gama_3d
+
 
 
 end module diffusive_mass_fluxdiv_module
