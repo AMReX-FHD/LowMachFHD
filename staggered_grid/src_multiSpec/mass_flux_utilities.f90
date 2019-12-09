@@ -6,7 +6,7 @@ module mass_flux_utilities_module
   use probin_common_module, only: k_B, molmass, rhobar, molmass, nspecies
   use probin_multispecies_module, only: use_lapack, fraction_tolerance, &
                                         is_ideal_mixture, inverse_type, is_nonisothermal, &
-                                        chi_iterations, avg_type, use_multiphase, alpha_gex
+                                        chi_iterations, avg_type, use_multiphase, alpha_gex, n_gex
   use matrix_utilities 
   use compute_mixture_properties_module
   use F95_LAPACK ! Donev: Disabled LAPACK so this builds more easily on different systems
@@ -347,16 +347,16 @@ contains
     ! Identity matrix
     if(use_multiphase) then
          !    alpha = 4 !spinodal decomposition
-        I = 0.d0
-        do row=1,nspecies
-           I(row, row) = 1.d0        
-        end do
+      ! I = 0.d0
+      ! do row=1,nspecies
+      !    I(row, row) = 1.d0        
+      ! end do
 
-        Gama = I
-        Gama(1,2)=8*8*alpha_gex*(molarconc(1)**7)*(molarconc(2)**7)
-        Gama(2,1)=8*8*alpha_gex*(molarconc(2)**7)*(molarconc(1)**7)
-        Gama(1,1)=7*8*alpha_gex*(molarconc(1)**6)*(molarconc(2)**8)
-        Gama(2,2)=7*8*alpha_gex*(molarconc(2)**6)*(molarconc(1)**8)
+      ! Gama = I
+        Gama(1,2)=dfloat(n_gex*n_gex)*alpha_gex*(molarconc(1)**(n_gex-1))*(molarconc(2)**(n_gex-1))
+        Gama(2,1)=dfloat(n_gex*n_gex)*alpha_gex*(molarconc(2)**(n_gex-1))*(molarconc(1)**(n_gex-1))
+        Gama(1,1)=1.d0+dfloat(n_gex*(n_gex-1))*alpha_gex*(molarconc(1)**(n_gex-2))*(molarconc(2)**n_gex)
+        Gama(2,2)=1.d0+dfloat(n_gex*(n_gex-1))*alpha_gex*(molarconc(2)**(n_gex-2))*(molarconc(1)**n_gex)
 
      else
 
