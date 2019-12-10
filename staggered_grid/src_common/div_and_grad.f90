@@ -128,6 +128,7 @@ contains
       real(kind=dp_t) :: dxinv,twodxinv  !, kc
       real(kind=dp_t) :: lapx(xlo(1)-1:xhi(1),xlo(2):xhi(2))
       real(kind=dp_t) :: lapy(ylo(1):yhi(1),ylo(2)-1:yhi(2))
+      real(kind=dp_t) :: phiavg
 
       dxinv = 1.d0/dx(1)
       twodxinv = 2.d0*dxinv
@@ -144,7 +145,10 @@ contains
       ! x-faces
       do j=xlo(2),xhi(2)
          do i=xlo(1),xhi(1)
-            gpx(i,j) = gpx(i,j) - kc_tension*(phi(i,j)+phi(i-1,j))*.5*( lapx(i,j)-lapx(i-1,j) ) * dxinv
+            phiavg = 0.5d0*(max(min(phi(i,j),1.d0),0.d0) + max(min(phi(i-1,j),1.d0),0.d0))
+            gpx(i,j) = gpx(i,j) - kc_tension*phiavg*( lapx(i,j)-lapx(i-1,j) ) * dxinv
+
+        !   gpx(i,j) = gpx(i,j) - kc_tension*(phi(i,j)+phi(i-1,j))*.5*( lapx(i,j)-lapx(i-1,j) ) * dxinv
          end do
       end do
    
@@ -176,7 +180,10 @@ contains
       ! y-faces
       do j=ylo(2),yhi(2)
          do i=ylo(1),yhi(1)
-            gpy(i,j) = gpy(i,j) - kc_tension*(phi(i,j)+phi(i,j-1))*0.5*( lapy(i,j)-lapy(i,j-1) ) * dxinv
+            phiavg = 0.5d0*(max(min(phi(i,j),1.d0),0.d0) + max(min(phi(i,j-1),1.d0),0.d0))
+            gpy(i,j) = gpy(i,j) - kc_tension*phiavg*( lapy(i,j)-lapy(i,j-1) ) * dxinv
+
+          ! gpy(i,j) = gpy(i,j) - kc_tension*(phi(i,j)+phi(i,j-1))*0.5*( lapy(i,j)-lapy(i,j-1) ) * dxinv
          end do
       end do
 
@@ -221,6 +228,7 @@ contains
       real(kind=dp_t) :: lapx(xlo(1)-1:xhi(1),xlo(2):xhi(2),xlo(3):xhi(3))
       real(kind=dp_t) :: lapy(ylo(1):yhi(1),ylo(2)-1:yhi(2),ylo(3):yhi(3))
       real(kind=dp_t) :: lapz(zlo(1):zhi(1),zlo(2):zhi(2),zlo(3)-1:zhi(3))
+      real(kind=dp_t) :: phiavg
       
       dxinv = 1.d0/dx(1)
       twodxinv = 2.d0*dxinv
@@ -247,7 +255,10 @@ contains
       do k=xlo(3),xhi(3)
          do j=xlo(2),xhi(2)
             do i=xlo(1),xhi(1)
-               gpx(i,j,k) = gpx(i,j,k) - kc_tension*0.5*( phi(i,j,k)+phi(i-1,j,k) )*( lapx(i,j,k)-lapx(i-1,j,k) ) * dxinv
+               phiavg = 0.5d0*(max(min(phi(i,j,k),1.d0),0.d0) + max(min(phi(i-1,j,k),1.d0),0.d0))
+               gpx(i,j,k) = gpx(i,j,k) - kc_tension*phiavg*( lapx(i,j,k)-lapx(i-1,j,k) ) * dxinv
+
+   !           gpx(i,j,k) = gpx(i,j,k) - kc_tension*0.5*( phi(i,j,k)+phi(i-1,j,k) )*( lapx(i,j,k)-lapx(i-1,j,k) ) * dxinv
             end do
          end do
       end do
@@ -278,7 +289,7 @@ contains
       do k=ylo(3),yhi(3)
         do j=ylo(2)-1,yhi(2)
            do i=ylo(1),yhi(1)
-              lapy(i,j,k) = ( phi(i+1,j,k)-2.d0*phi(i,j,k)+phi(i-1,j,k) + phi(i,j+1,k)-2.d0*phi(i,j,k)+phi(i,j-1,k) &
+               lapy(i,j,k) = ( phi(i+1,j,k)-2.d0*phi(i,j,k)+phi(i-1,j,k) + phi(i,j+1,k)-2.d0*phi(i,j,k)+phi(i,j-1,k) &
                   + phi(i,j,k+1)-2.d0*phi(i,j,k)+phi(i,j,k-1) ) * (dxinv*dxinv)
            end do
         end do
@@ -288,7 +299,10 @@ contains
       do k=ylo(3),yhi(3)
          do j=ylo(2),yhi(2)
             do i=ylo(1),yhi(1)
+               phiavg = 0.5d0*(max(min(phi(i,j,k),1.d0),0.d0) + max(min(phi(i,j-1,k),1.d0),0.d0))
                gpy(i,j,k) = gpy(i,j,k) - kc_tension*0.5*( phi(i,j,k)+phi(i,j-1,k) )*( lapy(i,j,k)-lapy(i,j-1,k) ) * dxinv
+
+!              gpy(i,j,k) = gpy(i,j,k) - kc_tension*0.5*( phi(i,j,k)+phi(i,j-1,k) )*( lapy(i,j,k)-lapy(i,j-1,k) ) * dxinv
             end do
          end do
       end do
@@ -329,7 +343,10 @@ contains
       do k=zlo(3),zhi(3)
          do j=zlo(2),zhi(2)
             do i=zlo(1),zhi(1)
-               gpz(i,j,k) = gpz(i,j,k) - 0.5*kc_tension*( phi(i,j,k)+phi(i,j,k-1) )*( lapz(i,j,k)-lapz(i,j,k-1) ) * dxinv
+               phiavg = 0.5d0*(max(min(phi(i,j,k),1.d0),0.d0) + max(min(phi(i,j,k-1),1.d0),0.d0))
+               gpz(i,j,k) = gpz(i,j,k) - kc_tension * phiavg*( lapz(i,j,k)-lapz(i,j,k-1) ) * dxinv
+
+!              gpz(i,j,k) = gpz(i,j,k) - 0.5*kc_tension*( phi(i,j,k)+phi(i,j,k-1) )*( lapz(i,j,k)-lapz(i,j,k-1) ) * dxinv
             end do
          end do
       end do
