@@ -341,9 +341,8 @@ contains
 
     eepsilon = 0.0001
 
-    print *," in limiter GAMA routine"
     do j = lo(2),hi(2)
-        do i = lo(1),hi(1)
+        do i = lo(1),hi(1)+1
             do n=1,nspecies
 
                 if(min(molarconc(i,j,n),molarconc(i-1,j,n)) .le. eepsilon) then !need to make this an input parameter?            
@@ -354,6 +353,14 @@ contains
                     Gpx(i,j,4)=1.d0
 
                 endif
+
+                end do
+            end do
+        end do       
+
+    do j = lo(2),hi(2)+1
+        do i = lo(1),hi(1)
+            do n=1,nspecies
 
                 if(min(molarconc(i,j,n),molarconc(i,j-1,n)) .le. eepsilon) then !need to make this an input parameter?            
                     Gpy(i,j,1)=1.d0
@@ -384,10 +391,9 @@ contains
 
     eepsilon = 0.0001
 
-    print *," in limiter GAMA routine"
     do k = lo(3),hi(3)
     do j = lo(2),hi(2)
-        do i = lo(1),hi(1)
+        do i = lo(1),hi(1)+1
             do n=1,nspecies
 
                 if(min(molarconc(i,j,k,n),molarconc(i-1,j,k,n)) .le. eepsilon) then !need to make this an input parameter?            
@@ -399,6 +405,16 @@ contains
 
                 endif
 
+                end do
+            end do
+        end do       
+        end do       
+
+    do k = lo(3),hi(3)
+    do j = lo(2),hi(2)+1
+        do i = lo(1),hi(1)
+            do n=1,nspecies
+
                 if(min(molarconc(i,j,k,n),molarconc(i,j-1,k,n)) .le. eepsilon) then !need to make this an input parameter?            
                     Gpy(i,j,k,1)=1.d0
                     Gpy(i,j,k,2)=0.d0
@@ -406,6 +422,16 @@ contains
                     Gpy(i,j,k,4)=1.d0
 
                 end if
+
+                end do
+            end do
+        end do       
+        end do       
+
+    do k = lo(3),hi(3)+1
+    do j = lo(2),hi(2)
+        do i = lo(1),hi(1)
+            do n=1,nspecies
 
                 if(min(molarconc(i,j,k,n),molarconc(i,j,k-1,n)) .le. eepsilon) then !need to make this an input parameter?            
                     Gpz(i,j,k,1)=1.d0
