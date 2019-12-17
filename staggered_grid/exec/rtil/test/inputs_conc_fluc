@@ -22,7 +22,7 @@
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 3000                    ! maximum number of time steps
+  max_step = 50000                    ! maximum number of time steps
   plot_int = 100                       ! Interval for writing a plotfile (for visit/amrvis)
   plot_shifted_vel = T
   chk_int = 100                          ! Interval for writing a checkpoint
@@ -128,7 +128,7 @@
                                         ! standard deviation over reduced dimensions
   n_steps_save_stats = -1               ! How often to dump HydroGrid output files
   !n_steps_skip = 30000                  ! How many steps to skip > L^2/(chi*dt)
-  n_steps_skip = 1000                  ! How many steps to skip > L^2/(chi*dt)
+  n_steps_skip = 10000                  ! How many steps to skip > L^2/(chi*dt)
   analyze_conserved = F                 ! Should we use conserved variables for the analysis
                                         ! (does not work well)
   center_snapshots = F                  ! Should we use cell-centered momenta for the analysis
@@ -318,9 +318,8 @@
 
    ! Variances
    writeVariancesVTK = T                ! Should we save a VTK file
-   nVariances = 6
-   ! numbering: 1=u-u, 2=u-v, 3=v-v, 4=u-w, 5=v-w, 6=w-w
-   variancePairs = "0 2 0 2, 0 2 0 3, 0 3 0 3, 0 2 0 4, 0 3 0 4, 0 4 0 4"
+   nVariances = 2
+   variancePairs = "0 5 0 5, 0 5 0 6"
       ! species1 variable1 species2 variable2
 
    ! Static structure factors
@@ -328,8 +327,9 @@
    subtractMeanFT = F                   ! The means are trivial here so no need to estimate them
    writeAbsValue = F                    ! Only write absolute values of complex values to VTK file?
    writeTheory = -1                     ! Write the theoretical prediction (-1=none, 0==continuum or 1=MAC)
-   nStructureFactors = 6
-   structureFactorPairs = "0 2 0 2, 0 2 0 3, 0 3 0 3, 0 2 0 4, 0 3 0 4, 0 4 0 4"
+   nStructureFactors = 2
+   structureFactorPairs = "0 5 0 5, 0 5 0 6"
+
 
    ! Dynamic structure factors:
    nWavenumbers=0
