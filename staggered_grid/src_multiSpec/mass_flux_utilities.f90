@@ -3,7 +3,7 @@ module mass_flux_utilities_module
   use bl_space
   use multifab_module
   use ml_layout_module
-  use probin_common_module, only: k_B, molmass, rhobar, molmass, nspecies
+  use probin_common_module, only: k_B, molmass, rhobar, molmass, nspecies, rho0
   use probin_multispecies_module, only: use_lapack, fraction_tolerance, &
                                         is_ideal_mixture, inverse_type, is_nonisothermal, &
                                         chi_iterations, avg_type, use_multiphase, alpha_gex, n_gex
@@ -728,6 +728,8 @@ contains
     if (nspecies_in .eq. 2) then
        W(1) = rho(1)/rhotot
        W(2) = rho(2)/rhotot
+       W(1) = max(min(W(1),1.d0),0.d0)
+       W(2) = max(min(W(2),1.d0),0.d0)
 
        tmp = molmass_in(1)*W(2)+molmass_in(2)*W(1)
        tmp = D_bar(1,2)*tmp*tmp/molmass_in(1)/molmass_in(2)
@@ -1194,6 +1196,19 @@ contains
     ! cell volume
     dv = product(dx(1:MAX_SPACEDIM))
 
+! special version for rtil
+   if(nspecies.eq.2)then
+     value1 = rho1(1)
+     value2 = rho2(1)
+     if(value1.le.0.or.value2.le.0)then
+          rhoav(1) = 0.d0
+     else
+          rhoav(1) =min( 0.5d0*(value1+value2), rho0)
+     endif
+     rhoav(2) = rho0 - rhoav(1)
+
+   else
+
     do comp=1,nspecies
       value1 = rho1(comp)/molmass(comp) ! Convert to number density
       value2 = rho2(comp)/molmass(comp)
@@ -1265,6 +1280,17 @@ contains
       end select
     end do
 
+!   if(abs(rhoav(1)+rhoav(2) - 1.38d0) .gt. 1.d-10)then
+!       write(6,*)" in nonnegative rhoavg", rhoav(1),rhoav(2), rhoav(1)+rhoav(2)
+!       write(6,*)" left 1" ,rho1(1),rho1(1)/molmass(1)
+!       write(6,*)" left 2" ,rho1(2),rho1(2)/molmass(2)
+!       write(6,*)" right 1" ,rho2(1),rho2(1)/molmass(1)
+!       write(6,*)" right 2" ,rho2(2),rho2(2)/molmass(2)
+
+!   endif
+
+    endif
+
   end subroutine compute_nonnegative_rho_av
 
   ! This routine must be called with non-negative densities, i.e., after calling compute_nonnegative_rho_av
@@ -1305,6 +1331,10 @@ contains
     ! compute the number of trace species
     ! build the mapping for expanding/contracting arrays
     ntrace = 0
+    if(abs(rhotot-1.38d0) .gt. 1.d-10)then
+        write(6,*)" foobar in onsager"
+        write(6,*)rho(1),rho(2),rhotot
+    endif
     do row=1, nspecies
        W(row) = rho(row)/rhotot
        if (W(row) .lt. fraction_tolerance) then
