@@ -722,14 +722,18 @@ contains
     real(kind=dp_t), dimension(nspecies_in,nspecies_in) :: Lambda
     real(kind=dp_t), dimension(nspecies_in)             :: W
 
+    real(kind=dp_t) eepsilon
+
+    eepsilon = 1.d-16
+
     ! if nspecies_in = 2, use analytic formulas
     ! note: nspecies_in = 1 (that is, ntrace = nspecies-1) is treated separately (chi=0)
     !       before this routine is called
     if (nspecies_in .eq. 2) then
        W(1) = rho(1)/rhotot
        W(2) = rho(2)/rhotot
-       W(1) = max(min(W(1),1.d0),0.d0)
-       W(2) = max(min(W(2),1.d0),0.d0)
+       W(1) = max(min(W(1),1.d0),eepsilon)
+       W(2) = max(min(W(2),1.d0),eelsilon)
 
        tmp = molmass_in(1)*W(2)+molmass_in(2)*W(1)
        tmp = D_bar(1,2)*tmp*tmp/molmass_in(1)/molmass_in(2)
