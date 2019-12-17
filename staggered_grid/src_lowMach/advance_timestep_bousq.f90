@@ -317,11 +317,11 @@ contains
     end if
 
     if (variance_coef_mass .ne. 0.d0) then
-       call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
        if (use_bl_rng) then
           ! save random state for restart
           call bl_rng_copy_engine(rng_eng_diffusion_chk,rng_eng_diffusion)
        end if
+       call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
     end if
 
     ! compute diffusive, stochastic, potential mass fluxes
