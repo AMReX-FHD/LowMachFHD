@@ -353,10 +353,10 @@ contains
       ! end do
 
       ! Gama = I
-        Gama(1,2)=dfloat(n_gex*n_gex)*alpha_gex*(molarconc(1)**(n_gex-1))*(molarconc(2)**(n_gex-1))
-        Gama(2,1)=dfloat(n_gex*n_gex)*alpha_gex*(molarconc(2)**(n_gex-1))*(molarconc(1)**(n_gex-1))
-        Gama(1,1)=1.d0+dfloat(n_gex*(n_gex-1))*alpha_gex*(molarconc(1)**(n_gex-2))*(molarconc(2)**n_gex)
-        Gama(2,2)=1.d0+dfloat(n_gex*(n_gex-1))*alpha_gex*(molarconc(2)**(n_gex-2))*(molarconc(1)**n_gex)
+        Gama(1,2)=molarconc(1)*dfloat(n_gex*n_gex)*alpha_gex*(molarconc(1)**(n_gex-1))*(molarconc(2)**(n_gex-1))
+        Gama(2,1)=molarconc(2)*dfloat(n_gex*n_gex)*alpha_gex*(molarconc(2)**(n_gex-1))*(molarconc(1)**(n_gex-1))
+        Gama(1,1)=1.d0+molarconc(1)*dfloat(n_gex*(n_gex-1))*alpha_gex*(molarconc(1)**(n_gex-2))*(molarconc(2)**n_gex)
+        Gama(2,2)=1.d0+molarconc(2)*dfloat(n_gex*(n_gex-1))*alpha_gex*(molarconc(2)**(n_gex-2))*(molarconc(1)**n_gex)
 
      else
 
