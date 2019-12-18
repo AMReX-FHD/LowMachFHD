@@ -733,7 +733,7 @@ contains
        W(1) = rho(1)/rhotot
        W(2) = rho(2)/rhotot
        W(1) = max(min(W(1),1.d0),eepsilon)
-       W(2) = max(min(W(2),1.d0),eelsilon)
+       W(2) = max(min(W(2),1.d0),eepsilon)
 
        tmp = molmass_in(1)*W(2)+molmass_in(2)*W(1)
        tmp = D_bar(1,2)*tmp*tmp/molmass_in(1)/molmass_in(2)
