@@ -353,10 +353,31 @@ contains
       ! end do
 
       ! Gama = I
-        Gama(1,2)=molarconc(1)*dfloat(n_gex*n_gex)*alpha_gex*(molarconc(1)**(n_gex-1))*(molarconc(2)**(n_gex-1))
-        Gama(2,1)=molarconc(2)*dfloat(n_gex*n_gex)*alpha_gex*(molarconc(2)**(n_gex-1))*(molarconc(1)**(n_gex-1))
-        Gama(1,1)=1.d0+molarconc(1)*dfloat(n_gex*(n_gex-1))*alpha_gex*(molarconc(1)**(n_gex-2))*(molarconc(2)**n_gex)
-        Gama(2,2)=1.d0+molarconc(2)*dfloat(n_gex*(n_gex-1))*alpha_gex*(molarconc(2)**(n_gex-2))*(molarconc(1)**n_gex)
+        w1 = molarconc(1)
+        w2 = molarconc(2)
+        if(abs(w1+w2-1.d0).gt.1.d-14)then
+            write(6,*)" mole fractions dont' add up in gamma computation"
+        endif
+        if(w1.lt.0.d0)then
+           w1 = max(min(w1,1.d0),0.d0
+           w2 = 1.d0
+        endif
+        if(w2.lt.0.d0)then
+           w2 = max(min(w1,1.d0),0.d0
+           w1 = 1.d0
+        endif
+
+    
+
+        Gama(1,2)=w1*dfloat(n_gex*n_gex)*alpha_gex*(w1**(n_gex-1))*(w2**(n_gex-1))
+        Gama(2,1)=w2*dfloat(n_gex*n_gex)*alpha_gex*(w2**(n_gex-1))*(w1**(n_gex-1))
+        Gama(1,1)=1.d0+w1*dfloat(n_gex*(n_gex-1))*alpha_gex*(w1**(n_gex-2))*(w2**n_gex)
+        Gama(2,2)=1.d0+w2*dfloat(n_gex*(n_gex-1))*alpha_gex*(w2**(n_gex-2))*(w1**n_gex)
+
+!       Gama(1,2)=molarconc(1)*dfloat(n_gex*n_gex)*alpha_gex*(molarconc(1)**(n_gex-1))*(molarconc(2)**(n_gex-1))
+!       Gama(2,1)=molarconc(2)*dfloat(n_gex*n_gex)*alpha_gex*(molarconc(2)**(n_gex-1))*(molarconc(1)**(n_gex-1))
+!       Gama(1,1)=1.d0+molarconc(1)*dfloat(n_gex*(n_gex-1))*alpha_gex*(molarconc(1)**(n_gex-2))*(molarconc(2)**n_gex)
+!       Gama(2,2)=1.d0+molarconc(2)*dfloat(n_gex*(n_gex-1))*alpha_gex*(molarconc(2)**(n_gex-2))*(molarconc(1)**n_gex)
 
      else
 
