@@ -566,70 +566,81 @@ contains
 
     call build(bpt,"compute_rhoWchi_local")
 
-    ! compute the number of trace species
-    ! build the mapping for expanding/contracting arrays
-    ntrace = 0
-    do row=1, nspecies
-       W(row) = rho(row)/rhotot
-       if (W(row) .lt. fraction_tolerance) then
-          ntrace = ntrace + 1
-          dest(row) = 0
-       else
-          dest(row) = row - ntrace
-       end if
-    end do
+    if (nspecies .eq. 2) then
 
-    if (ntrace .eq. nspecies-1) then
-
-       ! this is all trace species except for 1 (essentially pure solvent);
-       ! set rhoWchi to zero
-       rhoWchi(:,:) = 0.d0
-
-    else if (ntrace .eq. 0) then
-
-       ! there are no trace species
-       ! hence, chi = chi_sub
-
-       ! compute chi 
-       call compute_chi(nspecies,molmass,rho,rhotot,molarconc,chi,D_bar)
-
-       ! compute rho*W*chi
-       do row=1, nspecies
-          do column=1, nspecies
-             rhoWchi(row,column) = rho(row)*chi(row,column)
-          end do
-       end do
+        rhoWchi(1,1) = molarconc(2)*rho0*D_bar(1,2)
+        rhoWchi(1,2) = -molarconc(1)*rho0*D_bar(1,2)
+        rhoWchi(2,1) = -molarconc(2)*rho0*D_bar(1,2)
+        rhoWchi(2,2) = molarconc(1)*rho0*D_bar(1,2)
 
     else
 
-       ! if there are trace species, we consider a subsystem 
-       ! consisting of non-trace species
+        ! compute the number of trace species
+        ! build the mapping for expanding/contracting arrays
+        ntrace = 0
+        do row=1, nspecies
+           W(row) = rho(row)/rhotot
+           if (W(row) .lt. fraction_tolerance) then
+              ntrace = ntrace + 1
+              dest(row) = 0
+           else
+              dest(row) = row - ntrace
+           end if
+        end do
 
-       nspecies_sub = nspecies - ntrace
-       call compute_chi_sub()
-      
+        if (ntrace .eq. nspecies-1) then
+
+           ! this is all trace species except for 1 (essentially pure solvent);
+           ! set rhoWchi to zero
+           rhoWchi(:,:) = 0.d0
+
+        else if (ntrace .eq. 0) then
+
+           ! there are no trace species
+           ! hence, chi = chi_sub
+
+           ! compute chi 
+           call compute_chi(nspecies,molmass,rho,rhotot,molarconc,chi,D_bar)
+
+           ! compute rho*W*chi
+           do row=1, nspecies
+              do column=1, nspecies
+                 rhoWchi(row,column) = rho(row)*chi(row,column)
+              end do
+           end do
+
+        else
+
+           ! if there are trace species, we consider a subsystem 
+           ! consisting of non-trace species
+
+           nspecies_sub = nspecies - ntrace
+           call compute_chi_sub()
+          
+        end if
+
+        ! hack
+        !print*,'rhoWchi'
+        !do row=1, nspecies
+        !   print *,rhoWchi(row,1:nspecies)
+        !end do
+        !print*,'sum rhoWchi_col'
+        !select case (nspecies)
+        !   case (2)
+        !      print*,sum(rhoWchi(1:2,1)),sum(rhoWchi(1:2,2))
+        !   case (3)
+        !      print*,sum(rhoWchi(1:3,1)),sum(rhoWchi(1:3,2)),sum(rhoWchi(1:3,3))
+        !   case (4)
+        !      print*,sum(rhoWchi(1:4,1)),sum(rhoWchi(1:4,2)),sum(rhoWchi(1:4,3)),sum(rhoWchi(1:4,4))
+        !end select
+        !print*,'W*chi from rhoWchi/rhotot'
+        !do row=1, nspecies
+        !   print *,rhoWchi(row,1:nspecies)/rhotot
+        !end do
+        !stop
+        ! hack
+
     end if
-
-    ! hack
-    !print*,'rhoWchi'
-    !do row=1, nspecies
-    !   print *,rhoWchi(row,1:nspecies)
-    !end do
-    !print*,'sum rhoWchi_col'
-    !select case (nspecies)
-    !   case (2)
-    !      print*,sum(rhoWchi(1:2,1)),sum(rhoWchi(1:2,2))
-    !   case (3)
-    !      print*,sum(rhoWchi(1:3,1)),sum(rhoWchi(1:3,2)),sum(rhoWchi(1:3,3))
-    !   case (4)
-    !      print*,sum(rhoWchi(1:4,1)),sum(rhoWchi(1:4,2)),sum(rhoWchi(1:4,3)),sum(rhoWchi(1:4,4))
-    !end select
-    !print*,'W*chi from rhoWchi/rhotot'
-    !do row=1, nspecies
-    !   print *,rhoWchi(row,1:nspecies)/rhotot
-    !end do
-    !stop
-    ! hack
 
     call destroy(bpt)
     
