@@ -340,7 +340,7 @@ contains
     ! local variables
     integer                                       :: row,column
     real(kind=dp_t), dimension(nspecies,nspecies) :: I, X_xxT
-    real(kind=dp_t) :: alpha  !set as paramter KATIE
+    real(kind=dp_t) :: w1,w2 
 
 !  KATIE -- local to define Gamma matrix
 
@@ -359,11 +359,11 @@ contains
             write(6,*)" mole fractions dont' add up in gamma computation"
         endif
         if(w1.lt.0.d0)then
-           w1 = max(min(w1,1.d0),0.d0
+           w1 = max(min(w1,1.d0),0.d0)
            w2 = 1.d0
         endif
         if(w2.lt.0.d0)then
-           w2 = max(min(w1,1.d0),0.d0
+           w2 = max(min(w1,1.d0),0.d0)
            w1 = 1.d0
         endif
 
