@@ -552,6 +552,7 @@ contains
     integer         :: nspecies_sub     ! dim of subsystem = nspecies-ntrace
     real(kind=dp_t) :: molmtot_sub
     real(kind=dp_t) :: rhotot_sub
+    real(kind=dp_t) :: w1,w2
 
     ! this is a mapping used to eliminate elements in D_bar we don't need (for D_bar_sub)
     ! and for expanding sqrtLonsager_sub into sqrtLonsager
@@ -567,6 +568,17 @@ contains
     call build(bpt,"compute_rhoWchi_local")
 
     if (nspecies .eq. 2) then
+
+        w1 = molarconc(1)
+        w2 = molarconc(2)
+        if(w1.lt.0)then
+           w1=0.d0
+           w2=1.d0
+        endif
+        if(w2.lt.0)then
+           w2=0.d0
+           w1=1.d0
+        endif
 
         rhoWchi(1,1) = molarconc(2)*rho0*D_bar(1,2)
         rhoWchi(1,2) = -molarconc(1)*rho0*D_bar(1,2)
