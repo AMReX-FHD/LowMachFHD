@@ -1243,6 +1243,9 @@ contains
      endif
      rhoav(2) = rho0 - rhoav(1)
 
+    rhoav(2) =0.9*rho0
+    rhoav(1) =0.1*rho0
+
    else
 
     do comp=1,nspecies
