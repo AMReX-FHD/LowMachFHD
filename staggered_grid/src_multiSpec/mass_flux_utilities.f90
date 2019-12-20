@@ -367,6 +367,10 @@ contains
            w1 = 1.d0
         endif
 
+
+        !  w1 = .1
+        !  w2 = .9
+
     
 
         Gama(1,2)=w1*dfloat(n_gex*n_gex)*alpha_gex*(w1**(n_gex-1))*(w2**(n_gex-1))
@@ -1259,8 +1263,8 @@ contains
      endif
      rhoav(2) = rho0 - rhoav(1)
 
-    rhoav(2) =0.9*rho0
-    rhoav(1) =0.1*rho0
+     !  rhoav(1) = .1d0
+     !  rhoav(2) = .9d0
 
    else
 
