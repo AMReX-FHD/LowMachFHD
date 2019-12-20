@@ -359,11 +359,11 @@ contains
             write(6,*)" mole fractions dont' add up in gamma computation"
         endif
         if(w1.lt.0.d0)then
-           w1 = max(min(w1,1.d0),0.d0)
+           w1 = 0.d0
            w2 = 1.d0
         endif
         if(w2.lt.0.d0)then
-           w2 = max(min(w1,1.d0),0.d0)
+           w2 = 0.d0
            w1 = 1.d0
         endif
 
@@ -580,10 +580,14 @@ contains
            w1=1.d0
         endif
 
-        rhoWchi(1,1) = molarconc(2)*rho0*D_bar(1,2)
-        rhoWchi(1,2) = -molarconc(1)*rho0*D_bar(1,2)
-        rhoWchi(2,1) = -molarconc(2)*rho0*D_bar(1,2)
-        rhoWchi(2,2) = molarconc(1)*rho0*D_bar(1,2)
+        rhoWchi(1,1) = w2*rho0*D_bar(1,2)
+        rhoWchi(1,2) = -w1*rho0*D_bar(1,2)
+        rhoWchi(2,1) = -w2*rho0*D_bar(1,2)
+        rhoWchi(2,2) = w1*rho0*D_bar(1,2)
+
+   !    write(6,*)" D_bar",D_bar
+   !    write(6,*)" rhoWchi",rhoWchi
+
 
     else
 
