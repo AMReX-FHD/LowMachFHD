@@ -149,7 +149,9 @@ contains
 
     !KK I think we need to insert Gama limiting here
 
-    call limit_Gama(molarconc,Gama_face)
+!  JBB  code seems to work better with this off
+
+!    call limit_Gama(molarconc,Gama_face)
 
 !    print*, 'Gama face'
 !    call print_edge(Gama_face,2,8,1,1)
@@ -338,12 +340,18 @@ contains
 
     integer i,j,n
     real(kind=dp_t) eepsilon
+    real(kind=dp_t) trace, det
 
     eepsilon = 0.0001
 
     do j = lo(2),hi(2)
         do i = lo(1),hi(1)+1
-            do n=1,nspecies
+            trace = Gpx(i,j,1)+GPx(i,j,4)
+            det = Gpx(i,j,1)*GPx(i,j,4)-Gpx(i,j,2)*GPx(i,j,3)
+
+            if(trace.lt.0.d0 .or. det .lt. 0.d0)then
+            
+              do n=1,nspecies
 
                 if(min(molarconc(i,j,n),molarconc(i-1,j,n)) .le. eepsilon) then !need to make this an input parameter?            
 
@@ -355,11 +363,17 @@ contains
                 endif
 
                 end do
+             endif
             end do
         end do       
 
     do j = lo(2),hi(2)+1
         do i = lo(1),hi(1)
+            trace = Gpy(i,j,1)+GPy(i,j,4)
+            det = Gpy(i,j,1)*GPy(i,j,4)-Gpy(i,j,2)*GPy(i,j,3)
+
+            if(trace.lt.0.d0 .or. det .lt. 0.d0)then
+            
             do n=1,nspecies
 
                 if(min(molarconc(i,j,n),molarconc(i,j-1,n)) .le. eepsilon) then !need to make this an input parameter?            
@@ -371,6 +385,7 @@ contains
                 end if
 
                 end do
+             endif
             end do
         end do       
     
@@ -388,12 +403,19 @@ contains
 
     integer i,j,k,n
     real(kind=dp_t) eepsilon
+    real(kind=dp_t) trace, det
+
 
     eepsilon = 0.0001
 
     do k = lo(3),hi(3)
     do j = lo(2),hi(2)
         do i = lo(1),hi(1)+1
+            trace = Gpx(i,j,k,1)+GPx(i,j,k,4)
+            det = Gpx(i,j,k,1)*GPx(i,j,k,4)-Gpx(i,j,k,2)*GPx(i,j,k,3)
+
+            if(trace.lt.0.d0 .or. det .lt. 0.d0)then
+            
             do n=1,nspecies
 
                 if(min(molarconc(i,j,k,n),molarconc(i-1,j,k,n)) .le. eepsilon) then !need to make this an input parameter?            
@@ -406,6 +428,7 @@ contains
                 endif
 
                 end do
+            endif
             end do
         end do       
         end do       
@@ -413,6 +436,11 @@ contains
     do k = lo(3),hi(3)
     do j = lo(2),hi(2)+1
         do i = lo(1),hi(1)
+            trace = Gpy(i,j,k,1)+GPy(i,j,k,4)
+            det = Gpy(i,j,k,1)*GPy(i,j,k,4)-Gpy(i,j,k,2)*GPy(i,j,k,3)
+
+            if(trace.lt.0.d0 .or. det .lt. 0.d0)then
+            
             do n=1,nspecies
 
                 if(min(molarconc(i,j,k,n),molarconc(i,j-1,k,n)) .le. eepsilon) then !need to make this an input parameter?            
@@ -424,6 +452,7 @@ contains
                 end if
 
                 end do
+            endif
             end do
         end do       
         end do       
@@ -431,6 +460,11 @@ contains
     do k = lo(3),hi(3)+1
     do j = lo(2),hi(2)
         do i = lo(1),hi(1)
+            trace = Gpz(i,j,k,1)+GPz(i,j,k,4)
+            det = Gpz(i,j,k,1)*GPz(i,j,k,4)-Gpz(i,j,k,2)*GPz(i,j,k,3)
+
+            if(trace.lt.0.d0 .or. det .lt. 0.d0)then
+            
             do n=1,nspecies
 
                 if(min(molarconc(i,j,k,n),molarconc(i,j,k-1,n)) .le. eepsilon) then !need to make this an input parameter?            
@@ -442,6 +476,7 @@ contains
                 end if
 
                 end do
+            endif
             end do
         end do       
         end do       
