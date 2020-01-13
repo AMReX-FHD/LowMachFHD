@@ -129,7 +129,9 @@ contains
       real(kind=dp_t) :: lapx(xlo(1)-1:xhi(1),xlo(2):xhi(2))
       real(kind=dp_t) :: lapy(ylo(1):yhi(1),ylo(2)-1:yhi(2))
       real(kind=dp_t) :: phiavg
+      real(kind=dp_t) :: sixth
 
+      sixth = 1.d0/6.d0
       dxinv = 1.d0/dx(1)
       twodxinv = 2.d0*dxinv
       !kc = 1.d-2 !need to figure out good value
@@ -138,7 +140,10 @@ contains
       ! laplacian
       do j=xlo(2),xhi(2)
          do i=xlo(1)-1,xhi(1)
-            lapx(i,j) = ( phi(i+1,j)-2*phi(i,j)+phi(i-1,j) + phi(i,j+1)-2*phi(i,j)+phi(i,j-1) ) * (dxinv*dxinv)
+            ! lapx(i,j) = ( phi(i+1,j)-2*phi(i,j)+phi(i-1,j) + phi(i,j+1)-2*phi(i,j)+phi(i,j-1) ) * (dxinv*dxinv)
+            lapx(i,j) = ( phi(i+1,j-1)-2*phi(i,j-1)+phi(i-1,j-1) + phi(i-1,j+1)-2*phi(i-1,j)+phi(i-1,j-1) ) * (sixth*dxinv*dxinv) &
+             + 4.d0*( phi(i+1,j)-2*phi(i,j)+phi(i-1,j) + phi(i,j+1)-2*phi(i,j)+phi(i,j-1) ) * (sixth*dxinv*dxinv) &
+             + ( phi(i+1,j+1)-2*phi(i,j+1)+phi(i-1,j+1) + phi(i+1,j+1)-2*phi(i+1,j)+phi(i+1,j-1) ) * (sixth*dxinv*dxinv)
          end do
       end do
 !!!!!!
@@ -175,7 +180,10 @@ contains
       ! laplacian
       do j=ylo(2)-1,yhi(2)
          do i=ylo(1),yhi(1)
-            lapy(i,j) = ( phi(i+1,j)-2*phi(i,j)+phi(i-1,j) + phi(i,j+1)-2*phi(i,j)+phi(i,j-1) ) * (dxinv*dxinv)
+            ! lapy(i,j) = ( phi(i+1,j)-2*phi(i,j)+phi(i-1,j) + phi(i,j+1)-2*phi(i,j)+phi(i,j-1) ) * (dxinv*dxinv)
+            lapy(i,j) = ( phi(i+1,j-1)-2*phi(i,j-1)+phi(i-1,j-1) + phi(i-1,j+1)-2*phi(i-1,j)+phi(i-1,j-1) ) * (sixth*dxinv*dxinv) &
+             + 4.d0*( phi(i+1,j)-2*phi(i,j)+phi(i-1,j) + phi(i,j+1)-2*phi(i,j)+phi(i,j-1) ) * (sixth*dxinv*dxinv) &
+             + ( phi(i+1,j+1)-2*phi(i,j+1)+phi(i-1,j+1) + phi(i+1,j+1)-2*phi(i+1,j)+phi(i+1,j-1) ) * (sixth*dxinv*dxinv)
          end do
       end do
       
