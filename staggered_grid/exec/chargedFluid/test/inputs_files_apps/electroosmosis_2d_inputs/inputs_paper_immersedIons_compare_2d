@@ -7,20 +7,20 @@
   ! Problem specification
   !----------------------
   dim_in = 2                             ! 2D or 3D  
-  prob_lo(1:3) = 0.d0 0.d0 0.d0          ! physical lo coordinate
-  prob_hi(1:3) = 0.25e-5 1e-5 1e-5       ! physical hi coordinate
+  prob_lo(1:3) = 0.d0 0.d0 0.d0                ! physical lo coordinate
+  prob_hi(1:3) = 0.251075e-6 1.0043e-6 1.0043e-6 ! physical hi coordinate
   n_cells(1:2) = 8 32                    ! number of cells in domain
   max_grid_size(1:2) = 8 8               ! max number of cells in a box
 
   ! Time-step control
   !----------------------
-  fixed_dt = 5d-12                 ! time step (if positive, fixed)
+  fixed_dt = 2.5d-12                 ! time step (if positive, fixed)
   cfl = 0.5d0                      ! advective cfl number (used if fixed_dt<0) to determine time step
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 60000                 ! maximum number of time steps
-  plot_int = 600                   ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 4000                  ! maximum number of time steps
+  plot_int = 200                     ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = -1                      ! Interval for writing a checkpoint
   prob_type = 2                    ! sets scalars, m, coefficients (see init.f90)
   restart = -1                       ! checkpoint restart number: -1 if no restart
@@ -31,8 +31,10 @@
   !--------------------
   grav(1:2) = 0.d0 0.d0               ! gravity vector (negative is downwards)
   molmass(1:3) = 3.82e-23 5.89e-23 2.99e-23  ! sodium: 3.82e-23 g, Cl: 5.89e-23 g
-  rhobar(1:3) =   3.17d0 3.17d0 1.d0
-
+!  rhobar(1:3) =   3.17d0 3.17d0 1.d0
+  rhobar(1:3) =   1.d0 1.d0 1.d0
+!  rhobar(1:3) =   0.5d0 0.5d0 0.5d0
+  
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
   variance_coef_mom = 0.d0
   variance_coef_mass = 0.d0
@@ -77,7 +79,9 @@
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
   visc_type = 2
-  visc_coef = 1.d-2       ! momentum diffusion coefficient 'eta'   
+  visc_coef = 1.d-2       ! momentum diffusion coefficient 'eta'
+!  visc_coef = 2.d-2       ! momentum diffusion coefficient 'eta'  
+!  visc_coef = 0.5d-2       ! momentum diffusion coefficient 'eta'  
 
   advection_type = 0 ! 0 = centered explicit
                      ! 1 = unlimited bilinear bds in space and time
@@ -163,8 +167,8 @@
   T_init(1:2) = 300.d0 300.d0  ! initial values for temperature (bottom/top, inside/outside circle, etc.)
   temp_type = 0 ! for initializing temperature
 
-  c_init(1,1:3) = 1d-4 5d-5 0.99985d0
-  c_init(2,1:3) = 1d-4 5d-5 0.99985d0
+  c_init(1,1:3) = 0.00226268566386304d0 0.00174440033509860d0 0.995992914001038d0
+  c_init(2,1:3) = 0.00226268566386304d0 0.00174440033509860d0 0.995992914001038d0
 
   ! Thermodynamic and transport properties:
   !----------------------
@@ -173,7 +177,7 @@
   ! Number of elements is (nspecies*(nspecies-1)/2)
   ! The values are read row by row starting from top going down (this allows easy addition/deletion of new species/rows)
   ! So D_12; D_13, D_23; D_14, D_24, D_34; ...
-  Dbar(1:3) = 1.17d-5 1.33d-5 2.03d-5  ! diffusion of Na: 13.3e-6 ; Cl: 20.3e-6; water: 2.3e-5
+  Dbar(1:3) = 6.77d-6 1.17d-5 1.33d-5  ! diffusion of Na: 13.3e-6 ; Cl: 20.3e-6; water: 2.3e-5
   Dtherm(1:1) = 0.d0       ! thermo-diffusion coefficients, only differences among elements matter
   H_offdiag(1:1) = 0.d0    ! Off diagonal elements of H=d^2F/dx^2  
   H_diag(1:1) = 0.d0       ! Diagonal of H=d^2F/dx^2, these are vectors of length nspecies
@@ -188,14 +192,18 @@
   print_debye_len = T            ! if the simulation has a single, well-defined Debye length, print it off at beginning of run
   dielectric_const = 6.9296d-19    ! relative permitivity ~ 78, vacuum permitivity ~ 8.854d-21
   charge_per_mass(1:3) = 4194.d0 -2720.d0 0.d0
+!  charge_per_mass(1:3) = 8388.d0 -5440.d0 0.d0
+!  charge_per_mass(1:3) = 2097.d0 -1360.d0 0.d0
+!  charge_per_mass(1:3) = 1048.5d0 -680.d0 0.d0
+
 
   ! 1 = Dirichlet (fixed potential)
   ! 2 = Neumann (fixed charge density)
   Epot_wall_bc_type(1,2) = 2
   Epot_wall_bc_type(2,2) = 2
 
-  Epot_wall(1,2) = 2045061063363.60
-  Epot_wall(2,2) = 2045061063363.60
+  Epot_wall(1,2) = 3438393256647.80
+  Epot_wall(2,2) = 3438393256647.80
 
   E_ext_type = 1
   E_ext_value(1:2) = 1.d14 0.d0
