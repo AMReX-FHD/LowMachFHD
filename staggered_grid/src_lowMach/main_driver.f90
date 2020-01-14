@@ -37,6 +37,7 @@ subroutine main_driver()
   use reservoir_bc_fill_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
+                                  reset_averages, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
                                   probin_common_init, print_int, nspecies, &
                                   advection_type, fixed_dt, max_step, cfl, &
@@ -141,6 +142,8 @@ subroutine main_driver()
                                 m_Cl=5.887108600000000d-023, &
                                 m_H =1.673723600000000d-024, &
                                 m_OH=2.824068560000000d-023
+
+  integer :: num_avg_snapshots
   
   !==============================================================
   ! Initialization
@@ -1149,30 +1152,63 @@ subroutine main_driver()
               enddo
            enddo
         enddo
-     endif 
-         
+     endif
+
+     ! replace .true. with new reset_averages flag
+     if (reset_averages) then
+
+        ! reset averages every n_steps_skip+1
+        if (mod(istep,n_steps_skip) .eq. 1) then
+           do n=1,nlevs
+              call setval(rho_sum(n),0.d0)
+              if (use_charged_fluid) then
+                 call setval(Epot_sum(n),0.d0)
+              end if
+              do i=1,dm
+                 call setval(umac_sum(n,i),0.d0)
+                 if (advection_type.eq.0) then
+                    call setval(mass_fluxes_sum(n,i),0.d0)
+                    if (use_charged_fluid) then
+                       call setval(charge_fluxes_sum(n,i),0.d0)
+                    end if
+                 end if                 
+              end do
+           end do
+        end if
+
+        if (mod(istep,n_steps_skip) .eq. 0) then
+           num_avg_snapshots = n_steps_skip
+        else
+           num_avg_snapshots = mod(istep,n_steps_skip)
+        end if
+        
+     else
+
+        num_avg_snapshots = istep-n_steps_skip
+        
+     end if
 
      ! for writing time-averaged umac, rho, Epot, mass fluxes, and charge fluxes to plotfile
-     if (istep .gt. n_steps_skip) then
-        
+     if (istep .gt. n_steps_skip .or. reset_averages) then
+
         do n=1,nlevs
            ! first do rho
            call multifab_plus_plus_c(rho_sum(n),1,rho_new(n),1,nspecies,0)
            call multifab_copy_c(rho_avg(n),1,rho_sum(n),1,nspecies,0)
-           call multifab_mult_mult_s_c(rho_avg(n),1,(1.d0/(istep-n_steps_skip)),nspecies,0)
+           call multifab_mult_mult_s_c(rho_avg(n),1,(1.d0/num_avg_snapshots),nspecies,0)
 
            ! next do Epot
            if (use_charged_fluid) then
               call multifab_plus_plus_c(Epot_sum(n),1,Epot(n),1,1,0)
               call multifab_copy_c(Epot_avg(n),1,Epot_sum(n),1,1,0)
-              call multifab_mult_mult_s_c(Epot_avg(n),1,(1.d0/(istep-n_steps_skip)),1,0)
+              call multifab_mult_mult_s_c(Epot_avg(n),1,(1.d0/num_avg_snapshots),1,0)
            end if
 
            ! do umac
            do i=1,dm
               call multifab_plus_plus_c(umac_sum(n,i),1,umac(n,i),1,1,0)
               call multifab_copy_c(umac_avg(n,i),1,umac_sum(n,i),1,1,0)
-              call multifab_mult_mult_s_c(umac_avg(n,i),1,(1.d0/(istep-n_steps_skip)),1,0)
+              call multifab_mult_mult_s_c(umac_avg(n,i),1,(1.d0/num_avg_snapshots),1,0)
            end do
 
            ! do mass fluxes
@@ -1180,7 +1216,7 @@ subroutine main_driver()
               do i=1,dm
                  call multifab_plus_plus_c(mass_fluxes_sum(n,i),1,mass_fluxes(n,i)    ,1,nspecies+1,0)
                  call multifab_copy_c(     mass_fluxes_avg(n,i),1,mass_fluxes_sum(n,i),1,nspecies+1,0)
-                 call multifab_mult_mult_s_c(mass_fluxes_avg(n,i),1,(1.d0/(istep-n_steps_skip)),nspecies+1,0)
+                 call multifab_mult_mult_s_c(mass_fluxes_avg(n,i),1,(1.d0/num_avg_snapshots),nspecies+1,0)
               end do
 
               ! do charge fluxes
@@ -1188,13 +1224,14 @@ subroutine main_driver()
                  do i=1,dm
                     call multifab_plus_plus_c(charge_fluxes_sum(n,i),1,charge_fluxes(n,i)    ,1,nspecies+1,0)
                     call multifab_copy_c(     charge_fluxes_avg(n,i),1,charge_fluxes_sum(n,i),1,nspecies+1,0)
-                    call multifab_mult_mult_s_c(charge_fluxes_avg(n,i),1,(1.d0/(istep-n_steps_skip)),nspecies+1,0)
+                    call multifab_mult_mult_s_c(charge_fluxes_avg(n,i),1,(1.d0/num_avg_snapshots),nspecies+1,0)
                  enddo
               endif
            endif
         end do
 
      end if
+
 
      time = time + dt
 

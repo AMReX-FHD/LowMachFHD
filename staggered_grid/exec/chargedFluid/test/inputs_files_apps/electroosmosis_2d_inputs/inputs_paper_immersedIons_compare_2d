@@ -20,7 +20,7 @@
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
   max_step = 4000                  ! maximum number of time steps
-  plot_int = 200                     ! Interval for writing a plotfile (for visit/amrvis)
+  plot_int = 400                     ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = -1                      ! Interval for writing a checkpoint
   prob_type = 2                    ! sets scalars, m, coefficients (see init.f90)
   restart = -1                       ! checkpoint restart number: -1 if no restart
@@ -132,7 +132,8 @@
                                  ! If positive, how often to compute mean and 
                                  ! standard deviation over reduced dimensions
   n_steps_save_stats = -1 ! How often to dump HydroGrid output files
-  n_steps_skip = 0      ! How many steps to skip
+  n_steps_skip = 400    ! How many steps to skip
+  reset_averages = T    ! reset time-averaged quantities every n_steps_skip
   stat_save_type = 1      ! If stats_save_type = 0, we compute averages of instantaneous fields, else, of time-averaged fields
   analyze_conserved = F   ! Should we use conserved variables for the analysis
                           ! (does not work well)

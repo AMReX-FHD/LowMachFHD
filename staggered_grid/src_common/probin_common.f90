@@ -26,6 +26,7 @@ module probin_common_module
   real(dp_t),save :: wallspeed_hi(MAX_SPACEDIM-1,MAX_SPACEDIM)
   integer,save    :: hydro_grid_int,project_dir,max_grid_projection(2)
   integer,save    :: stats_int,n_steps_save_stats,n_steps_skip,histogram_unit,stat_save_type
+  logical,save    :: reset_averages
   logical,save    :: analyze_conserved,center_snapshots
   real(dp_t),save :: variance_coef_mom,variance_coef_mass,initial_variance_mom,initial_variance_mass
   real(dp_t),save :: k_B,Runiv,visc_coef
@@ -223,6 +224,7 @@ module probin_common_module
                                                ! it's set to 0, we save instantaneous fields; else, we save time averaged fields
   namelist /probin_common/ n_steps_save_stats  ! How often to dump HydroGrid output files
   namelist /probin_common/ n_steps_skip        ! How many steps to skip
+  namelist /probin_common/ reset_averages      ! reset time-averaged quantities every n_steps_skip
   namelist /probin_common/ analyze_conserved   ! Should we use conserved variables for the analysis
                                                ! (does not work well)
   namelist /probin_common/ center_snapshots    ! Should we use cell-centered momenta for the analysis
@@ -353,6 +355,7 @@ contains
     stat_save_type = 0 ! by default, vstat/hstat files contain instantaneous fields, not time-averaged ones. 
     n_steps_save_stats = -1
     n_steps_skip = 0
+    reset_averages = .false.
     analyze_conserved = .false.
     center_snapshots = .false.
     histogram_unit=-1
@@ -843,6 +846,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) n_steps_skip
+
+       case ('--reset_averages')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) reset_averages
 
        case ('--analyze_conserved')
           farg = farg + 1
