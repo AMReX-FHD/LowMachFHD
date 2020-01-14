@@ -23,7 +23,7 @@
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
   max_step = 500000                    ! maximum number of time steps
-  plot_int = 1000                       ! Interval for writing a plotfile (for visit/amrvis)
+  plot_int = 100                       ! Interval for writing a plotfile (for visit/amrvis)
   plot_shifted_vel = T
   chk_int = 1000                          ! Interval for writing a checkpoint
   restart =  -1
@@ -282,7 +282,7 @@
   stag_mg_rel_tol = 1.e-9               ! relative tolerance stopping criteria
 
   ! GMRES solver parameters
-  gmres_rel_tol = 1.e-16                 ! relative tolerance stopping criteria
+  gmres_rel_tol = 1.e-14                 ! relative tolerance stopping criteria
   gmres_abs_tol = 0.                    ! absolute tolerance stopping criteria
   gmres_verbose = 0                     ! gmres verbosity; if greater than 1, more residuals will be printed out
   gmres_max_outer = 10                  ! max number of outer iterations
