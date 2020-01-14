@@ -258,11 +258,12 @@ contains
            do i=xlo(1)-1,xhi(1)
 !              lapx(i,j,k) = ( phi(i+1,j,k)-2.d0*phi(i,j,k)+phi(i-1,j,k) + phi(i,j+1,k)-2.d0*phi(i,j,k)+phi(i,j-1,k) &
 !                  + phi(i,j,k+1)-2.d0*phi(i,j,k)+phi(i,j,k-1) ) * (dxinv*dxinv)
-              lapx(i,j,k) = ( phi(i-1,j+1,k+1)+2*phi(i,j+1,k+1)+phi(i+1,j+1,k+1)+2*phi(i-1,j,k+1)+2*phi(i+1,j,k+1) &
-                  +phi(i-1,j-1,k+1)+2*phi(i,j-1,k+1)+phi(i+1,j,k+1) &
-                  +2*phi(i-1,j+1,k)+phi(i+1,j+1,k)-32*phi(i,j,k)+2*phi(i-1,j-1,k)+2*phi(i+1,j-1,k) &
-                  +phi(i-1,j+1,k-1)+2*phi(i,j+1,k-1)+phi(i+1,j+1,k-1)+2*phi(i-1,j,k-1)+2*phi(i+1,j,k-1) &
-                  +phi(i-1,j-1,k-1)+2*phi(i,j-1,k-1)+phi(i+1,j,k-1) ) * (twelveinv*dxinv*dxinv)
+            lapx(i,j,k) = ( phi(i-1,j+1,k+1)+ phi(i+1,j+1,k+1) + phi(i+1,j-1,k+1) + phi(i-1,j-1,k+1) + &
+                 2.d0*phi(i,j+1,k+1)+ 2.d0*phi(i-1,j,k+1)+2.d0*phi(i+1,j,k+1) + 2.d0*phi(i,j-1,k+1) +  &
+                  2.d0*phi(i-1,j+1,k)+2.d0*phi(i+1,j+1,k)-32.d0*phi(i,j,k)+2.d0*phi(i-1,j-1,k)+2.d0*phi(i+1,j-1,k) &
+                  + phi(i-1,j+1,k-1)+ phi(i+1,j+1,k-1) + phi(i+1,j-1,k-1) + phi(i-1,j-1,k-1) + &
+                 2.d0*phi(i,j+1,k-1)+ 2.d0*phi(i-1,j,k-1)+2.d0*phi(i+1,j,k-1) + 2.d0*phi(i,j-1,k-1))   &
+                  * (twelveinv*dxinv*dxinv)
            end do
         end do
       end do
@@ -309,11 +310,12 @@ contains
            do i=ylo(1),yhi(1)
              !  lapy(i,j,k) = ( phi(i+1,j,k)-2.d0*phi(i,j,k)+phi(i-1,j,k) + phi(i,j+1,k)-2.d0*phi(i,j,k)+phi(i,j-1,k) &
               !    + phi(i,j,k+1)-2.d0*phi(i,j,k)+phi(i,j,k-1) ) * (dxinv*dxinv)
-              lapy(i,j,k) = ( phi(i-1,j+1,k+1)+2*phi(i,j+1,k+1)+phi(i+1,j+1,k+1)+2*phi(i-1,j,k+1)+2*phi(i+1,j,k+1) &
-                  +phi(i-1,j-1,k+1)+2*phi(i,j-1,k+1)+phi(i+1,j,k+1) &
-                  +2*phi(i-1,j+1,k)+phi(i+1,j+1,k)-32*phi(i,j,k)+2*phi(i-1,j-1,k)+2*phi(i+1,j-1,k) &
-                  +phi(i-1,j+1,k-1)+2*phi(i,j+1,k-1)+phi(i+1,j+1,k-1)+2*phi(i-1,j,k-1)+2*phi(i+1,j,k-1) &
-                  +phi(i-1,j-1,k-1)+2*phi(i,j-1,k-1)+phi(i+1,j,k-1) ) * (twelveinv*dxinv*dxinv)
+            lapy(i,j,k) = ( phi(i-1,j+1,k+1)+ phi(i+1,j+1,k+1) + phi(i+1,j-1,k+1) + phi(i-1,j-1,k+1) + &
+                 2.d0*phi(i,j+1,k+1)+ 2.d0*phi(i-1,j,k+1)+2.d0*phi(i+1,j,k+1) + 2.d0*phi(i,j-1,k+1) +  &
+                  2.d0*phi(i-1,j+1,k)+2.d0*phi(i+1,j+1,k)-32.d0*phi(i,j,k)+2.d0*phi(i-1,j-1,k)+2.d0*phi(i+1,j-1,k) &
+                  + phi(i-1,j+1,k-1)+ phi(i+1,j+1,k-1) + phi(i+1,j-1,k-1) + phi(i-1,j-1,k-1) + &
+                 2.d0*phi(i,j+1,k-1)+ 2.d0*phi(i-1,j,k-1)+2.d0*phi(i+1,j,k-1) + 2.d0*phi(i,j-1,k-1))   &
+                  * (twelveinv*dxinv*dxinv)
            end do
         end do
       end do
@@ -360,11 +362,12 @@ contains
            do i=zlo(1),zhi(1)
       !        lapz(i,j,k) = ( phi(i+1,j,k)-2.d0*phi(i,j,k)+phi(i-1,j,k) + phi(i,j+1,k)-2.d0*phi(i,j,k)+phi(i,j-1,k) &
        !           + phi(i,j,k+1)-2.d0*phi(i,j,k)+phi(i,j,k-1) ) * (dxinv*dxinv)
-              lapz(i,j,k) = ( phi(i-1,j+1,k+1)+2*phi(i,j+1,k+1)+phi(i+1,j+1,k+1)+2*phi(i-1,j,k+1)+2*phi(i+1,j,k+1) &
-                  +phi(i-1,j-1,k+1)+2*phi(i,j-1,k+1)+phi(i+1,j,k+1) &
-                  +2*phi(i-1,j+1,k)+phi(i+1,j+1,k)-32*phi(i,j,k)+2*phi(i-1,j-1,k)+2*phi(i+1,j-1,k) &
-                  +phi(i-1,j+1,k-1)+2*phi(i,j+1,k-1)+phi(i+1,j+1,k-1)+2*phi(i-1,j,k-1)+2*phi(i+1,j,k-1) &
-                  +phi(i-1,j-1,k-1)+2*phi(i,j-1,k-1)+phi(i+1,j,k-1) ) * (twelveinv*dxinv*dxinv)
+            lapz(i,j,k) = ( phi(i-1,j+1,k+1)+ phi(i+1,j+1,k+1) + phi(i+1,j-1,k+1) + phi(i-1,j-1,k+1) + &
+                 2.d0*phi(i,j+1,k+1)+ 2.d0*phi(i-1,j,k+1)+2.d0*phi(i+1,j,k+1) + 2.d0*phi(i,j-1,k+1) +  &
+                  2.d0*phi(i-1,j+1,k)+2.d0*phi(i+1,j+1,k)-32.d0*phi(i,j,k)+2.d0*phi(i-1,j-1,k)+2.d0*phi(i+1,j-1,k) &
+                  + phi(i-1,j+1,k-1)+ phi(i+1,j+1,k-1) + phi(i+1,j-1,k-1) + phi(i-1,j-1,k-1) + &
+                 2.d0*phi(i,j+1,k-1)+ 2.d0*phi(i-1,j,k-1)+2.d0*phi(i+1,j,k-1) + 2.d0*phi(i,j-1,k-1))   &
+                  * (twelveinv*dxinv*dxinv)
            end do
         end do
       end do
