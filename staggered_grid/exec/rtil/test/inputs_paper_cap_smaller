@@ -194,8 +194,8 @@
   ! 2 = Neumann (fixed charge density)
   Epot_wall_bc_type(1,2) = 1
   Epot_wall_bc_type(2,2) = 1
-  Epot_wall(1,2) =  1.d10
-  Epot_wall(2,2) = -1.d10
+  Epot_wall(1,2) =  .125d10
+  Epot_wall(2,2) = -.125d10
   !Epot_wall(1,2) =  2.d10
   !Epot_wall(2,2) = -2.d10
 
