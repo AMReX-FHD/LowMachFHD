@@ -234,14 +234,18 @@ contains
                  +node_grad_cz(i-1,j,k)+node_grad_cz(i,j,k+1)+node_grad_cz(i,j+1,k+1)+&
                  node_grad_cz(i-1,j+1,k+1)+node_grad_cz(i-1,j,k+1))
 
-         forcex(i,j,k) = -(.5*(node_grad_cx(i,j+1,k)*node_grad_cy(i,j+1,k)+node_grad_cx(i,j+1,k+1)*node_grad_cy(i,j+1,k+1)) -&
-                  .5*(node_grad_cx(i,j,k)*node_grad_cy(i,j,k)+node_grad_cx(i,j,k+1)*node_grad_cy(i,j,k+1)))/dx(2) &
+         forcex(i,j,k) = -(.5*(node_grad_cx(i,j+1,k)*node_grad_cy(i,j+1,k) &
+                +node_grad_cx(i,j+1,k+1)*node_grad_cy(i,j+1,k+1)) -&
+                  .5*(node_grad_cx(i,j,k)*node_grad_cy(i,j,k)+&
+                node_grad_cx(i,j,k+1)*node_grad_cy(i,j,k+1)))/dx(2) &
            +(0.5*(cy_local_plus*cy_local_plus+cz_local_plus*cz_local_plus-&
                  cx_local_plus*cx_local_plus) &
            -0.5*(cy_local_minus*cy_local_minus+cz_local_minus*cz_local_minus-&
                  cx_local_minus*cx_local_minus))/(dx(1)) & 
-           -(.5*(node_grad_cx(i,j,k+1)*node_grad_cz(i,j,k+1)+node_grad_cx(i,j+1,k+1)*node_grad_cz(i,j+1,k+1)) -&
-                  .5*(node_grad_cx(i,j,k)*node_grad_cz(i,j,k)+node_grad_cx(i,j+1,k)*node_grad_cz(i,j+1,k)))/dx(3)
+           -(.5*(node_grad_cx(i,j,k+1)*node_grad_cz(i,j,k+1) &
+                +node_grad_cx(i,j+1,k+1)*node_grad_cz(i,j+1,k+1)) -&
+                  .5*(node_grad_cx(i,j,k)*node_grad_cz(i,j,k)&
+            +node_grad_cx(i,j+1,k)*node_grad_cz(i,j+1,k)))/dx(3)
          forcex(i,j,k) = kc_tension*forcex(i,j,k)
 
          end do
@@ -273,10 +277,15 @@ contains
                  node_grad_cz(i+1,j-1,k)+node_grad_cz(i+1,j,k)+node_grad_cz(i,j,k+1)+&
                  node_grad_cz(i,j-1,k+1)+node_grad_cz(i+1,j-1,k+1)+node_grad_cz(i+1,j,k+1))
 
-         forcey(i,j,k) = -(.5*(node_grad_cx(i+1,j,k)*node_grad_cy(i+1,j,k)+node_grad_cx(i+1,j,k+1)*node_grad_cy(i+1,j,k+1)) - .5*(node_grad_cx(i,j,k)*node_grad_cy(i,j,k)+node_grad_cx(i,j,k+1)*node_grad_cy(i,j,k+1)))/dx(1) &
+         forcey(i,j,k) = -(.5*(node_grad_cx(i+1,j,k)*node_grad_cy(i+1,j,k) &
+                +node_grad_cx(i+1,j,k+1)*node_grad_cy(i+1,j,k+1)) &
+            - .5*(node_grad_cx(i,j,k)*node_grad_cy(i,j,k) &
+                +node_grad_cx(i,j,k+1)*node_grad_cy(i,j,k+1)))/dx(1) &
            +(0.5*(cx_local_plus*cx_local_plus+cz_local_plus*cz_local_plus-cy_local_plus*cy_local_plus) &
            -0.5*(cx_local_minus*cx_local_minus+cz_local_minus*cz_local_minus-cy_local_minus*cy_local_minus))/(dx(2)) & 
-           -(.5*(node_grad_cy(i,j,k+1)*node_grad_cz(i,j,k+1)+node_grad_cy(i+1,j,k+1)*node_grad_cz(i+1,j,k+1)) - .5*(node_grad_cy(i,j,k)*node_grad_cz(i,j,k)+node_grad_cy(i+1,j,k)*node_grad_cz(i+1,j,k)))/dx(3)
+           -(.5*(node_grad_cy(i,j,k+1)*node_grad_cz(i,j,k+1) &
+            +node_grad_cy(i+1,j,k+1)*node_grad_cz(i+1,j,k+1)) &
+        - .5*(node_grad_cy(i,j,k)*node_grad_cz(i,j,k)+node_grad_cy(i+1,j,k)*node_grad_cz(i+1,j,k)))/dx(3)
          forcey(i,j,k) = kc_tension*forcey(i,j,k)
 
       end do
@@ -307,10 +316,14 @@ contains
               +node_grad_cz(i+1,j,k)+node_grad_cz(i,j,k-1)+node_grad_cz(i,j+1,k-1)& 
               +node_grad_cz(i+1,j+1,k-1)+node_grad_cz(i+1,j,k-1))
 
-         forcez(i,j,k) = -(.5*(node_grad_cx(i+1,j,k)*node_grad_cz(i+1,j,k)+(node_grad_cx(i+1,j+1,k)*node_grad_cz(i+1,j+1,k))) - .5*(node_grad_cx(i,j,k)*node_grad_cz(i,j,k)+node_grad_cx(i,j+1,k)*node_grad_cz(i,j+1,k)))/dx(1) &
+         forcez(i,j,k) = -(.5*(node_grad_cx(i+1,j,k)*node_grad_cz(i+1,j,k) &
+            +(node_grad_cx(i+1,j+1,k)*node_grad_cz(i+1,j+1,k))) & 
+        - .5*(node_grad_cx(i,j,k)*node_grad_cz(i,j,k)+node_grad_cx(i,j+1,k)*node_grad_cz(i,j+1,k)))/dx(1) &
            +(0.5*(cx_local_plus*cx_local_plus+cy_local_plus*cy_local_plus-cz_local_plus*cz_local_plus) &
            -0.5*(cx_local_minus*cx_local_minus+cy_local_minus*cy_local_minus-cz_local_minus*cz_local_minus))/(dx(3)) & 
-           -(.5*(node_grad_cy(i,j+1,k)*node_grad_cz(i,j+1,k)+node_grad_cy(i+1,j+1,k)*node_grad_cz(i+1,j+1,k)) - .5*(node_grad_cy(i,j,k)*node_grad_cz(i,j,k)+node_grad_cy(i+1,j,k)*node_grad_cz(i+1,j,k)))/dx(2)
+           -(.5*(node_grad_cy(i,j+1,k)*node_grad_cz(i,j+1,k) &
+            +node_grad_cy(i+1,j+1,k)*node_grad_cz(i+1,j+1,k)) &
+        - .5*(node_grad_cy(i,j,k)*node_grad_cz(i,j,k)+node_grad_cy(i+1,j,k)*node_grad_cz(i+1,j,k)))/dx(2)
          forcez(i,j,k) = kc_tension*forcez(i,j,k)
 
       end do
