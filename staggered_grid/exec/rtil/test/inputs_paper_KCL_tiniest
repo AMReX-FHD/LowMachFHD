@@ -21,7 +21,7 @@
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
   max_step = 500000                    ! maximum number of time steps
-  plot_int = 100                       ! Interval for writing a plotfile (for visit/amrvis)
+  plot_int = 1000                       ! Interval for writing a plotfile (for visit/amrvis)
   plot_shifted_vel = T
   chk_int = 1000                          ! Interval for writing a checkpoint
   restart =  -1
