@@ -1186,7 +1186,7 @@ contains
 
     integer i,j,n
 
-    print *," in limiter routine"
+!    print *," in limiter routine"
     
     do j = lo(2),hi(2)
         do i = lo(1),hi(1)+1
