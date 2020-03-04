@@ -117,8 +117,6 @@ contains
 
     call build(bpt, "advance_timestep_inertial")
 
-    call print_edge(umac,1,3,5,1)
-    
     weights(1) = 1.d0
 
     nlevs = mla%nlevel
