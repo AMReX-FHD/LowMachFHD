@@ -2,7 +2,6 @@ f90sources += analyze_spectra.f90
 f90sources += bl_rng.f90
 f90sources += checkpoint.f90
 f90sources += convert_stag.f90
-f90sources += debug.f90
 f90sources += div_and_grad.f90
 f90sources += inhomogeneous_bc_val.f90
 f90sources += main.f90
