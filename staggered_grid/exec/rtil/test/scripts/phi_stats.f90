@@ -3,7 +3,7 @@ program phi_stats
   character(len=64) fname
   double precision xval(3),temp
   double precision xphi(64,3)
-  double precision avg(3), var(3), std(3)
+  double precision avg(3), var(3), errorbar(3)
   
   integer i, nFiles
 
@@ -41,11 +41,10 @@ program phi_stats
   end do
   var(:) = var(:) / nFiles
 
-  std(:) = sqrt(var(:))
-
+  errorbar(:) = sqrt(var(:)/nFiles)
   
-  print*,xval(1),avg(1),var(1),std(1)
-  print*,xval(2),avg(2),var(2),std(2)
-  print*,xval(3),avg(3),var(3),std(3)
+  print*,xval(1),avg(1),errorbar(1)
+  print*,xval(2),avg(2),errorbar(2)
+  print*,xval(3),avg(3),errorbar(3)
 
 end program phi_stats
