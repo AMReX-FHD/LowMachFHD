@@ -1390,10 +1390,10 @@ contains
     ! compute the number of trace species
     ! build the mapping for expanding/contracting arrays
     ntrace = 0
-    if(abs(rhotot-1.38d0) .gt. 1.d-10)then
-        write(6,*)" foobar in onsager"
-        write(6,*)rho(1),rho(2),rhotot
-    endif
+!   if(abs(rhotot-1.38d0) .gt. 1.d-10)then
+!       write(6,*)" foobar in onsager"
+!       write(6,*)rho(1),rho(2),rhotot
+!   endif
     do row=1, nspecies
        W(row) = rho(row)/rhotot
        if (W(row) .lt. fraction_tolerance) then
