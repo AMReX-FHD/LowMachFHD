@@ -720,6 +720,13 @@ contains
        end if
 
     end if
+    
+    if(use_multiphase) then
+
+       !compute reversible stress tensor ---added term (will add to gmres_rhs_v later)
+       call compute_div_reversible_stress(mla,div_reversible_stress,rhotot_new,rho_new,dx,the_bc_tower)
+
+    end if
 
     if (use_charged_fluid) then
 
@@ -971,6 +978,18 @@ contains
     if (any(grav(1:dm) .ne. 0.d0)) then
        call mk_grav_force_bousq(mla,gmres_rhs_v,.true.,rho_fc,the_bc_tower)
     end if
+
+    if(use_multiphase) then
+
+      ! add divergence of reversible stress to gmres_rhs_v
+      do n=1,nlevs
+         do i=1,dm
+            call multifab_saxpy_3(gmres_rhs_v(n,i),1.d0,div_reversible_stress(n,i))
+         end do
+      end do
+
+    end if
+   
 
     if (use_charged_fluid) then
 
