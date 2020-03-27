@@ -14,7 +14,7 @@ module reversible_stress_module
   use fill_rho_ghost_cells_module
   use convert_rhoc_to_c_module
   use probin_common_module, only: molmass, k_B, rhobar, nspecies, prob_lo, prob_hi
-  use probin_multispecies_module, only: kc_tension
+  use probin_multispecies_module, only: kc_tension, T_init
   use probin_charged_module, only: charge_per_mass, dpdt_factor, &
                                    dielectric_const, dielectric_type, &
                                    E_ext_type, E_ext_value, zero_eps_on_wall_type, &
@@ -118,6 +118,7 @@ contains
       integer :: i,j 
       ! real(kind=dp_t) :: kc
       real(kind=dp_t) :: cx_local_plus, cy_local_plus, cx_local_minus, cy_local_minus
+      real(kind=dp_t) :: scale_factor
 
       real(kind=dp_t) , allocatable :: node_grad_cx(:,:)
       real(kind=dp_t) , allocatable :: node_grad_cy(:,:)
@@ -125,8 +126,7 @@ contains
       allocate(node_grad_cx(lo(1)-1:hi(1)+2,lo(2)-1:hi(2)+2))
       allocate(node_grad_cy(lo(1)-1:hi(1)+2,lo(2)-1:hi(2)+2))
 
-      ! kc = 1.d-2 !make parameter
-
+      scale_factor = rhobar(1)*k_B*T_init(1)/molmass(1)
 
       !grad x & y
       do j=lo(2)-1,hi(2)+2
@@ -145,11 +145,10 @@ contains
         cx_local_minus = 0.25*(node_grad_cx(i,j)+node_grad_cx(i,j+1)+node_grad_cx(i-1,j+1)+node_grad_cx(i-1,j))
         cy_local_minus = 0.25*(node_grad_cy(i,j)+node_grad_cy(i,j+1)+node_grad_cy(i-1,j+1)+node_grad_cy(i-1,j))
 
-!also have not added k_c anywhere--need to fix
         forcex(i,j) = -(node_grad_cx(i,j+1)*node_grad_cy(i,j+1) - node_grad_cx(i,j)*node_grad_cy(i,j))/dx(2) &
            +(0.5*(cy_local_plus*cy_local_plus-cx_local_plus*cx_local_plus) &
            -0.5*(cy_local_minus*cy_local_minus-cx_local_minus*cx_local_minus))/(dx(1)) 
-        forcex(i,j) = kc_tension*forcex(i,j)
+        forcex(i,j) = scale_factor * kc_tension*forcex(i,j)
       end do
       end do
 
@@ -165,7 +164,7 @@ contains
         forcey(i,j) = -(node_grad_cx(i+1,j)*node_grad_cy(i+1,j) - node_grad_cx(i,j)*node_grad_cy(i,j))/dx(1) &
            +(0.5*(cy_local_plus*cy_local_plus-cx_local_plus*cx_local_plus) &
            -0.5*(cy_local_minus*cy_local_minus-cx_local_minus*cx_local_minus))/(dx(2)) 
-        forcey(i,j) = kc_tension*forcey(i,j)
+        forcey(i,j) = scale_factor * kc_tension*forcey(i,j)
       end do
       end do
 
@@ -186,20 +185,22 @@ contains
       !  real(kind=dp_t) :: kc
       real(kind=dp_t) :: cx_local_plus, cy_local_plus, cz_local_plus, cx_local_minus, cy_local_minus, cz_local_minus
 
+      real(kind=dp_t) :: scale_factor
+
       real(kind=dp_t),  allocatable :: node_grad_cx(:,:,:)
       real(kind=dp_t),  allocatable :: node_grad_cy(:,:,:)
       real(kind=dp_t),  allocatable :: node_grad_cz(:,:,:)
+
+      scale_factor = rhobar(1)*k_B*T_init(1)/molmass(1)
 
       allocate(node_grad_cx(lo(1)-1:hi(1)+2,lo(2)-1:hi(2)+2,lo(3)-1:hi(3)+2))
       allocate(node_grad_cy(lo(1)-1:hi(1)+2,lo(2)-1:hi(2)+2,lo(3)-1:hi(3)+2))
       allocate(node_grad_cz(lo(1)-1:hi(1)+2,lo(2)-1:hi(2)+2,lo(3)-1:hi(3)+2))
       
-      !  kc = 1.d-6 !make parameter
-
       !grad x & y & z
       do k=lo(3)-1,hi(3)+2
        do j=lo(2)-1,hi(2)+2
-        do i=lo(1)-1,hi(1)+2 !! again, is this correct placement for +1?
+        do i=lo(1)-1,hi(1)+2
 
               node_grad_cx(i,j,k) = (c(i,j,k)-c(i-1,j,k)+c(i,j-1,k)-c(i-1,j-1,k) &
 		+c(i,j,k-1)-c(i-1,j,k-1)+c(i,j-1,k-1)-c(i-1,j-1,k-1))/(4*dx(1))
@@ -246,7 +247,7 @@ contains
                 +node_grad_cx(i,j+1,k+1)*node_grad_cz(i,j+1,k+1)) -&
                   .5*(node_grad_cx(i,j,k)*node_grad_cz(i,j,k)&
             +node_grad_cx(i,j+1,k)*node_grad_cz(i,j+1,k)))/dx(3)
-         forcex(i,j,k) = kc_tension*forcex(i,j,k)
+         forcex(i,j,k) = scale_factor * kc_tension*forcex(i,j,k)
 
          end do
         end do
@@ -286,7 +287,7 @@ contains
            -(.5*(node_grad_cy(i,j,k+1)*node_grad_cz(i,j,k+1) &
             +node_grad_cy(i+1,j,k+1)*node_grad_cz(i+1,j,k+1)) &
         - .5*(node_grad_cy(i,j,k)*node_grad_cz(i,j,k)+node_grad_cy(i+1,j,k)*node_grad_cz(i+1,j,k)))/dx(3)
-         forcey(i,j,k) = kc_tension*forcey(i,j,k)
+         forcey(i,j,k) = scale_factor * kc_tension*forcey(i,j,k)
 
       end do
       end do
@@ -324,7 +325,7 @@ contains
            -(.5*(node_grad_cy(i,j+1,k)*node_grad_cz(i,j+1,k) &
             +node_grad_cy(i+1,j+1,k)*node_grad_cz(i+1,j+1,k)) &
         - .5*(node_grad_cy(i,j,k)*node_grad_cz(i,j,k)+node_grad_cy(i+1,j,k)*node_grad_cz(i+1,j,k)))/dx(2)
-         forcez(i,j,k) = kc_tension*forcez(i,j,k)
+         forcez(i,j,k) = scale_factor * kc_tension*forcez(i,j,k)
 
       end do
       end do
