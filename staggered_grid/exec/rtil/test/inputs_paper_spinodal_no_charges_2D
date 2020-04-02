@@ -105,7 +105,7 @@
 
   ! Control for analyze_spectra.90 for calling HydroGrid
   !----------------------
-  hydro_grid_int = 0                   ! How often to call updateHydroGrid
+  hydro_grid_int = 1                   ! How often to call updateHydroGrid
                                         ! 0 if never
                                         ! negative for projectHydroGrid custom analysis
                                         ! positive for updateHydroGrid
@@ -121,7 +121,7 @@
   stats_int = 0                         ! Project grid for analysis (writes hstat and vstat files)
                                         ! If positive, how often to compute mean and 
                                         ! standard deviation over reduced dimensions
-  n_steps_save_stats = 1                ! How often to dump HydroGrid output files
+  n_steps_save_stats = 5000             ! How often to dump HydroGrid output files
   n_steps_skip = 250000                 ! How many steps to skip
   analyze_conserved = F                 ! Should we use conserved variables for the analysis
                                         ! (does not work well)
