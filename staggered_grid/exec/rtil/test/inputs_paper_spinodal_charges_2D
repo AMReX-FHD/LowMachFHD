@@ -61,11 +61,6 @@
   seed_reaction = 1
   seed_init_mass = 1
   seed_init_momentum = 1
-  !seed_momentum = 37
-  !seed_diffusion = 37
-  !seed_reaction = 37
-  !seed_init_mass = 37
-  !seed_init_momentum = 37
 
   ! Viscous friction L phi operator
   ! if abs(visc_type) = 1, L = div beta grad
@@ -154,7 +149,7 @@
   alpha_gex = 4000.
   n_gex = 2
 
-   kc_tension = 1.d-11
+  kc_tension = 1.d-11
   
   ! Thermodynamic and transport properties:
   !----------------------
@@ -297,6 +292,7 @@
    ! Variances
    writeVariancesVTK = T                ! Should we save a VTK file
    nVariances = 2
+   ! numbering: 1=rho1-rho1, 2=rho1-rho2
    variancePairs = "0 5 0 5, 0 5 0 6"
       ! species1 variable1 species2 variable2
 
