@@ -140,10 +140,14 @@ contains
 
       do j=lo(2),hi(2)
       do i=lo(1),hi(1)+1
-        cx_local_plus = 0.25*(node_grad_cx(i,j)+node_grad_cx(i,j+1)+node_grad_cx(i+1,j+1)+node_grad_cx(i+1,j))
-        cy_local_plus = 0.25*(node_grad_cy(i,j)+node_grad_cy(i,j+1)+node_grad_cy(i+1,j+1)+node_grad_cy(i+1,j))
-        cx_local_minus = 0.25*(node_grad_cx(i,j)+node_grad_cx(i,j+1)+node_grad_cx(i-1,j+1)+node_grad_cx(i-1,j))
-        cy_local_minus = 0.25*(node_grad_cy(i,j)+node_grad_cy(i,j+1)+node_grad_cy(i-1,j+1)+node_grad_cy(i-1,j))
+        !cx_local_plus = 0.25*(node_grad_cx(i,j)+node_grad_cx(i,j+1)+node_grad_cx(i+1,j+1)+node_grad_cx(i+1,j))
+        !cy_local_plus = 0.25*(node_grad_cy(i,j)+node_grad_cy(i,j+1)+node_grad_cy(i+1,j+1)+node_grad_cy(i+1,j))
+        !!cx_local_minus = 0.25*(node_grad_cx(i,j)+node_grad_cx(i,j+1)+node_grad_cx(i-1,j+1)+node_grad_cx(i-1,j))
+        !cy_local_minus = 0.25*(node_grad_cy(i,j)+node_grad_cy(i,j+1)+node_grad_cy(i-1,j+1)+node_grad_cy(i-1,j))
+        cx_local_plus = 0.5*(c(i+1,j)-c(i-1,j))/dx(1)
+        cx_local_minus = 0.5*(c(i,j)-c(i-2,j))/dx(1)
+        cy_local_plus = 0.5*(c(i,j+1)-c(i,j-1))/dx(2)
+        cy_local_minus = 0.5*(c(i-1,j+1)-c(i-1,j-1))/dx(2)
 
         forcex(i,j) = -(node_grad_cx(i,j+1)*node_grad_cy(i,j+1) - node_grad_cx(i,j)*node_grad_cy(i,j))/dx(2) &
            +(0.5*(cy_local_plus*cy_local_plus-cx_local_plus*cx_local_plus) &
@@ -156,14 +160,14 @@ contains
       do j=lo(2),hi(2)+1
       do i=lo(1),hi(1)
 
-        cx_local_plus = 0.25*(node_grad_cx(i,j)+node_grad_cx(i,j+1)+node_grad_cx(i+1,j+1)+node_grad_cx(i+1,j))
-        cy_local_plus = 0.25*(node_grad_cy(i,j)+node_grad_cy(i,j+1)+node_grad_cy(i+1,j+1)+node_grad_cy(i+1,j))
-        cx_local_minus = 0.25*(node_grad_cx(i,j)+node_grad_cx(i,j-1)+node_grad_cx(i+1,j-1)+node_grad_cx(i+1,j))
-        cy_local_minus = 0.25*(node_grad_cy(i,j)+node_grad_cy(i,j-1)+node_grad_cy(i+1,j-1)+node_grad_cy(i+1,j))
+        cx_local_plus = 0.5*(c(i+1,j)-c(i-1,j))/dx(1)
+        cx_local_minus = 0.5*(c(i+1,j-1)-c(i-1,j-1))/dx(1)
+        cy_local_plus = 0.5*(c(i,j+1)-c(i,j-1))/dx(2)
+        cy_local_minus = 0.5*(c(i,j)-c(i,j-2))/dx(2)
 
         forcey(i,j) = -(node_grad_cx(i+1,j)*node_grad_cy(i+1,j) - node_grad_cx(i,j)*node_grad_cy(i,j))/dx(1) &
-           +(0.5*(cx_local_plus*cx_local_plus-cy_local_plus*cy_local_plus) &
-           -0.5*(cx_local_minus*cx_local_minus-cy_local_minus*cy_local_minus))/(dx(2)) 
+           +(0.5*(cy_local_plus*cy_local_plus-cx_local_plus*cx_local_plus) &
+           -0.5*(cy_local_minus*cy_local_minus-cx_local_minus*cx_local_minus))/(dx(2)) 
         forcey(i,j) = scale_factor * kc_tension*forcey(i,j)
       end do
       end do
