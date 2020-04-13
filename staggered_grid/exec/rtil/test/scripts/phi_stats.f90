@@ -1,11 +1,11 @@
 program phi_stats
 
   character(len=64) fname
-  double precision xval(3),temp
-  double precision xphi(64,3)
-  double precision avg(3), var(3), errorbar(3)
+  double precision xval(193),temp
+  double precision xphi(64,193)
+  double precision avg(193), var(193), errorbar(193)
   
-  integer i, nFiles
+  integer i,j,nFiles
 
   read(5,*) nFiles
   
@@ -14,10 +14,10 @@ program phi_stats
      read(5,*) fname
 
      open(1,file=fname)
-     
-     read(1,*) xval(1), xphi(i,1), temp
-     read(1,*) xval(2), xphi(i,2), temp
-     read(1,*) xval(3), xphi(i,3), temp
+
+     do j=1,193
+        read(1,*) xval(j), xphi(i,j), temp
+     end do
      
      close(1)
 
@@ -26,25 +26,25 @@ program phi_stats
   ! compute average at each height
   avg(:) = 0.
   do i=1,nFiles
-     avg(1) = avg(1) + xphi(i,1)
-     avg(2) = avg(2) + xphi(i,2)
-     avg(3) = avg(3) + xphi(i,3)
+     do j=1,193
+        avg(j) = avg(j) + xphi(i,j)
+     end do
   end do
   avg(:) = avg(:) / nFiles
 
   ! compute variance at each height
   var(:) = 0.
   do i=1,nFiles
-     var(1) = var(1) + (xphi(i,1)-avg(1))**2
-     var(2) = var(2) + (xphi(i,2)-avg(2))**2
-     var(3) = var(3) + (xphi(i,3)-avg(3))**2
+     do j=1,192
+        var(j) = var(j) + (xphi(i,j)-avg(j))**2
+     end do
   end do
   var(:) = var(:) / nFiles
 
   errorbar(:) = sqrt(var(:)/nFiles)
-  
-  print*,xval(1),avg(1),errorbar(1)
-  print*,xval(2),avg(2),errorbar(2)
-  print*,xval(3),avg(3),errorbar(3)
+
+  do j=1,192
+     print*,xval(j),avg(j),errorbar(j)
+  end do
 
 end program phi_stats

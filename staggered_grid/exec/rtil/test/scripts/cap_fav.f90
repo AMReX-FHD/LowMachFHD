@@ -606,6 +606,8 @@ program faverage
           (avg(i,j), rms(i,j), j=1, nvars_pass)
   enddo
 
+  write(uout,*) 0.96e-5, -wallpot, 0
+
   if (uout .ne. 6) close(unit=uout)
 
   call destroy(pf)
