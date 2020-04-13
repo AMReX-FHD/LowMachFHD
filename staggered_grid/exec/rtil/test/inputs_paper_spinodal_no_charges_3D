@@ -297,7 +297,7 @@
    ! Variances
    writeVariancesVTK = T                ! Should we save a VTK file
    nVariances = 2
-   variancePairs = "0 5 0 5, 0 5 0 6"
+   variancePairs = "0 6 0 6, 0 6 0 7"
       ! species1 variable1 species2 variable2
 
    ! Static structure factors
@@ -306,7 +306,7 @@
    writeAbsValue = F                    ! Only write absolute values of complex values to VTK file?
    writeTheory = -1                     ! Write the theoretical prediction (-1=none, 0==continuum or 1=MAC)
    nStructureFactors = 2
-   structureFactorPairs = "0 5 0 5, 0 5 0 6"
+   structureFactorPairs = "0 6 0 6, 0 6 0 7"
 
    ! Dynamic structure factors:
    nWavenumbers=0
