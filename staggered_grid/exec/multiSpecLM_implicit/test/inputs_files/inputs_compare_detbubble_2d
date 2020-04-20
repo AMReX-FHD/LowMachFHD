@@ -71,13 +71,19 @@
   bc_lo(1:2) = -1 -1
   bc_hi(1:2) = -1 -1
 
+!  bc_lo(1:2) = 100 100
+!  bc_hi(1:2) = 100 100
+
+!  bc_lo(1:2) = 200 200
+!  bc_hi(1:2) = 200 200
+
   ! Each no-slip wall may be moving with a specified tangential 
   ! velocity along the tangential directions
   ! In 2D:
   ! wallspeed_lo/hi(1,1) - yvel on x-face
   ! wallspeed_lo/hi(1,2) - xvel on y-face
-  wallspeed_lo(1,2) = -1.d0
-  wallspeed_hi(1,2) =  1.d0
+  wallspeed_lo(1,2) = 0.d0
+  wallspeed_hi(1,2) = 0.d0
 
 /
 
