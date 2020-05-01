@@ -2,22 +2,22 @@
 
   ! Problem specification
   !----------------------
-  dim_in = 2                            ! 2D or 3D  
+  dim_in = 3                            ! 2D or 3D  
   prob_type = 2                         ! const conc grad along y (see src_lowMach/init_lowmach.f90) 
   prob_lo(1:3) = 0.  0.  0.             ! physical lo coordinate
-  prob_hi(1:3) = 32. 32. 1.e6           ! physical hi coordinate
-  n_cells(1:3) = 32  32  1              ! number of cells in domain
-  max_grid_size(1:3) = 32 32 1          ! max number of cells in a box
+  prob_hi(1:3) = 1600. 1600. 1600.      ! physical hi coordinate
+  n_cells(1:3) = 16    16    16         ! number of cells in domain
+  max_grid_size(1:3) = 16 16 8          ! max number of cells in a box
 
   ! Time-step control
   !----------------------
-  fixed_dt = 0.1                        ! time step (if positive, fixed)
+  fixed_dt = 500                        ! time step (if positive, fixed)
   cfl = 0.5                             ! advective cfl number (used if fixed_dt<0) to determine time step
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
   max_step = 10000                        ! maximum number of time steps
-  plot_int = 1000                         ! Interval for writing a plotfile (for visit/amrvis)
+  plot_int = 1000                        ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = -1                          ! Interval for writing a checkpoint
   restart = -1                          ! checkpoint restart number
   print_int = 10                        ! how often to output EOS drift and sum of conserved quantities
@@ -25,7 +25,7 @@
 
   ! Physical parameters
   !--------------------
-  grav(1:2) = 0. 0.                     ! gravity vector (negative is downwards)
+  grav(1:3) = 0. 0. 0.                  ! gravity vector (negative is downwards)
   nspecies = 3
   molmass(1:3) = 1. 2. 3.               ! molecular masses for nspecies (mass per molecule, *not* molar mass)
   rhobar(1:3) = 2. 3. 3.85714           ! pure component densities for all species (chosen from EOS)
@@ -99,14 +99,14 @@
   ! 200 = slip wall         (Dir condition for normal vel; Dir traction condition for trans vel)
   ! 201 = slip reservoir    (Dir condition for normal vel; Dir traction condition for trans vel)
   ! For a complete list see bc.f90
-  bc_lo(1:2) = -1 -1
-  bc_hi(1:2) = -1 -1
+  bc_lo(1:3) = -1 -1 -1
+  bc_hi(1:3) = -1 -1 -1
 
-!  bc_lo(1:2) = 100 100
-!  bc_hi(1:2) = 100 100
+!  bc_lo(1:3) = 100 100 100
+!  bc_hi(1:3) = 100 100 100
 
-!  bc_lo(1:2) = 200 200
-!  bc_hi(1:2) = 200 200
+!  bc_lo(1:3) = 200 200 200
+!  bc_hi(1:3) = 200 200 200
 
   ! Control for analyze_spectra.90 for calling HydroGrid
   !----------------------
@@ -122,12 +122,12 @@
   ! -dim=analyze full grid using HydroGrid and then project along dim so we also analyze projections
   ! It is better to use the conserved variables but it does not quite work for staggered
 
-  max_grid_projection(1:1) = 32         ! parallelization parameters
+  max_grid_projection(1:2) = 32 32      ! parallelization parameters
   stats_int = 0                         ! Project grid for analysis (writes hstat and vstat files)
                                         ! If positive, how often to compute mean and 
                                         ! standard deviation over reduced dimensions
-  n_steps_save_stats = 10000              ! How often to dump HydroGrid output files
-  n_steps_skip = 500                     ! How many steps to skip > L^2/(chi*dt)
+  n_steps_save_stats = 10000            ! How often to dump HydroGrid output files
+  n_steps_skip = 500                    ! How many steps to skip > L^2/(chi*dt)
   analyze_conserved = F                 ! Should we use conserved variables for the analysis
                                         ! (does not work well)
   center_snapshots = F                  ! Should we use cell-centered momenta for the analysis
@@ -263,7 +263,7 @@
 ! 1=w1-w2, 2=w1-w3, 3=w2-w3
 
 &hydroAnalysisOptions
-! 2D full grid data
+! 3D full grid data
 ! NOTE: This namelist will be ignored if project_dir>0
 
    staggeredVelocities = 0              ! Are velocities on a staggered grid or not, (0, +1, or -1)*h/2
@@ -286,7 +286,7 @@
    writeAbsValue = F                    ! Only write absolute values of complex values to VTK file?
    writeTheory = -1                     ! Write the theoretical prediction (-1=none, 0==continuum or 1=MAC)
    nStructureFactors = 15
-   structureFactorPairs = "0 2 0 2, 0 2 0 3, 0 2 0 5, 0 2 0 6, 0 2 0 7, 0 3 0 3, 0 3 0 5, 0 3 0 6, 0 3 0 7, 0 5 0 5, 0 5 0 6, 0 5 0 7, 0 6 0 6, 0 6 0 7, 0 7 0 7"
+   structureFactorPairs = "0 2 0 2, 0 2 0 3, 0 2 0 6, 0 2 0 7, 0 2 0 8, 0 3 0 3, 0 3 0 6, 0 3 0 7, 0 3 0 8, 0 6 0 6, 0 6 0 7, 0 6 0 8, 0 7 0 7, 0 7 0 8, 0 8 0 8"
 
    ! Dynamic structure factors:
    nWavenumbers=0
