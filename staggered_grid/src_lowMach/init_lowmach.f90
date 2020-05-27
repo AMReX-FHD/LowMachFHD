@@ -121,14 +121,16 @@ module init_lowmach_module
   ! assumes the final species is the dominant component
 
   !=========================================================
-  ! case 15:
-  ! Discontinuous band in central 50% of domain
+  ! case +/-15, 16: Supported only in 2D for now, mostly for testing electrodiffusion
+  ! Discontinuous band in central 1/2 (case 15) or 1/3 (case 16) of domain
   ! c=c_init(1,:) inside; c=c_init(2,:) outside
   ! if prob_type=-15, add another tanh along other dimension for last two species (two stripes crossing)
+  ! Donev: prob_type = -15: a special case for doing ternary diffusion NaCl + KCl square test
+  ! Here the last two species have a tanh profile in both x and y (species are Na+,Cl-,K+,water)   
 
   !=========================================================
-  ! case 16:
-  ! Concentrations and streamwise vel. u only depend on wall normal variable, ie the fields are homogeneous in the 
+  ! case 17: For electro-osmotic and other channel flows (2D and 3D)
+  ! Concentrations and streamwise vel. u only depend on wall normal variable y, ie the fields are homogeneous in the 
   ! x and z directions. The values for the fields are read in from .txt files. Also, v = w = 0.
   ! Note that currently only nspecies=3 is supported. 
 
@@ -182,7 +184,16 @@ contains
     do n=1,nlevs
        call multifab_build(conc(n),mla%la(n),nspecies,rho(n)%ng)
     end do
-
+    
+    ! with mixed boundary conditions some of the corner umac ghost cells that
+    ! never affect the solution aren't filled, causing segfaults on some compilers
+    ! this prevents segfaults
+    do n=1,nlevs
+       do i=1,dm
+          call setval(umac(n,i),0.d0,all=.true.)
+       end do
+    end do
+           
     ng_u = umac(1,1)%ng
     ng_c = conc(1)%ng
     ng_r = rho(1)%ng
@@ -193,11 +204,11 @@ contains
     delta  = 0.5d0 
     sigma  = (prob_hi(1)-prob_lo(1))/10.0d0  ! variance of gaussian distribution
 
-    ! if prob_type = 16 and dm = 3, then we should read in the 1d values of 
+    ! if prob_type = 17 and dm = 3, then we should read in the 1d values of 
     ! c1,c2,c3,u
-    if (prob_type.eq.16) then 
+    if (prob_type.eq.17) then 
        if (nspecies.ne.3) then 
-          call bl_error("Only nspecies = 3 is currently supported for prob_type 16")
+          call bl_error("Only nspecies = 3 is currently supported for prob_type 17")
        endif 
        open(unit=34,file="c1_1d_vals.txt")
        open(unit=35,file="c2_1d_vals.txt")
@@ -259,7 +270,7 @@ contains
     real(kind=dp_t)  :: dx(:)
     real(kind=dp_t)  :: time 
 
-    ! These are only used if prob_type = 16...
+    ! These are only used if prob_type = 17...
     real(kind=dp_t)  :: c1_file(0:n_cells(2)-1)
     real(kind=dp_t)  :: c2_file(0:n_cells(2)-1)
     real(kind=dp_t)  :: c3_file(0:n_cells(2)-1)
@@ -636,7 +647,7 @@ contains
     case (15)
 
        !=========================================================
-       ! Discontinuous band in central 50% of domain
+       ! Discontinuous band in central 1/2 (type=15) or 1/3 (type=16) of domain
        ! c=c_init(1,:) inside; c=c_init(2,:) outside
        !=============================================================
 
@@ -793,7 +804,7 @@ contains
 
        end if
 
-    case (16)
+    case (17)
 
        !=============================================================
        ! Here we restart from a (statistically) 1d state where
@@ -882,7 +893,7 @@ contains
     real(kind=dp_t)  :: dx(:)
     real(kind=dp_t)  :: time 
 
-    ! These are only used if prob_type = 16...
+    ! These are only used if prob_type = 17...
     real(kind=dp_t)  :: c1_file(0:n_cells(2)-1)
     real(kind=dp_t)  :: c2_file(0:n_cells(2)-1)
     real(kind=dp_t)  :: c3_file(0:n_cells(2)-1)
@@ -1301,7 +1312,7 @@ contains
           enddo
        enddo
 
-    case (16)
+    case (17)
 
        !=============================================================
        ! Here we restart from a (statistically) 1d state where
@@ -1409,12 +1420,13 @@ contains
     ! P=(I-W*M*z*z^T / (z^T*W*M*z))
     dc = factor*sqrt(c0*molmass(1:nspecies)/rho_tot)*z ! Unprojected mass fluctuations
 
-    if(use_charged_fluid .and. electroneutral) then ! Project onto z^T*w=0 first
+    if(use_charged_fluid .and. (electroneutral.or.(initial_variance_mass<0.0d0))) then ! Project onto z^T*w=0 first
        factor = sum(molmass(1:nspecies)*c0*(charge_per_mass(1:nspecies)**2)) ! Related to Debye length
        ! Project onto z^T*w=0
        dc = dc - sum(dc*charge_per_mass(1:nspecies))/factor * molmass(1:nspecies)*c0*charge_per_mass(1:nspecies)
        ! Project onto 1^T*w=1
        dc = dc - sum(dc)*c0 ! Make it sum to zero
+       !write(*,*) c, " charge=", sum(dc*charge_per_mass(1:nspecies))
        c = c + dc ! add the fluctuations -- this can produce negative values
        ! We don't try to make them positive since charge neutrality has to be obeyed strictly
     else
