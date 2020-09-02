@@ -16,7 +16,7 @@ module electrodiffusive_mass_fluxdiv_module
   use probin_charged_module, only: Epot_wall_bc_type, Epot_wall, E_ext_type, electroneutral, &
                                    zero_eps_on_wall_type, epot_mg_verbose, epot_mg_abs_tol, &
                                    epot_mg_rel_tol, charge_per_mass, relxn_param_charge
-  use probin_multispecies_module, only: is_nonisothermal
+  use probin_multispecies_module, only: is_nonisothermal, use_multiphase
   
   use fabio_module
 
@@ -490,6 +490,10 @@ contains
           end do
        end do
     end do
+
+    if (use_multiphase) then
+       call limit_emf(rho, electro_mass_flux, grad_Epot)
+    end if
 
     ! compute -rhoWchi * (... ) on faces
     do n=1,nlevs
@@ -1090,5 +1094,185 @@ contains
     end if
 
   end subroutine print_flux_reservoir_3d
+
+  ! 0 emf for negative densities
+  subroutine limit_emf(rho, electro_mass_flux, grad_Epot)
+
+    type(multifab) , intent(inout) :: electro_mass_flux(:,:)
+    type(multifab) , intent(in) :: rho(:)
+    type(multifab) , intent(in) :: grad_Epot(:,:)
+
+    ! Local
+    integer                  :: lo(get_dim(rho(1))),hi(get_dim(rho(1)))
+    integer                  :: ng_r,ng_e,ng_g,i,dm
+    real(kind=dp_t), pointer :: rp(:,:,:,:)
+    real(kind=dp_t), pointer :: epx(:,:,:,:), epy(:,:,:,:), epz(:,:,:,:)
+    real(kind=dp_t), pointer :: gpx(:,:,:,:), gpy(:,:,:,:), gpz(:,:,:,:)
+
+    dm = get_dim(rho(1))
+    ng_r = nghost(rho(1))
+    ng_e = nghost(electro_mass_flux(1,1))
+    ng_g = nghost(grad_Epot(1,1))
+    
+    do i=1,nfabs(rho(1))
+        rp => dataptr(rho(1),i)
+       epx => dataptr(electro_mass_flux(1,1),i)
+       epy => dataptr(electro_mass_flux(1,2),i)
+       gpx => dataptr(grad_Epot(1,1),i)
+       gpy => dataptr(grad_Epot(1,2),i)
+
+       lo = lwb(get_box(rho(1),i))
+       hi = upb(get_box(rho(1),i))
+          select case (dm)
+          case (2)
+             call limit_emf_2d(rp(:,:,1,:), ng_r, &
+                                          epx(:,:,1,:), epy(:,:,1,:), ng_e, &
+                                          gpx(:,:,1,1), gpy(:,:,1,1), ng_g, &
+                                          lo, hi)
+          case (3)
+             epz => dataptr(electro_mass_flux(1,3),i)
+             gpz => dataptr(grad_Epot(1,3),i)
+             call limit_emf_3d(rp(:,:,:,:), ng_r, &
+                                          epx(:,:,:,:), epy(:,:,:,:), epz(:,:,:,:), ng_e, &
+                                          gpx(:,:,:,1), gpy(:,:,:,1), gpz(:,:,:,1), ng_g, &
+                                          lo, hi)
+          end select
+    end do
+ 
+  end subroutine limit_emf
+
+
+  subroutine limit_emf_2d(rho, ng_r,electro_mass_fluxx,electro_mass_fluxy,ng_e, &
+                                     grad_Epotx,grad_Epoty,ng_g, &
+                                     lo,hi)
+
+    integer        , intent(in   ) :: lo(:),hi(:),ng_e,ng_g,ng_r
+    real(kind=dp_t), intent(in) :: rho(lo(1)-ng_r:,lo(2)-ng_r:,:)
+    real(kind=dp_t), intent(inout) :: electro_mass_fluxx(lo(1)-ng_e:,lo(2)-ng_e:,:)
+    real(kind=dp_t), intent(inout) :: electro_mass_fluxy(lo(1)-ng_e:,lo(2)-ng_e:,:)
+    real(kind=dp_t), intent(in) ::         grad_Epotx(lo(1)-ng_g:,lo(2)-ng_g:)
+    real(kind=dp_t), intent(in) ::         grad_Epoty(lo(1)-ng_g:,lo(2)-ng_g:)
+
+    integer i,j,n
+
+    
+    do j = lo(2),hi(2)
+        do i = lo(1),hi(1)+1
+            do n=1,nspecies
+
+                if(rho(i,j,n) .le. 0) then            
+
+                    if(electro_mass_fluxx(i,j,n)>0) then
+                        electro_mass_fluxx(i,j,1:nspecies) = 0
+                    end if
+
+		end if
+
+                if(rho(i-1,j,n) .le. 0) then
+                    if(electro_mass_fluxx(i,j,n)<0) then
+                        electro_mass_fluxx(i,j,1:nspecies) = 0
+                    end if
+		end if
+            
+                end do
+            end do
+        end do       
+
+    do j = lo(2),hi(2)+1
+        do i = lo(1),hi(1)
+            do n=1,nspecies
+
+
+                if(rho(i,j,n) .le. 0) then            
+                    if(electro_mass_fluxy(i,j,n)>0) then
+                        electro_mass_fluxy(i,j,1:nspecies) = 0
+                    end if
+		end if
+
+                if(rho(i,j-1,n) .le. 0) then
+                    if(electro_mass_fluxy(i,j,n)<0) then
+                        electro_mass_fluxy(i,j,1:nspecies) = 0
+                    end if
+
+                end if
+            
+                end do
+            end do
+        end do       
+    
+
+
+    end subroutine limit_emf_2d
+
+  subroutine limit_emf_3d(rho, ng_r,electro_mass_fluxx,electro_mass_fluxy,electro_mass_fluxz,ng_e, &
+                                     grad_Epotx,grad_Epoty,grad_Epotz,ng_g, &
+                                     lo,hi)
+
+    integer        , intent(in   ) :: lo(:),hi(:),ng_e,ng_g,ng_r
+    real(kind=dp_t), intent(in) :: rho(lo(1)-ng_r:,lo(2)-ng_r:,lo(3)-ng_r:,:)
+    real(kind=dp_t), intent(inout) :: electro_mass_fluxx(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
+    real(kind=dp_t), intent(inout) :: electro_mass_fluxy(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
+    real(kind=dp_t), intent(inout) :: electro_mass_fluxz(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
+    real(kind=dp_t), intent(in) ::         grad_Epotx(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
+    real(kind=dp_t), intent(in) ::         grad_Epoty(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
+    real(kind=dp_t), intent(in) ::         grad_Epotz(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
+
+    integer i,j,k,n
+
+
+
+    do k = lo(3),hi(3)
+    do j = lo(2),hi(2)
+
+        do i = lo(1),hi(1)
+
+            do n=1,nspecies
+
+                if(rho(i,j,k,n) .le. 0) then            
+
+                    if(electro_mass_fluxx(i,j,k,n)>0) then
+
+                        electro_mass_fluxx(i,j,k,1:nspecies) = 0
+
+                    end if
+
+                    if(electro_mass_fluxx(i+1,j,k,n)<0) then
+
+                        electro_mass_fluxx(i+1,j,k,1:nspecies) = 0
+
+                    end if
+
+                    if(electro_mass_fluxy(i,j,k,n)>0) then
+
+                        electro_mass_fluxy(i,j,k,1:nspecies) = 0
+
+                    end if
+
+                    if(electro_mass_fluxy(i,j+1,k,n)<0) then
+
+                        electro_mass_fluxy(i,j+1,k,1:nspecies) = 0
+
+                    end if
+
+                    if(electro_mass_fluxz(i,j,k,n)>0) then
+
+                        electro_mass_fluxz(i,j,k,1:nspecies) = 0
+
+                    end if
+
+                    if(electro_mass_fluxz(i,j,k+1,n)<0) then
+
+                        electro_mass_fluxz(i,j,k+1,1:nspecies) = 0
+
+                    end if
+
+                end if
+            
+                end do
+            end do
+        end do       
+        end do       
+
+    end subroutine limit_emf_3d
 
 end module electrodiffusive_mass_fluxdiv_module

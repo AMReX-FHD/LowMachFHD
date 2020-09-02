@@ -3,10 +3,10 @@ module mass_flux_utilities_module
   use bl_space
   use multifab_module
   use ml_layout_module
-  use probin_common_module, only: k_B, molmass, rhobar, molmass, nspecies
+  use probin_common_module, only: k_B, molmass, rhobar, molmass, nspecies, rho0
   use probin_multispecies_module, only: use_lapack, fraction_tolerance, &
                                         is_ideal_mixture, inverse_type, is_nonisothermal, &
-                                        chi_iterations, avg_type
+                                        chi_iterations, avg_type, use_multiphase, alpha_gex, n_gex
   use matrix_utilities 
   use compute_mixture_properties_module
   use F95_LAPACK ! Donev: Disabled LAPACK so this builds more easily on different systems
@@ -341,29 +341,60 @@ contains
     integer                                       :: row,column
     real(kind=dp_t), dimension(nspecies,nspecies) :: I, X_xxT
 
-    ! Identity matrix
-    I = 0.d0
-    do row=1,nspecies
-       I(row, row) = 1.d0        
-    end do
+    ! local to define Gamma matrix
+    real(kind=dp_t) :: w1,w2 
 
-    ! populate X_xxT
-    if (is_ideal_mixture) then
-       X_xxT = 0.d0
+    ! Identity matrix
+    if(use_multiphase) then
+       
+       ! Gama = I
+       w1 = molarconc(1)
+       w2 = molarconc(2)
+       if(abs(w1+w2-1.d0).gt.1.d-14)then
+          write(6,*)" mole fractions dont' add up in gamma computation"
+       endif
+       if(w1.lt.0.d0)then
+          w1 = 0.d0
+          w2 = 1.d0
+       endif
+       if(w2.lt.0.d0)then
+          w2 = 0.d0
+          w1 = 1.d0
+       endif
+
+       Gama(1,2)=w1*dfloat(n_gex*n_gex)*alpha_gex*(w1**(n_gex-1))*(w2**(n_gex-1))
+       Gama(2,1)=w2*dfloat(n_gex*n_gex)*alpha_gex*(w2**(n_gex-1))*(w1**(n_gex-1))
+       Gama(1,1)=1.d0+w1*dfloat(n_gex*(n_gex-1))*alpha_gex*(w1**(n_gex-2))*(w2**n_gex)
+       Gama(2,2)=1.d0+w2*dfloat(n_gex*(n_gex-1))*alpha_gex*(w2**(n_gex-2))*(w1**n_gex)
+
     else
-       do row=1, nspecies  
-          ! diagonal entries
-          X_xxT(row,row) = molarconc(row) - molarconc(row)**2 
-          do column=1, row-1
-             ! off-diagnoal entries
-             X_xxT(row,column)   = -molarconc(row)*molarconc(column)  ! form x*transpose(x) off diagonals 
-             X_xxT(column, row)  = X_xxT(row, column)                 ! symmetric
-          end do
+
+       ! more general case below
+
+       ! Identity matrix
+       I = 0.d0
+       do row=1,nspecies
+          I(row, row) = 1.d0        
        end do
-    end if
-  
-    ! compute Gama 
-    Gama = I + matmul(X_xxT, Hessian)     
+
+       ! populate X_xxT
+       if (is_ideal_mixture) then
+          X_xxT = 0.d0
+       else
+          do row=1, nspecies  
+             ! diagonal entries
+             X_xxT(row,row) = molarconc(row) - molarconc(row)**2 
+             do column=1, row-1
+                ! off-diagnoal entries
+                X_xxT(row,column)   = -molarconc(row)*molarconc(column)  ! form x*transpose(x) off diagonals 
+                X_xxT(column, row)  = X_xxT(row, column)                 ! symmetric
+             end do
+          end do
+       end if
+   
+        ! compute Gama 
+        Gama = I + matmul(X_xxT, Hessian)     
+     endif
  
   end subroutine compute_Gama_local
 
@@ -516,6 +547,7 @@ contains
     integer         :: nspecies_sub     ! dim of subsystem = nspecies-ntrace
     real(kind=dp_t) :: molmtot_sub
     real(kind=dp_t) :: rhotot_sub
+    real(kind=dp_t) :: w1,w2
 
     ! this is a mapping used to eliminate elements in D_bar we don't need (for D_bar_sub)
     ! and for expanding sqrtLonsager_sub into sqrtLonsager
@@ -530,70 +562,92 @@ contains
 
     call build(bpt,"compute_rhoWchi_local")
 
-    ! compute the number of trace species
-    ! build the mapping for expanding/contracting arrays
-    ntrace = 0
-    do row=1, nspecies
-       W(row) = rho(row)/rhotot
-       if (W(row) .lt. fraction_tolerance) then
-          ntrace = ntrace + 1
-          dest(row) = 0
-       else
-          dest(row) = row - ntrace
-       end if
-    end do
+    if (use_multiphase .and. nspecies .eq. 2) then
 
-    if (ntrace .eq. nspecies-1) then
+        w1 = molarconc(1)
+        w2 = molarconc(2)
+        if(w1.lt.0)then
+           w1=0.d0
+           w2=1.d0
+        endif
+        if(w2.lt.0)then
+           w2=0.d0
+           w1=1.d0
+        endif
 
-       ! this is all trace species except for 1 (essentially pure solvent);
-       ! set rhoWchi to zero
-       rhoWchi(:,:) = 0.d0
-
-    else if (ntrace .eq. 0) then
-
-       ! there are no trace species
-       ! hence, chi = chi_sub
-
-       ! compute chi 
-       call compute_chi(nspecies,molmass,rho,rhotot,molarconc,chi,D_bar)
-
-       ! compute rho*W*chi
-       do row=1, nspecies
-          do column=1, nspecies
-             rhoWchi(row,column) = rho(row)*chi(row,column)
-          end do
-       end do
+        rhoWchi(1,1) = w2*rho0*D_bar(1,2)
+        rhoWchi(1,2) = -w1*rho0*D_bar(1,2)
+        rhoWchi(2,1) = -w2*rho0*D_bar(1,2)
+        rhoWchi(2,2) = w1*rho0*D_bar(1,2)
 
     else
 
-       ! if there are trace species, we consider a subsystem 
-       ! consisting of non-trace species
+        ! compute the number of trace species
+        ! build the mapping for expanding/contracting arrays
+        ntrace = 0
+        do row=1, nspecies
+           W(row) = rho(row)/rhotot
+           if (W(row) .lt. fraction_tolerance) then
+              ntrace = ntrace + 1
+              dest(row) = 0
+           else
+              dest(row) = row - ntrace
+           end if
+        end do
 
-       nspecies_sub = nspecies - ntrace
-       call compute_chi_sub()
-      
+        if (ntrace .eq. nspecies-1) then
+
+           ! this is all trace species except for 1 (essentially pure solvent);
+           ! set rhoWchi to zero
+           rhoWchi(:,:) = 0.d0
+
+        else if (ntrace .eq. 0) then
+
+           ! there are no trace species
+           ! hence, chi = chi_sub
+
+           ! compute chi 
+           call compute_chi(nspecies,molmass,rho,rhotot,molarconc,chi,D_bar)
+
+           ! compute rho*W*chi
+           do row=1, nspecies
+              do column=1, nspecies
+                 rhoWchi(row,column) = rho(row)*chi(row,column)
+              end do
+           end do
+
+        else
+
+           ! if there are trace species, we consider a subsystem 
+           ! consisting of non-trace species
+
+           nspecies_sub = nspecies - ntrace
+           call compute_chi_sub()
+          
+        end if
+
+        ! hack
+        !print*,'rhoWchi'
+        !do row=1, nspecies
+        !   print *,rhoWchi(row,1:nspecies)
+        !end do
+        !print*,'sum rhoWchi_col'
+        !select case (nspecies)
+        !   case (2)
+        !      print*,sum(rhoWchi(1:2,1)),sum(rhoWchi(1:2,2))
+        !   case (3)
+        !      print*,sum(rhoWchi(1:3,1)),sum(rhoWchi(1:3,2)),sum(rhoWchi(1:3,3))
+        !   case (4)
+        !      print*,sum(rhoWchi(1:4,1)),sum(rhoWchi(1:4,2)),sum(rhoWchi(1:4,3)),sum(rhoWchi(1:4,4))
+        !end select
+        !print*,'W*chi from rhoWchi/rhotot'
+        !do row=1, nspecies
+        !   print *,rhoWchi(row,1:nspecies)/rhotot
+        !end do
+        !stop
+        ! hack
+
     end if
-
-    ! hack
-    !print*,'rhoWchi'
-    !do row=1, nspecies
-    !   print *,rhoWchi(row,1:nspecies)
-    !end do
-    !print*,'sum rhoWchi_col'
-    !select case (nspecies)
-    !   case (2)
-    !      print*,sum(rhoWchi(1:2,1)),sum(rhoWchi(1:2,2))
-    !   case (3)
-    !      print*,sum(rhoWchi(1:3,1)),sum(rhoWchi(1:3,2)),sum(rhoWchi(1:3,3))
-    !   case (4)
-    !      print*,sum(rhoWchi(1:4,1)),sum(rhoWchi(1:4,2)),sum(rhoWchi(1:4,3)),sum(rhoWchi(1:4,4))
-    !end select
-    !print*,'W*chi from rhoWchi/rhotot'
-    !do row=1, nspecies
-    !   print *,rhoWchi(row,1:nspecies)/rhotot
-    !end do
-    !stop
-    ! hack
 
     call destroy(bpt)
     
@@ -707,12 +761,21 @@ contains
     real(kind=dp_t), dimension(nspecies_in,nspecies_in) :: Lambda
     real(kind=dp_t), dimension(nspecies_in)             :: W
 
+    real(kind=dp_t) eepsilon
+
+    eepsilon = 1.d-16
+
     ! if nspecies_in = 2, use analytic formulas
     ! note: nspecies_in = 1 (that is, ntrace = nspecies-1) is treated separately (chi=0)
     !       before this routine is called
     if (nspecies_in .eq. 2) then
        W(1) = rho(1)/rhotot
        W(2) = rho(2)/rhotot
+
+       if (use_multiphase) then
+          W(1) = max(min(W(1),1.d0),eepsilon)
+          W(2) = max(min(W(2),1.d0),eepsilon)
+       end if
 
        tmp = molmass_in(1)*W(2)+molmass_in(2)*W(1)
        tmp = D_bar(1,2)*tmp*tmp/molmass_in(1)/molmass_in(2)
@@ -721,7 +784,7 @@ contains
        chi(1,2) = -tmp
        chi(2,1) = -tmp
        chi(2,2) = tmp*W(1)/W(2)
-
+       
        return
     end if
 
@@ -1178,76 +1241,91 @@ contains
     ! cell volume
     dv = product(dx(1:MAX_SPACEDIM))
 
-    do comp=1,nspecies
-      value1 = rho1(comp)/molmass(comp) ! Convert to number density
-      value2 = rho2(comp)/molmass(comp)
+    ! special version for rtil
+    if(use_multiphase .and. nspecies .eq. 2)then
+       value1 = rho1(1)
+       value2 = rho2(1)
+       if(value1.le.0.or.value2.le.0)then
+          rhoav(1) = 0.d0
+       else
+          rhoav(1) =min( 0.5d0*(value1+value2), rho0)
+       endif
+       rhoav(2) = rho0 - rhoav(1)
 
-      select case(avg_type)
-      case(1) ! Arithmetic with a C0-smoothed Heaviside
-        if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
-          rhoav(comp)=0.d0
-        else
-          tmp1=min(dv*value1,1.d0)
-          tmp2=min(dv*value2,1.d0)
-          rhoav(comp)=molmass(comp)*(value1+value2)/2.d0*tmp1*tmp2
-        end if
-      case(2) ! Geometric
-        rhoav(comp)=molmass(comp)*sqrt(max(value1,0.d0)*max(value2,0.d0))
-      case(3) ! Harmonic
-        ! What we want here is the harmonic mean of max(value1,0) and max(value2,0)
-        ! Where we define the result to be zero if either one is zero
-        ! But numerically we want to avoid here division by zero
-        if ( (value1 .le. 10.d0*tiny(1.d0)) .or. (value2 .le. 10.d0*tiny(1.d0)) ) then
-          rhoav(comp)=0.d0
-        else
-          rhoav(comp)=molmass(comp)*2.d0/(1.d0/value1+1.d0/value2)
-        end if
-      case(10) ! Arithmetic with (discontinuous) Heaviside
-        if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
-          rhoav(comp)=0.d0
-        else
-          rhoav(comp)=molmass(comp)*(value1+value2)/2.d0
-        end if
-      case(11) ! Arithmetic with C1-smoothed Heaviside
-        if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
-          rhoav(comp)=0.d0
-        else
-          tmp1=dv*value1
-          if (tmp1<1.d0) then
-            tmp1=(3.d0-2.d0*tmp1)*tmp1**2
-          else
-            tmp1=1.d0
-          end if
-          tmp2=dv*value2
-          if (tmp2<1.d0) then
-            tmp2=(3.d0-2.d0*tmp2)*tmp2**2
-          else
-            tmp2=1.d0
-          end if
-          rhoav(comp)=molmass(comp)*(value1+value2)/2.d0*tmp1*tmp2
-        endif
-      case(12) ! Arithmetic with C2-smoothed Heaviside
-        if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
-          rhoav(comp)=0.d0
-        else
-          tmp1=dv*value1
-          if (tmp1<1.d0) then
-            tmp1=(10.d0-15.d0*tmp1+6.d0*tmp1**2)*tmp1**3
-          else
-          tmp1=1.d0
-          end if
-          tmp2=dv*value2
-          if (tmp2<1.d0) then
-            tmp2=(10.d0-15.d0*tmp2+6.d0*tmp2**2)*tmp2**3
-          else
-            tmp2=1.d0
-          end if
-          rhoav(comp)=molmass(comp)*(value1+value2)/2.d0*tmp1*tmp2
-        endif
-      case default
-        call bl_error("compute_nonnegative_rho_av: invalid avg_type")
-      end select
-    end do
+    else
+
+       do comp=1,nspecies
+          value1 = rho1(comp)/molmass(comp) ! Convert to number density
+          value2 = rho2(comp)/molmass(comp)
+
+          select case(avg_type)
+          case(1) ! Arithmetic with a C0-smoothed Heaviside
+             if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
+                rhoav(comp)=0.d0
+             else
+                tmp1=min(dv*value1,1.d0)
+                tmp2=min(dv*value2,1.d0)
+                rhoav(comp)=molmass(comp)*(value1+value2)/2.d0*tmp1*tmp2
+             end if
+          case(2) ! Geometric
+             rhoav(comp)=molmass(comp)*sqrt(max(value1,0.d0)*max(value2,0.d0))
+          case(3) ! Harmonic
+             ! What we want here is the harmonic mean of max(value1,0) and max(value2,0)
+             ! Where we define the result to be zero if either one is zero
+             ! But numerically we want to avoid here division by zero
+             if ( (value1 .le. 10.d0*tiny(1.d0)) .or. (value2 .le. 10.d0*tiny(1.d0)) ) then
+                rhoav(comp)=0.d0
+             else
+                rhoav(comp)=molmass(comp)*2.d0/(1.d0/value1+1.d0/value2)
+             end if
+          case(10) ! Arithmetic with (discontinuous) Heaviside
+             if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
+                rhoav(comp)=0.d0
+             else
+                rhoav(comp)=molmass(comp)*(value1+value2)/2.d0
+             end if
+          case(11) ! Arithmetic with C1-smoothed Heaviside
+             if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
+                rhoav(comp)=0.d0
+             else
+                tmp1=dv*value1
+                if (tmp1<1.d0) then
+                   tmp1=(3.d0-2.d0*tmp1)*tmp1**2
+                else
+                   tmp1=1.d0
+                end if
+                tmp2=dv*value2
+                if (tmp2<1.d0) then
+                   tmp2=(3.d0-2.d0*tmp2)*tmp2**2
+                else
+                   tmp2=1.d0
+                end if
+                rhoav(comp)=molmass(comp)*(value1+value2)/2.d0*tmp1*tmp2
+             endif
+          case(12) ! Arithmetic with C2-smoothed Heaviside
+             if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
+                rhoav(comp)=0.d0
+             else
+                tmp1=dv*value1
+                if (tmp1<1.d0) then
+                   tmp1=(10.d0-15.d0*tmp1+6.d0*tmp1**2)*tmp1**3
+                else
+                   tmp1=1.d0
+                end if
+                tmp2=dv*value2
+                if (tmp2<1.d0) then
+                   tmp2=(10.d0-15.d0*tmp2+6.d0*tmp2**2)*tmp2**3
+                else
+                   tmp2=1.d0
+                end if
+                rhoav(comp)=molmass(comp)*(value1+value2)/2.d0*tmp1*tmp2
+             endif
+          case default
+             call bl_error("compute_nonnegative_rho_av: invalid avg_type")
+          end select
+       end do
+
+    endif
 
   end subroutine compute_nonnegative_rho_av
 

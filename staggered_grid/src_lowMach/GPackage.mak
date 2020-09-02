@@ -22,3 +22,4 @@ f90sources += project_onto_eos.f90
 f90sources += reservoir_bc_fill.f90
 f90sources += stochastic_m_fluxdiv.f90
 f90sources += sum_momenta.f90
+f90sources += compute_div_reversible_stress.f90

@@ -284,6 +284,9 @@ contains
     real(kind=dp_t)  :: random
 
     real(kind=dp_t)  :: rho_total, sinx
+    real(kind=dp_t)  :: pi
+
+    pi  = atan2(1.d0,1.d0)*4
 
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
 
@@ -821,6 +824,28 @@ contains
           u(:,j)   = u_file(j) 
        end do
 
+    case (18)
+
+       !=============================================================
+       ! put in a particular mode
+       !=============================================================
+ 
+       u = 0.d0
+       v = 0.d0
+
+       rad = L(1)/4.d0
+
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
+          do i=lo(1),hi(1)
+             x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
+   
+             c(i,j,1) = 0.5d0 + 0.0*cos(2*pi*(x/L(1)))*cos(2*pi*(y/L(2)))   
+             c(i,j,2) = 0.5d0 - 0.0*cos(2*pi*(x/L(1)))*cos(2*pi*(y/L(2)))   
+    
+          end do
+       end do
+
     case default
 
        call bl_error("Desired prob_type not supported in 2D")
@@ -904,10 +929,13 @@ contains
     real(kind=dp_t)  :: x,y,z,rad,L(3),sumtot,c_loc,y1,r,r1,r2,m_e,gradToverT
 
     real(kind=dp_t) :: random
+    real(kind=dp_t) :: pi
 
     real(kind=dp_t)  :: rho_total, sinx, sinz
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
+
+    pi  = atan2(1.d0,1.d0)*4
     
     select case (abs(prob_type))
 
@@ -1329,6 +1357,31 @@ contains
           c(:,j,:,3) = c3_file(j)
           u(:,j,:)   = u_file(j) 
        end do
+
+    case (18)
+
+       !=============================================================
+       ! put in a particular mode
+       !=============================================================
+ 
+       u = 0.d0
+       v = 0.d0
+       w = 0.d0
+
+
+       do k=lo(3),hi(3)
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
+          do i=lo(1),hi(1)
+             x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
+   
+             c(i,j,k,1) = 0.5d0 + 0.0*cos(2*pi*(x/L(1)))*cos(2*pi*(y/L(2)))   
+             c(i,j,k,2) = 0.5d0 - 0.0*cos(2*pi*(x/L(1)))*cos(2*pi*(y/L(2)))   
+    
+          end do
+       end do
+       end do
+
 
     case default
 
