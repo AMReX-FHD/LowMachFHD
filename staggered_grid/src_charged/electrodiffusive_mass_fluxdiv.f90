@@ -2,7 +2,6 @@ module electrodiffusive_mass_fluxdiv_module
 
   use multifab_module
   use ml_layout_module
-  use debug_module
   use define_bc_module
   use bc_module
   use div_and_grad_module
@@ -83,6 +82,7 @@ contains
     call electrodiffusive_mass_flux(mla,rho,Temp,rhoWchi,electro_mass_flux, &
                                     diff_mass_flux,stoch_mass_flux,dx,the_bc_tower, &
                                     charge,grad_Epot,Epot,permittivity,dt,zero_initial_Epot)
+
     ! add fluxes to diff_mass_flux
     do n=1,nlevs
        do i=1,dm
@@ -203,12 +203,6 @@ contains
        call average_cc_to_face(nlevs, rhoWchi, rhoWchi_face, 1, tran_bc_comp, &
                                nspecies**2, the_bc_tower%bc_tower_array, .false.) 
     end if
-    
-!    print*, 'rhoWchi_face'
-!    call print_edge(rhoWchi_face,2,8,1,1)
-!    call print_edge(rhoWchi_face,2,8,1,2)
-!    call print_edge(rhoWchi_face,2,8,1,3)
-!    call print_edge(rhoWchi_face,2,8,1,4)
 
     ! solve poisson equation for phi (the electric potential)
     ! -del dot epsilon grad Phi = charge
@@ -349,9 +343,6 @@ contains
           ! for Dirichlet conditions, temporarily set the numerical values to zero
           ! so we can put the Neumann boundaries into homogeneous form
           do comp=1,dm
-!            if (Epot_wall_bc_type(comp,1) .eq. 1) then
-!               Epot_wall(comp,1) = 0.d0
-!            end if
              if (Epot_wall_bc_type(1,comp) .eq. 1) then
                 Epot_wall(1,comp) = 0.d0
              end if
@@ -454,12 +445,8 @@ contains
 
     end if
 
-!    print *,'gradient of Epot'
     ! compute the gradient of the electric potential
     call compute_grad(mla,Epot,grad_Epot,dx,1,Epot_bc_comp,1,1,the_bc_tower%bc_tower_array)
-!    print *,'done with gradient of Epot'
-
-!    call print_edge(grad_Epot,2,8,1,1)
 
     if (E_ext_type .ne. 0) then
        ! add external electric field
@@ -495,10 +482,6 @@ contains
                                the_bc_tower%bc_tower_array,.true.)
     end if
 
- !   print *,'charge coefficient'
- !   call print_edge(electro_mass_flux,2,8,1,1)
- !   call print_edge(electro_mass_flux,2,8,1,2)
-
     ! multiply flux coefficient by gradient of electric potential
     do n=1,nlevs
        do i=1,dm
@@ -508,16 +491,7 @@ contains
        end do
     end do
 
-!    print *,'electric driving force'
-!    call print_edge(electro_mass_flux,2,8,1,1)
-!    call print_edge(electro_mass_flux,2,8,1,2)
-
-
     call limit_emf(rho, electro_mass_flux, grad_Epot)
-
-!    print *,'electric driving force after limiting'
-!    call print_edge(electro_mass_flux,2,8,1,1)
-!    call print_edge(electro_mass_flux,2,8,1,2)
 
     ! compute -rhoWchi * (... ) on faces
     do n=1,nlevs
@@ -525,10 +499,6 @@ contains
           call matvec_mul(mla, electro_mass_flux(n,i), rhoWchi_face(n,i), nspecies)
        end do
     end do
-
-!    print *,'electric flux'
-!    call print_edge(electro_mass_flux,2,8,1,1)
-!    call print_edge(electro_mass_flux,2,8,1,2)
 
     if (.false..and.electroneutral) then
        ! Print some fluxes for debugging
@@ -1123,7 +1093,7 @@ contains
 
   end subroutine print_flux_reservoir_3d
 
-!0 emf for negative densities
+  ! 0 emf for negative densities
   subroutine limit_emf(rho, electro_mass_flux, grad_Epot)
 
     type(multifab) , intent(inout) :: electro_mass_flux(:,:)
