@@ -83,7 +83,7 @@ contains
     call electrodiffusive_mass_flux(mla,rho,Temp,rhoWchi,electro_mass_flux, &
                                     diff_mass_flux,stoch_mass_flux,dx,stage_time,the_bc_tower, &
                                     charge,grad_Epot,Epot,permittivity,dt,zero_initial_Epot)
-    
+
     ! add fluxes to diff_mass_flux
     do n=1,nlevs
        do i=1,dm
@@ -345,8 +345,11 @@ contains
           ! for Dirichlet conditions, temporarily set the numerical values to zero
           ! so we can put the Neumann boundaries into homogeneous form
           do comp=1,dm
-             if (Epot_wall_bc_type(comp,1) .eq. 1) then
-                Epot_wall(comp,1) = 0.d0
+             if (Epot_wall_bc_type(1,comp) .eq. 1) then
+                Epot_wall(1,comp) = 0.d0
+             end if
+             if (Epot_wall_bc_type(2,comp) .eq. 1) then
+                Epot_wall(2,comp) = 0.d0
              end if
           end do
 

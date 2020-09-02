@@ -1537,7 +1537,7 @@ subroutine main_driver()
   deallocate(Epot_sum, Epot_avg) 
   deallocate(gradPhiApprox)
 
-  if (algorithm_type .eq. 6) deallocate(total_mass_flux)
+  if (analyze_cuts>0) deallocate(total_mass_flux)
 
   deallocate(chem_rate)
 
