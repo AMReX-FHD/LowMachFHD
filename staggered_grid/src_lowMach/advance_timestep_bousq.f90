@@ -29,12 +29,13 @@ module advance_timestep_bousq_module
   use fluid_charge_module
   use mk_grav_force_module
   use bds_module
+  use reversible_stress_module
   use project_onto_eos_module
   use probin_common_module, only: advection_type, grav, variance_coef_mass, &
                                   variance_coef_mom, barodiffusion_type, project_eos_int, &
                                   molmass, use_bl_rng, nspecies, plot_int, max_step
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
-  use probin_multispecies_module, only: midpoint_stoch_mass_flux_type, is_ideal_mixture
+  use probin_multispecies_module, only: midpoint_stoch_mass_flux_type, is_ideal_mixture, use_multiphase
   use probin_charged_module, only: use_charged_fluid, electroneutral, relxn_param_charge
   use probin_chemistry_module, only: nreactions, use_Poisson_rng, include_discrete_LMA_correction, &
                                      exclude_solvent_comput_rates, use_mole_frac_LMA
@@ -122,6 +123,8 @@ contains
 
     ! only used when use_charged_fluid=T
     type(multifab) :: Lorentz_force(mla%nlevel,mla%dim)
+
+    type(multifab) :: div_reversible_stress(mla%nlevel,mla%dim)
 
     ! only needed if total_mass_flux is passed in
     ! this a temporary used to hold the advective mass fluxes
@@ -217,6 +220,14 @@ contains
        do n=1,nlevs
           do i=1,dm
              call multifab_build_edge(Lorentz_force(n,i),mla%la(n),1,0,i)
+          end do
+       end do
+    end if
+
+    if (use_multiphase) then
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_build_edge(div_reversible_stress(n,i),mla%la(n),1,0,i)
           end do
        end do
     end if
@@ -326,6 +337,22 @@ contains
                               0.5d0*dt,time,dx,weights,the_bc_tower, &
                               charge_old,grad_Epot_old,Epot, &
                               permittivity)
+
+    ! here is a reasonable place to call something to compute in reversible stress term
+    ! in this case want to get divergence so it looks like a add to rhs for stokes solver
+    if(use_multiphase) then
+
+     !compute reversible stress tensor ---added term
+     call compute_div_reversible_stress(mla,div_reversible_stress,rhotot_old,rho_old,dx,the_bc_tower)
+
+      ! add divergence of reversible stress to gmres_rhs_v
+      do n=1,nlevs
+         do i=1,dm
+            call multifab_saxpy_3(gmres_rhs_v(n,i),1.d0,div_reversible_stress(n,i))
+         end do
+      end do
+
+    end if
 
     if (use_charged_fluid) then
 
@@ -690,6 +717,13 @@ contains
        end if
 
     end if
+    
+    if(use_multiphase) then
+
+       !compute reversible stress tensor ---added term (will add to gmres_rhs_v later)
+       call compute_div_reversible_stress(mla,div_reversible_stress,rhotot_new,rho_new,dx,the_bc_tower)
+
+    end if
 
     if (use_charged_fluid) then
 
@@ -942,6 +976,18 @@ contains
        call mk_grav_force_bousq(mla,gmres_rhs_v,.true.,rho_fc,the_bc_tower)
     end if
 
+    if(use_multiphase) then
+
+      ! add divergence of reversible stress to gmres_rhs_v
+      do n=1,nlevs
+         do i=1,dm
+            call multifab_saxpy_3(gmres_rhs_v(n,i),1.d0,div_reversible_stress(n,i))
+         end do
+      end do
+
+    end if
+   
+
     if (use_charged_fluid) then
 
        ! add Lorentz force to gmres_rhs_v
@@ -1135,6 +1181,14 @@ contains
        do n=1,nlevs
           do i=1,dm
              call multifab_destroy(Lorentz_force(n,i))
+          end do
+       end do
+    end if
+
+    if (use_multiphase) then
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_destroy(div_reversible_stress(n,i))
           end do
        end do
     end if

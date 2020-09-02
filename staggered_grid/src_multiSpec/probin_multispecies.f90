@@ -17,6 +17,9 @@ module probin_multispecies_module
   real(kind=dp_t)    :: fraction_tolerance
   logical            :: correct_flux,print_error_norms,plot_stag
   logical            :: is_nonisothermal,is_ideal_mixture,use_lapack
+  logical            :: use_multiphase
+  real(kind=dp_t)    :: kc_tension, alpha_gex
+  integer            :: n_gex
   real(kind=dp_t)    :: c_init(2,MAX_SPECIES)
   real(kind=dp_t)    :: c_bc(3,2,MAX_SPECIES)
   real(kind=dp_t)    :: alpha1,beta,delta,sigma     ! manufactured solution parameters populated in init
@@ -39,6 +42,10 @@ module probin_multispecies_module
   namelist /probin_multispecies/ is_nonisothermal   ! If T Soret effect will be included
   namelist /probin_multispecies/ use_lapack         ! Use LAPACK or iterative method for diffusion matrix (recommend False)
   namelist /probin_multispecies/ chi_iterations     ! number of iterations used in Dbar2chi_iterative
+  namelist /probin_multispecies/ use_multiphase     ! whether to enable multiphase terms
+  namelist /probin_multispecies/ kc_tension         ! interfacial tension parameter
+  namelist /probin_multispecies/ alpha_gex          ! parameter for excess gibbs free energy
+  namelist /probin_multispecies/ n_gex              ! power for excess gibbs free energy
 
   ! Initial and boundary conditions 
   !----------------------
@@ -105,6 +112,10 @@ contains
     is_ideal_mixture   = .true.
     is_nonisothermal   = .false.
     use_lapack         = .false.
+    use_multiphase     = .false.
+    kc_tension         = 0.d0
+    alpha_gex          = 0.d0
+    n_gex              = 1
     chi_iterations     = 10
     T_init             = 1.0d0
     temp_type          = 0
