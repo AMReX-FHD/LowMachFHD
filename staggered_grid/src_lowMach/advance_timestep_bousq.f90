@@ -144,7 +144,6 @@ contains
 
     real(kind=dp_t), parameter :: mattingly_lin_comb_coef(1:2) = (/-1.d0, 2.d0/)
 
-
     if (barodiffusion_type .ne. 0) then
        call bl_error("advance_timestep_bousq: barodiffusion not supported yet")
     end if
@@ -317,11 +316,11 @@ contains
     end if
 
     if (variance_coef_mass .ne. 0.d0) then
+       call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
        if (use_bl_rng) then
           ! save random state for restart
           call bl_rng_copy_engine(rng_eng_diffusion_chk,rng_eng_diffusion)
        end if
-       call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
     end if
 
     ! compute diffusive, stochastic, potential mass fluxes
@@ -339,10 +338,8 @@ contains
                               charge_old,grad_Epot_old,Epot, &
                               permittivity)
 
-! KATIE here is a reasonable place to call something to compute in reversible stress term
-!  In this case want to get divergence so it looks like a add to rhs for stokes solver
-
-
+    ! here is a reasonable place to call something to compute in reversible stress term
+    ! in this case want to get divergence so it looks like a add to rhs for stokes solver
     if(use_multiphase) then
 
      !compute reversible stress tensor ---added term
