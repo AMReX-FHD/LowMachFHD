@@ -4,14 +4,415 @@ module div_and_grad_module
   use ml_layout_module
   use define_bc_module
   use bc_module
+  use probin_multispecies_module, only : kc_tension
 
   implicit none
 
   private
 
-  public :: compute_grad, compute_grad_4o, compute_div
+  public :: compute_grad, compute_grad_4o, compute_div, compute_higher_order_term
 
 contains
+
+  subroutine compute_higher_order_term(mla,phi,gradp,dx, &
+                          start_incomp,start_bccomp,start_outcomp,num_comp, &
+                          the_bc_level,increment_bccomp_in)
+
+    ! compute the face-centered gradient of a cell-centered field
+
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(in   ) :: phi(:)
+    type(multifab) , intent(inout) :: gradp(:,:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:)
+    integer        , intent(in   ) :: start_incomp,start_bccomp,start_outcomp,num_comp
+    type(bc_level) , intent(in   ) :: the_bc_level(:)
+    logical,  intent(in), optional :: increment_bccomp_in
+
+    ! local
+    integer :: n,i,dm,nlevs,ng_p,ng_g,comp,bccomp,outcomp
+    integer :: lo(mla%dim),hi(mla%dim)
+    logical :: increment_bccomp
+
+    real(kind=dp_t), pointer :: pp(:,:,:,:)
+    real(kind=dp_t), pointer :: gpx(:,:,:,:)
+    real(kind=dp_t), pointer :: gpy(:,:,:,:)
+    real(kind=dp_t), pointer :: gpz(:,:,:,:)
+
+    type(mfiter) :: mfi
+    type(box) :: xnodalbox, ynodalbox, znodalbox
+    integer :: xlo(mla%dim), xhi(mla%dim)
+    integer :: ylo(mla%dim), yhi(mla%dim)
+    integer :: zlo(mla%dim), zhi(mla%dim)
+
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"compute_higher_order_term")
+
+    dm = mla%dim
+    nlevs = mla%nlevel
+
+    ng_p = phi(1)%ng
+    ng_g = gradp(1,1)%ng
+
+    increment_bccomp = .true.
+    if (present(increment_bccomp_in)) then
+       increment_bccomp = increment_bccomp_in
+    end if
+    
+    !$omp parallel private(mfi,n,i,xnodalbox,ynodalbox,znodalbox,xlo,ylo,zlo) &
+    !$omp private(xhi,yhi,zhi,pp,gpx,gpy,gpz,lo,hi,comp,bccomp,outcomp)
+    do n=1,nlevs
+       call mfiter_build(mfi, phi(n), tiling=.true.)
+
+     do while (more_tile(mfi))
+        i = get_fab_index(mfi)
+
+        xnodalbox = get_nodaltilebox(mfi,1)
+        xlo = lwb(xnodalbox)
+        xhi = upb(xnodalbox)
+        ynodalbox = get_nodaltilebox(mfi,2)
+        ylo = lwb(ynodalbox)
+        yhi = upb(ynodalbox)
+        znodalbox = get_nodaltilebox(mfi,3)
+        zlo = lwb(znodalbox)
+        zhi = upb(znodalbox)
+
+ !      do i=1,nfabs(phi(n))
+          pp  => dataptr(phi(n), i)
+          gpx => dataptr(gradp(n,1), i)
+          gpy => dataptr(gradp(n,2), i)
+          lo = lwb(get_box(phi(n), i))
+          hi = upb(get_box(phi(n), i))
+          
+          do comp=start_incomp,start_incomp+num_comp-1
+             if (increment_bccomp) then
+                bccomp = start_bccomp + (comp-start_incomp)
+             else
+                bccomp = start_bccomp
+             end if
+             outcomp = start_outcomp + (comp-start_incomp)
+             select case (dm)
+             case (2)
+                call compute_higher_order_term_2d(pp(:,:,1,comp), ng_p, &
+                                     gpx(:,:,1,outcomp), gpy(:,:,1,outcomp), ng_g, &
+                                     lo, hi, dx(n,:), &
+                                     the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp),xlo,xhi,ylo,yhi)
+             case (3)
+                gpz => dataptr(gradp(n,3), i)
+                call compute_higher_order_term_3d(pp(:,:,:,comp), ng_p, &
+                                     gpx(:,:,:,outcomp), gpy(:,:,:,outcomp), gpz(:,:,:,outcomp), ng_g, &
+                                     lo, hi, dx(n,:), &
+                                     the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp),xlo,xhi,ylo,yhi,zlo,zhi)
+             end select
+          end do
+       end do
+    end do
+    !$omp end parallel
+
+    call destroy(bpt)
+
+  contains
+    
+    subroutine compute_higher_order_term_2d(phi,ng_p,gpx,gpy,ng_g,lo,hi,dx,bc,xlo,xhi,ylo,yhi)
+
+      integer        , intent(in   ) :: ng_p,ng_g,lo(:),hi(:)
+      integer        , intent(in   ) :: xlo(:),xhi(:),ylo(:),yhi(:)
+      real(kind=dp_t), intent(in   ) :: phi(lo(1)-ng_p:,lo(2)-ng_p:)
+      real(kind=dp_t), intent(inout) :: gpx(lo(1)-ng_g:,lo(2)-ng_g:)
+      real(kind=dp_t), intent(inout) :: gpy(lo(1)-ng_g:,lo(2)-ng_g:)
+      real(kind=dp_t), intent(in   ) :: dx(:)
+      integer        , intent(in   ) :: bc(:,:)
+
+      ! local
+      integer :: i,j
+      real(kind=dp_t) :: dxinv,twodxinv  !, kc
+      real(kind=dp_t) :: lapx(xlo(1)-1:xhi(1),xlo(2):xhi(2))
+      real(kind=dp_t) :: lapy(ylo(1):yhi(1),ylo(2)-1:yhi(2))
+      real(kind=dp_t) :: phiavg
+      real(kind=dp_t) :: sixth
+
+      sixth = 1.d0/6.d0
+      dxinv = 1.d0/dx(1)
+      twodxinv = 2.d0*dxinv
+      !kc = 1.d-2 !need to figure out good value
+
+
+      ! laplacian
+      do j=xlo(2),xhi(2)
+         do i=xlo(1)-1,xhi(1)
+            ! lapx(i,j) = ( phi(i+1,j)-2*phi(i,j)+phi(i-1,j) + phi(i,j+1)-2*phi(i,j)+phi(i,j-1) ) * (dxinv*dxinv)
+            lapx(i,j) = ( phi(i+1,j-1)-2*phi(i,j-1)+phi(i-1,j-1) + phi(i-1,j+1)-2*phi(i-1,j)+phi(i-1,j-1) ) * (sixth*dxinv*dxinv) &
+             + 4.d0*( phi(i+1,j)-2*phi(i,j)+phi(i-1,j) + phi(i,j+1)-2*phi(i,j)+phi(i,j-1) ) * (sixth*dxinv*dxinv) &
+             + ( phi(i+1,j+1)-2*phi(i,j+1)+phi(i-1,j+1) + phi(i+1,j+1)-2*phi(i+1,j)+phi(i+1,j-1) ) * (sixth*dxinv*dxinv)
+         end do
+      end do
+!!!!!!
+      ! x-faces
+      do j=xlo(2),xhi(2)
+         do i=xlo(1),xhi(1)
+            phiavg = 0.5d0*(max(min(phi(i,j),1.d0),0.d0) + max(min(phi(i-1,j),1.d0),0.d0))
+            gpx(i,j) = gpx(i,j) - 0.5d0* kc_tension*phiavg*( lapx(i,j)-lapx(i-1,j) ) * dxinv
+
+        !   gpx(i,j) = gpx(i,j) - kc_tension*(phi(i,j)+phi(i-1,j))*.5*( lapx(i,j)-lapx(i-1,j) ) * dxinv
+         end do
+      end do
+   
+      ! alter stencil at boundary since ghost value represents value at boundary
+      if (xlo(1) .eq. lo(1)) then
+      if (bc(1,1) .eq. FOEXTRAP .or. bc(1,1) .eq. HOEXTRAP .or. bc(1,1) .eq. EXT_DIR) then
+         i=lo(1)
+         do j=lo(2),hi(2)
+            !gpx(i,j) = ( phi(i,j)-phi(i-1,j) ) * twodxinv
+            gpx(i,j) = 0.d0
+         end do
+      end if
+      end if
+      if (xhi(1) .eq. hi(1)+1) then
+      if (bc(1,2) .eq. FOEXTRAP .or. bc(1,2) .eq. HOEXTRAP .or. bc(1,2) .eq. EXT_DIR) then
+         i=hi(1)+1
+         do j=lo(2),hi(2)
+            !gpx(i,j) = ( phi(i,j)-phi(i-1,j) ) * twodxinv
+            gpx(i,j) = 0.d0
+         end do
+      end if
+      end if
+
+      ! laplacian
+      do j=ylo(2)-1,yhi(2)
+         do i=ylo(1),yhi(1)
+            ! lapy(i,j) = ( phi(i+1,j)-2*phi(i,j)+phi(i-1,j) + phi(i,j+1)-2*phi(i,j)+phi(i,j-1) ) * (dxinv*dxinv)
+            lapy(i,j) = ( phi(i+1,j-1)-2*phi(i,j-1)+phi(i-1,j-1) + phi(i-1,j+1)-2*phi(i-1,j)+phi(i-1,j-1) ) * (sixth*dxinv*dxinv) &
+             + 4.d0*( phi(i+1,j)-2*phi(i,j)+phi(i-1,j) + phi(i,j+1)-2*phi(i,j)+phi(i,j-1) ) * (sixth*dxinv*dxinv) &
+             + ( phi(i+1,j+1)-2*phi(i,j+1)+phi(i-1,j+1) + phi(i+1,j+1)-2*phi(i+1,j)+phi(i+1,j-1) ) * (sixth*dxinv*dxinv)
+         end do
+      end do
+      
+      ! y-faces
+      do j=ylo(2),yhi(2)
+         do i=ylo(1),yhi(1)
+            phiavg = 0.5d0*(max(min(phi(i,j),1.d0),0.d0) + max(min(phi(i,j-1),1.d0),0.d0))
+            gpy(i,j) = gpy(i,j) - 0.5d0* kc_tension*phiavg*( lapy(i,j)-lapy(i,j-1) ) * dxinv
+
+          ! gpy(i,j) = gpy(i,j) - kc_tension*(phi(i,j)+phi(i,j-1))*0.5*( lapy(i,j)-lapy(i,j-1) ) * dxinv
+         end do
+      end do
+
+      ! alter stencil at boundary since ghost value represents value at boundary
+      if (ylo(2) .eq. lo(2)) then
+      if (bc(2,1) .eq. FOEXTRAP .or. bc(2,1) .eq. HOEXTRAP .or. bc(2,1) .eq. EXT_DIR) then
+         j=lo(2)
+         do i=lo(1),hi(1)
+          !  gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) * twodxinv
+            gpy(i,j) = 0 
+         end do
+      end if
+      end if
+
+      ! alter stencil at boundary since ghost value represents value at boundary
+      if (yhi(2) .eq. hi(2)+1) then
+      if (bc(2,2) .eq. FOEXTRAP .or. bc(2,2) .eq. HOEXTRAP .or. bc(2,2) .eq. EXT_DIR) then
+         j=hi(2)+1
+         do i=lo(1),hi(1)
+          !  gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) * twodxinv
+            gpy(i,j) = 0 
+         end do
+      end if
+      end if
+
+    end subroutine compute_higher_order_term_2d
+
+    subroutine compute_higher_order_term_3d(phi,ng_p,gpx,gpy,gpz,ng_g,lo,hi,dx,bc,xlo,xhi,ylo,yhi,zlo,zhi)
+
+      integer        , intent(in   ) :: ng_p,ng_g,lo(:),hi(:)
+      integer        , intent(in   ) :: xlo(:),xhi(:),ylo(:),yhi(:),zlo(:),zhi(:)
+      real(kind=dp_t), intent(in   ) :: phi(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
+      real(kind=dp_t), intent(inout) :: gpx(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
+      real(kind=dp_t), intent(inout) :: gpy(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
+      real(kind=dp_t), intent(inout) :: gpz(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
+      real(kind=dp_t), intent(in   ) :: dx(:)
+      integer        , intent(in   ) :: bc(:,:)
+
+      ! local
+      integer :: i,j,k
+      real(kind=dp_t) :: dxinv,twodxinv,twelveinv             !kc
+      real(kind=dp_t) :: lapx(xlo(1)-1:xhi(1),xlo(2):xhi(2),xlo(3):xhi(3))
+      real(kind=dp_t) :: lapy(ylo(1):yhi(1),ylo(2)-1:yhi(2),ylo(3):yhi(3))
+      real(kind=dp_t) :: lapz(zlo(1):zhi(1),zlo(2):zhi(2),zlo(3)-1:zhi(3))
+      real(kind=dp_t) :: phiavg
+      
+      dxinv = 1.d0/dx(1)
+      twodxinv = 2.d0*dxinv
+      twelveinv = 1.d0/12.d0
+!     kc = 1.d-6 !need to figure out good value
+
+!      ! laplacian
+!      do j=xlo(2),xhi(2)
+!         do i=xlo(1)-1,xhi(1)
+!            lapx(i,j) = ( phi(i+1,j)-2*phi(i,j)+phi(i-1,j) + phi(i,j+1)-2*phi(i,j)+phi(i,j-1) ) * (dxinv*dxinv)
+!         end do
+!      end do
+
+      ! laplacian
+      do k=xlo(3),xhi(3)
+        do j=xlo(2),xhi(2)
+           do i=xlo(1)-1,xhi(1)
+!              lapx(i,j,k) = ( phi(i+1,j,k)-2.d0*phi(i,j,k)+phi(i-1,j,k) + phi(i,j+1,k)-2.d0*phi(i,j,k)+phi(i,j-1,k) &
+!                  + phi(i,j,k+1)-2.d0*phi(i,j,k)+phi(i,j,k-1) ) * (dxinv*dxinv)
+            lapx(i,j,k) = ( phi(i-1,j+1,k+1)+ phi(i+1,j+1,k+1) + phi(i+1,j-1,k+1) + phi(i-1,j-1,k+1) + &
+                 2.d0*phi(i,j+1,k+1)+ 2.d0*phi(i-1,j,k+1)+2.d0*phi(i+1,j,k+1) + 2.d0*phi(i,j-1,k+1) +  &
+                  2.d0*phi(i-1,j+1,k)+2.d0*phi(i+1,j+1,k)-32.d0*phi(i,j,k)+2.d0*phi(i-1,j-1,k)+2.d0*phi(i+1,j-1,k) &
+                  + phi(i-1,j+1,k-1)+ phi(i+1,j+1,k-1) + phi(i+1,j-1,k-1) + phi(i-1,j-1,k-1) + &
+                 2.d0*phi(i,j+1,k-1)+ 2.d0*phi(i-1,j,k-1)+2.d0*phi(i+1,j,k-1) + 2.d0*phi(i,j-1,k-1))   &
+                  * (twelveinv*dxinv*dxinv)
+           end do
+        end do
+      end do
+
+      ! x-faces
+      do k=xlo(3),xhi(3)
+         do j=xlo(2),xhi(2)
+            do i=xlo(1),xhi(1)
+               phiavg = 0.5d0*(max(min(phi(i,j,k),1.d0),0.d0) + max(min(phi(i-1,j,k),1.d0),0.d0))
+               gpx(i,j,k) = gpx(i,j,k) - 0.5d0* kc_tension*phiavg*( lapx(i,j,k)-lapx(i-1,j,k) ) * dxinv
+
+   !           gpx(i,j,k) = gpx(i,j,k) - kc_tension*0.5*( phi(i,j,k)+phi(i-1,j,k) )*( lapx(i,j,k)-lapx(i-1,j,k) ) * dxinv
+            end do
+         end do
+      end do
+
+      ! alter stencil at boundary since ghost value represents value at boundary
+      if (xlo(1) .eq. lo(1)) then 
+      if (bc(1,1) .eq. FOEXTRAP .or. bc(1,1) .eq. HOEXTRAP .or. bc(1,1) .eq. EXT_DIR) then
+         i=xlo(1)
+         do k=xlo(3),xhi(3)
+            do j=xlo(2),xhi(2)
+              ! gpx(i,j,k) = ( phi(i,j,k)-phi(i-1,j,k) ) * twodxinv
+               gpx(i,j,k) = 0.d0
+            end do
+         end do
+      end if
+      end if
+      if (xhi(1) .eq. hi(1)+1) then
+      if (bc(1,2) .eq. FOEXTRAP .or. bc(1,2) .eq. HOEXTRAP .or. bc(1,2) .eq. EXT_DIR) then
+         i=xhi(1)
+         do k=xlo(3),xhi(3)
+            do j=xlo(2),xhi(2)
+               !gpx(i,j,k) = ( phi(i,j,k)-phi(i-1,j,k) ) * twodxinv
+               gpx(i,j,k) = 0.d0
+            end do
+         end do
+      end if
+      end if
+
+      !y laplacaian
+      do k=ylo(3),yhi(3)
+        do j=ylo(2)-1,yhi(2)
+           do i=ylo(1),yhi(1)
+             !  lapy(i,j,k) = ( phi(i+1,j,k)-2.d0*phi(i,j,k)+phi(i-1,j,k) + phi(i,j+1,k)-2.d0*phi(i,j,k)+phi(i,j-1,k) &
+              !    + phi(i,j,k+1)-2.d0*phi(i,j,k)+phi(i,j,k-1) ) * (dxinv*dxinv)
+            lapy(i,j,k) = ( phi(i-1,j+1,k+1)+ phi(i+1,j+1,k+1) + phi(i+1,j-1,k+1) + phi(i-1,j-1,k+1) + &
+                 2.d0*phi(i,j+1,k+1)+ 2.d0*phi(i-1,j,k+1)+2.d0*phi(i+1,j,k+1) + 2.d0*phi(i,j-1,k+1) +  &
+                  2.d0*phi(i-1,j+1,k)+2.d0*phi(i+1,j+1,k)-32.d0*phi(i,j,k)+2.d0*phi(i-1,j-1,k)+2.d0*phi(i+1,j-1,k) &
+                  + phi(i-1,j+1,k-1)+ phi(i+1,j+1,k-1) + phi(i+1,j-1,k-1) + phi(i-1,j-1,k-1) + &
+                 2.d0*phi(i,j+1,k-1)+ 2.d0*phi(i-1,j,k-1)+2.d0*phi(i+1,j,k-1) + 2.d0*phi(i,j-1,k-1))   &
+                  * (twelveinv*dxinv*dxinv)
+           end do
+        end do
+      end do
+
+      ! y-faces
+      do k=ylo(3),yhi(3)
+         do j=ylo(2),yhi(2)
+            do i=ylo(1),yhi(1)
+               phiavg = 0.5d0*(max(min(phi(i,j,k),1.d0),0.d0) + max(min(phi(i,j-1,k),1.d0),0.d0))
+               gpy(i,j,k) = gpy(i,j,k) - 0.5d0*kc_tension*phiavg*( lapy(i,j,k)-lapy(i,j-1,k) ) * dxinv
+
+!              gpy(i,j,k) = gpy(i,j,k) - kc_tension*0.5*( phi(i,j,k)+phi(i,j-1,k) )*( lapy(i,j,k)-lapy(i,j-1,k) ) * dxinv
+            end do
+         end do
+      end do
+
+      ! alter stencil at boundary since ghost value represents value at boundary
+      if (ylo(2) .eq. lo(2)) then
+      if (bc(2,1) .eq. FOEXTRAP .or. bc(2,1) .eq. HOEXTRAP .or. bc(2,1) .eq. EXT_DIR) then
+         j=ylo(2)
+         do k=ylo(3),yhi(3)
+            do i=ylo(1),yhi(1)
+               !gpy(i,j,k) = ( phi(i,j,k)-phi(i,j-1,k) ) * twodxinv
+               gpy(i,j,k) = 0.d0
+            end do
+         end do
+      end if
+      end if
+      if (yhi(2) .eq. hi(2)+1) then
+      if (bc(2,2) .eq. FOEXTRAP .or. bc(2,2) .eq. HOEXTRAP .or. bc(2,2) .eq. EXT_DIR) then
+         j=yhi(2)
+         do k=ylo(3),yhi(3)
+            do i=ylo(1),yhi(1)
+               !gpy(i,j,k) = ( phi(i,j,k)-phi(i,j-1,k) ) * twodxinv
+               gpy(i,j,k) = 0.d0
+            end do
+         end do
+      end if
+      end if
+
+      !z laplacaian
+      do k=zlo(3)-1,zhi(3)
+        do j=zlo(2),zhi(2)
+           do i=zlo(1),zhi(1)
+      !        lapz(i,j,k) = ( phi(i+1,j,k)-2.d0*phi(i,j,k)+phi(i-1,j,k) + phi(i,j+1,k)-2.d0*phi(i,j,k)+phi(i,j-1,k) &
+       !           + phi(i,j,k+1)-2.d0*phi(i,j,k)+phi(i,j,k-1) ) * (dxinv*dxinv)
+            lapz(i,j,k) = ( phi(i-1,j+1,k+1)+ phi(i+1,j+1,k+1) + phi(i+1,j-1,k+1) + phi(i-1,j-1,k+1) + &
+                 2.d0*phi(i,j+1,k+1)+ 2.d0*phi(i-1,j,k+1)+2.d0*phi(i+1,j,k+1) + 2.d0*phi(i,j-1,k+1) +  &
+                  2.d0*phi(i-1,j+1,k)+2.d0*phi(i+1,j+1,k)-32.d0*phi(i,j,k)+2.d0*phi(i-1,j-1,k)+2.d0*phi(i+1,j-1,k) &
+                  + phi(i-1,j+1,k-1)+ phi(i+1,j+1,k-1) + phi(i+1,j-1,k-1) + phi(i-1,j-1,k-1) + &
+                 2.d0*phi(i,j+1,k-1)+ 2.d0*phi(i-1,j,k-1)+2.d0*phi(i+1,j,k-1) + 2.d0*phi(i,j-1,k-1))   &
+                  * (twelveinv*dxinv*dxinv)
+           end do
+        end do
+      end do
+
+      ! z-faces
+      do k=zlo(3),zhi(3)
+         do j=zlo(2),zhi(2)
+            do i=zlo(1),zhi(1)
+               phiavg = 0.5d0*(max(min(phi(i,j,k),1.d0),0.d0) + max(min(phi(i,j,k-1),1.d0),0.d0))
+               gpz(i,j,k) = gpz(i,j,k) -0.5d0* kc_tension * phiavg*( lapz(i,j,k)-lapz(i,j,k-1) ) * dxinv
+
+!              gpz(i,j,k) = gpz(i,j,k) - 0.5*kc_tension*( phi(i,j,k)+phi(i,j,k-1) )*( lapz(i,j,k)-lapz(i,j,k-1) ) * dxinv
+            end do
+         end do
+      end do
+
+      ! alter stencil at boundary since ghost value represents value at boundary
+      if (zlo(3) .eq. lo(3)) then
+      if (bc(3,1) .eq. FOEXTRAP .or. bc(3,1) .eq. HOEXTRAP .or. bc(3,1) .eq. EXT_DIR) then
+         k=zlo(3)
+         do j=zlo(2),zhi(2)
+            do i=zlo(1),zhi(1)
+               !gpz(i,j,k) = ( phi(i,j,k)-phi(i,j,k-1) ) * twodxinv
+               gpz(i,j,k) = 0.d0
+            end do
+         end do
+      end if
+      end if
+
+      ! alter stencil at boundary since ghost value represents value at boundary
+      if (zhi(3) .eq. hi(3)+1) then
+      if (bc(3,2) .eq. FOEXTRAP .or. bc(3,2) .eq. HOEXTRAP .or. bc(3,2) .eq. EXT_DIR) then
+         k=zhi(3)
+         do j=zlo(2),zhi(2)
+            do i=zlo(1),zhi(1)
+               !gpz(i,j,k) = ( phi(i,j,k)-phi(i,j,k-1) ) * twodxinv
+               gpz(i,j,k) = 0.d0
+            end do
+         end do
+      end if
+      end if
+
+    end subroutine compute_higher_order_term_3d
+
+  end subroutine compute_higher_order_term
 
   subroutine compute_grad(mla,phi,gradp,dx, &
                           start_incomp,start_bccomp,start_outcomp,num_comp, &

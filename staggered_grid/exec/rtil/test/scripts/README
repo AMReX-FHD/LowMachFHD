@@ -1,0 +1,4 @@
+move cap_fav.f90 to  FBoxLib/Tools/Postprocessing/F_Src for compilation
+this computes average phi as a function of y, including a top row with the wall boundary conditions
+run with
+  cap_fav.Linux.gfortran.exe -o Epot.dat -d 2 -v 1 Epot -p plt01699000 -w 1e7

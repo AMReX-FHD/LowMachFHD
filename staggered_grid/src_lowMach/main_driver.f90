@@ -812,6 +812,7 @@ subroutine main_driver()
         ! compute momentum
         call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
         call sum_momenta(mla,mtemp)
+        call sum_kinetic(mla,umac,rhotot_fc)
         call eos_check(mla,rho_old)
      end if
 
@@ -847,6 +848,7 @@ subroutine main_driver()
            ! compute momentum
            call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
            call sum_momenta(mla,mtemp)
+           call sum_kinetic(mla,umac,rhotot_fc)
            call eos_check(mla,rho_old)
         end if
 
@@ -975,6 +977,7 @@ subroutine main_driver()
         ! compute momentum
         call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
         call sum_momenta(mla,mtemp)
+        call sum_kinetic(mla,umac,rhotot_fc)
         call eos_check(mla,rho_old)
      end if
 
@@ -1296,6 +1299,7 @@ subroutine main_driver()
         ! compute momentum
         call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
         call sum_momenta(mla,mtemp)
+        call sum_kinetic(mla,umac,rhotot_fc)
         call eos_check(mla,rho_new)
 
         if (use_charged_fluid) then
@@ -1537,7 +1541,7 @@ subroutine main_driver()
   deallocate(Epot_sum, Epot_avg) 
   deallocate(gradPhiApprox)
 
-  if (algorithm_type .eq. 6) deallocate(total_mass_flux)
+  if (analyze_cuts>0) deallocate(total_mass_flux)
 
   deallocate(chem_rate)
 

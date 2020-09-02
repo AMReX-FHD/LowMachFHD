@@ -4,7 +4,7 @@ module diffusive_mass_fluxdiv_module
   use define_bc_module
   use bc_module
   use div_and_grad_module
-  use probin_multispecies_module, only: is_nonisothermal, correct_flux
+  use probin_multispecies_module, only: is_nonisothermal, correct_flux, use_multiphase
   use probin_common_module, only: barodiffusion_type, nspecies, shift_cc_to_boundary
   use mass_flux_utilities_module
   use ml_layout_module
@@ -141,6 +141,14 @@ contains
           call matvec_mul(mla, diff_mass_flux(n,i), Gama_face(n,i), nspecies)
        end do
     end do    
+ 
+    if (use_multiphase)then
+
+        call compute_higher_order_term(mla, molarconc, diff_mass_flux, dx, 1, mol_frac_bc_comp, 1, nspecies, & 
+                      the_bc_tower%bc_tower_array)
+
+    endif
+     
 
     if(is_nonisothermal) then
     
@@ -253,5 +261,199 @@ contains
     call destroy(bpt)
 
   end subroutine diffusive_mass_flux
+
+!make Gama identity for small concentrations
+  subroutine limit_Gama(molarconc, Gama)
+
+    type(multifab) , intent(inout) :: Gama(:,:)
+    type(multifab) , intent(in) :: molarconc(:)
+
+    ! Local
+    integer                  :: lo(get_dim(molarconc(1))),hi(get_dim(molarconc(1)))
+    integer                  :: ng_m,ng_G,i,dm
+    real(kind=dp_t), pointer :: mp(:,:,:,:)
+    real(kind=dp_t), pointer :: Gpx(:,:,:,:), Gpy(:,:,:,:), Gpz(:,:,:,:)
+
+    dm = get_dim(molarconc(1))
+    ng_m = nghost(molarconc(1))
+    ng_G = nghost(Gama(1,1))
+    
+    do i=1,nfabs(molarconc(1))
+        mp => dataptr(molarconc(1),i)
+       Gpx => dataptr(Gama(1,1),i)
+       Gpy => dataptr(Gama(1,2),i)
+
+       lo = lwb(get_box(molarconc(1),i))
+       hi = upb(get_box(molarconc(1),i))
+          select case (dm)
+          case (2)
+             call limit_Gama_2d(mp(:,:,1,:), ng_m, &
+                                          Gpx(:,:,1,:), Gpy(:,:,1,:), ng_G, &
+                                          lo, hi)
+          case (3)
+             Gpz => dataptr(Gama(1,3),i)
+             call limit_Gama_3d(mp(:,:,:,:), ng_m, &
+                                          Gpx(:,:,:,:), Gpy(:,:,:,:), Gpz(:,:,:,:), ng_G, &
+                                          lo, hi)
+          end select
+    end do
+ 
+  end subroutine limit_Gama
+
+  subroutine limit_Gama_2d(molarconc, ng_m,Gpx,Gpy,ng_G, &
+                                     lo,hi)
+
+    integer        , intent(in   ) :: lo(:),hi(:),ng_m,ng_G
+    real(kind=dp_t), intent(in) :: molarconc(lo(1)-ng_m:,lo(2)-ng_m:,:)
+    real(kind=dp_t), intent(inout) :: Gpx(lo(1)-ng_G:,lo(2)-ng_G:,:)
+    real(kind=dp_t), intent(inout) :: Gpy(lo(1)-ng_G:,lo(2)-ng_G:,:)
+
+    integer i,j,n
+    real(kind=dp_t) eepsilon
+    real(kind=dp_t) trace, det
+
+    eepsilon = 0.0001
+
+    do j = lo(2),hi(2)
+        do i = lo(1),hi(1)+1
+            trace = Gpx(i,j,1)+GPx(i,j,4)
+            det = Gpx(i,j,1)*GPx(i,j,4)-Gpx(i,j,2)*GPx(i,j,3)
+
+            if(trace.lt.0.d0 .or. det .lt. 0.d0)then
+            
+              do n=1,nspecies
+
+                if(min(molarconc(i,j,n),molarconc(i-1,j,n)) .le. eepsilon) then !need to make this an input parameter?            
+
+                    Gpx(i,j,1)=1.d0
+                    Gpx(i,j,2)=0.d0
+                    Gpx(i,j,3)=0.d0
+                    Gpx(i,j,4)=1.d0
+
+                endif
+
+                end do
+             endif
+            end do
+        end do       
+
+    do j = lo(2),hi(2)+1
+        do i = lo(1),hi(1)
+            trace = Gpy(i,j,1)+GPy(i,j,4)
+            det = Gpy(i,j,1)*GPy(i,j,4)-Gpy(i,j,2)*GPy(i,j,3)
+
+            if(trace.lt.0.d0 .or. det .lt. 0.d0)then
+            
+            do n=1,nspecies
+
+                if(min(molarconc(i,j,n),molarconc(i,j-1,n)) .le. eepsilon) then !need to make this an input parameter?            
+                    Gpy(i,j,1)=1.d0
+                    Gpy(i,j,2)=0.d0
+                    Gpy(i,j,3)=0.d0
+                    Gpy(i,j,4)=1.d0
+
+                end if
+
+                end do
+             endif
+            end do
+        end do       
+    
+
+    end subroutine limit_Gama_2d
+
+  subroutine limit_Gama_3d(molarconc, ng_m,Gpx,Gpy,Gpz,ng_G, &
+                                     lo,hi)
+
+    integer        , intent(in   ) :: lo(:),hi(:),ng_m,ng_G
+    real(kind=dp_t), intent(in) :: molarconc(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:,:)
+    real(kind=dp_t), intent(inout) :: Gpx(lo(1)-ng_G:,lo(2)-ng_G:,lo(3)-ng_G:,:)
+    real(kind=dp_t), intent(inout) :: Gpy(lo(1)-ng_G:,lo(2)-ng_G:,lo(3)-ng_G:,:)
+    real(kind=dp_t), intent(inout) :: Gpz(lo(1)-ng_G:,lo(2)-ng_G:,lo(3)-ng_G:,:)
+
+    integer i,j,k,n
+    real(kind=dp_t) eepsilon
+    real(kind=dp_t) trace, det
+
+
+    eepsilon = 0.0001
+
+    do k = lo(3),hi(3)
+    do j = lo(2),hi(2)
+        do i = lo(1),hi(1)+1
+            trace = Gpx(i,j,k,1)+GPx(i,j,k,4)
+            det = Gpx(i,j,k,1)*GPx(i,j,k,4)-Gpx(i,j,k,2)*GPx(i,j,k,3)
+
+            if(trace.lt.0.d0 .or. det .lt. 0.d0)then
+            
+            do n=1,nspecies
+
+                if(min(molarconc(i,j,k,n),molarconc(i-1,j,k,n)) .le. eepsilon) then !need to make this an input parameter?            
+
+                    Gpx(i,j,k,1)=1.d0
+                    Gpx(i,j,k,2)=0.d0
+                    Gpx(i,j,k,3)=0.d0
+                    Gpx(i,j,k,4)=1.d0
+
+                endif
+
+                end do
+            endif
+            end do
+        end do       
+        end do       
+
+    do k = lo(3),hi(3)
+    do j = lo(2),hi(2)+1
+        do i = lo(1),hi(1)
+            trace = Gpy(i,j,k,1)+GPy(i,j,k,4)
+            det = Gpy(i,j,k,1)*GPy(i,j,k,4)-Gpy(i,j,k,2)*GPy(i,j,k,3)
+
+            if(trace.lt.0.d0 .or. det .lt. 0.d0)then
+            
+            do n=1,nspecies
+
+                if(min(molarconc(i,j,k,n),molarconc(i,j-1,k,n)) .le. eepsilon) then !need to make this an input parameter?            
+                    Gpy(i,j,k,1)=1.d0
+                    Gpy(i,j,k,2)=0.d0
+                    Gpy(i,j,k,3)=0.d0
+                    Gpy(i,j,k,4)=1.d0
+
+                end if
+
+                end do
+            endif
+            end do
+        end do       
+        end do       
+
+    do k = lo(3),hi(3)+1
+    do j = lo(2),hi(2)
+        do i = lo(1),hi(1)
+            trace = Gpz(i,j,k,1)+GPz(i,j,k,4)
+            det = Gpz(i,j,k,1)*GPz(i,j,k,4)-Gpz(i,j,k,2)*GPz(i,j,k,3)
+
+            if(trace.lt.0.d0 .or. det .lt. 0.d0)then
+            
+            do n=1,nspecies
+
+                if(min(molarconc(i,j,k,n),molarconc(i,j,k-1,n)) .le. eepsilon) then !need to make this an input parameter?            
+                    Gpz(i,j,k,1)=1.d0
+                    Gpz(i,j,k,2)=0.d0
+                    Gpz(i,j,k,3)=0.d0
+                    Gpz(i,j,k,4)=1.d0
+
+                end if
+
+                end do
+            endif
+            end do
+        end do       
+        end do       
+    
+
+    end subroutine limit_Gama_3d
+
+
 
 end module diffusive_mass_fluxdiv_module
