@@ -83,9 +83,6 @@ contains
     call electrodiffusive_mass_flux(mla,rho,Temp,rhoWchi,electro_mass_flux, &
                                     diff_mass_flux,stoch_mass_flux,dx,the_bc_tower, &
                                     charge,grad_Epot,Epot,permittivity,dt,zero_initial_Epot)
-
-    !KK insert fix here
-      
     ! add fluxes to diff_mass_flux
     do n=1,nlevs
        do i=1,dm
