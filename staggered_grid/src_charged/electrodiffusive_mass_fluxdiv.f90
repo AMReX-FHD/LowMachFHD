@@ -16,7 +16,7 @@ module electrodiffusive_mass_fluxdiv_module
   use probin_charged_module, only: Epot_wall_bc_type, Epot_wall, E_ext_type, electroneutral, &
                                    zero_eps_on_wall_type, epot_mg_verbose, epot_mg_abs_tol, &
                                    epot_mg_rel_tol, charge_per_mass, relxn_param_charge
-  use probin_multispecies_module, only: is_nonisothermal
+  use probin_multispecies_module, only: is_nonisothermal, use_multiphase
   
   use fabio_module
 
@@ -491,7 +491,9 @@ contains
        end do
     end do
 
-    call limit_emf(rho, electro_mass_flux, grad_Epot)
+    if (use_multiphase) then
+       call limit_emf(rho, electro_mass_flux, grad_Epot)
+    end if
 
     ! compute -rhoWchi * (... ) on faces
     do n=1,nlevs
