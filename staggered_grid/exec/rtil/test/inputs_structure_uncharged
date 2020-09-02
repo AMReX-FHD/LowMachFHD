@@ -132,7 +132,7 @@
   is_ideal_mixture = F                  ! If T assume Gamma=I (H=0) and simplify
   is_nonisothermal = F                  ! If T Soret effect will be included
 
-  use_multiphase = .true.
+  use_multiphase = T
   alpha_gex = 4.
   kc_tension = 1.d-2
   

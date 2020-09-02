@@ -137,7 +137,7 @@
 
   avg_type = 10
 
-  use_multiphase = .true.
+  use_multiphase = T
   ! alpha_gex = 3.
   !alpha_gex = 3.d6
   !n_gex = 8
