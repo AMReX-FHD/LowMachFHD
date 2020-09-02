@@ -109,7 +109,7 @@ contains
     is_ideal_mixture   = .true.
     is_nonisothermal   = .false.
     use_lapack         = .false.
-    use_multiphase     = .true.
+    use_multiphase     = .false.
     kc_tension         = 0.d0
     alpha_gex          = 0.d0
     n_gex              = 1
