@@ -1,9 +1,17 @@
-ifeq ($(findstring edison, $(HOST)), edison)
-FC       = ftn
-FC1      = ftn
+ifeq ($(findstring bint, $(HOST)), bint)
+ifdef MIC
+FC       = ifort -mmic
+FC1      = ifort -mmic
+else
+FC       = ifort
+FC1      = ifort
+endif
+else ifeq ($(findstring edison, $(HOST)), edison)
+FC       = ifort
+FC1      = ifort
 else ifeq ($(findstring cori, $(HOST)), cori)
-FC       = ftn
-FC1      = ftn
+FC       = ifort
+FC1      = ifort
 else
 FC       = gfortran -ffree-form
 FC1      = gfortran -ffixed-form
