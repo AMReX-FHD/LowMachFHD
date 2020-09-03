@@ -62,7 +62,7 @@ contains
     dm = mla%dim
     nlevs = mla%nlevel
 
-    dv = product(dx(1,1:MAX_SPACEDIM)*volume_factor)
+    dv = product(dx(1,1:MAX_SPACEDIM))*volume_factor
 
     increment_div = .false.
     if (present(increment_in)) increment_div = increment_in
@@ -570,7 +570,7 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
 
-    dv = product(dx(1,1:MAX_SPACEDIM)*volume_factor)
+    dv = product(dx(1,1:MAX_SPACEDIM))*volume_factor
 
     ! the number of ghost cells must match variance_mfab input to multifab_fill_random
     ! the values in the ghost cells do not have to be added to n_init since we
