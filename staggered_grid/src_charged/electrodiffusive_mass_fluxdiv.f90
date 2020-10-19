@@ -140,7 +140,6 @@ contains
     type(multifab)  ::      rhsvec(mla%nlevel)
 
     type(multifab)  ::             beta(mla%nlevel,mla%dim)
-    type(multifab)  :: charge_coef_face(mla%nlevel,mla%dim)
     type(multifab)  ::  permittivity_fc(mla%nlevel,mla%dim)
     type(multifab)  ::            E_ext(mla%nlevel,mla%dim)
     type(multifab)  ::             A_Phi(mla%nlevel,mla%dim)
@@ -169,7 +168,6 @@ contains
        call multifab_build( rhsvec(n),mla%la(n),nspecies,0)
        do i=1,dm
           call multifab_build_edge(            beta(n,i),mla%la(n),          1,0,i)
-          call multifab_build_edge(charge_coef_face(n,i),mla%la(n),   nspecies,0,i)
           call multifab_build_edge(    rhoWchi_face(n,i),mla%la(n),nspecies**2,0,i)
           call multifab_build_edge( permittivity_fc(n,i),mla%la(n),          1,0,i)
           call multifab_build_edge(           E_Ext(n,i),mla%la(n),          1,0,i)
@@ -536,7 +534,6 @@ contains
        do i=1,dm
           call multifab_destroy(rhoWchi_face(n,i))
           call multifab_destroy(beta(n,i))
-          call multifab_destroy(charge_coef_face(n,i))
           call multifab_destroy(permittivity_fc(n,i))
           call multifab_destroy(E_ext(n,i))
           call multifab_destroy(A_Phi(n,i))
