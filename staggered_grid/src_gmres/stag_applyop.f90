@@ -113,11 +113,19 @@ contains
 
     call build(bpt,"stag_applyop_level")
 
-    if (dx(1) .ne. dx(2)) then
-       call bl_error("stag_applyop_2d requires the same dx in all directions")
+    dm = get_dim(la)
+
+    if (dx(1) .ge. (1.d0 + 1.d-12)*dx(2) .or. &
+        dx(1) .le. (1.d0 - 1.d-12)*dx(2)) then
+       call bl_error('ERROR: stag_applyop we only support dx=dy')
     end if
 
-    dm = get_dim(la)
+    if (dm .eq. 3) then
+       if (dx(1) .ge. (1.d0 + 1.d-12)*dx(3) .or. &
+           dx(1) .le. (1.d0 - 1.d-12)*dx(3)) then
+          call bl_error('ERROR: stag_applyop we only support dx=dz')
+       end if
+    end if
 
     if (present(color_in)) then
        color = color_in
