@@ -1,4 +1,50 @@
-move cap_fav.f90 to  FBoxLib/Tools/Postprocessing/F_Src for compilation
-this computes average phi as a function of y, including a top row with the wall boundary conditions
-run with
-  cap_fav.Linux.gfortran.exe -o Epot.dat -d 2 -v 1 Epot -p plt01699000 -w 1e7
+(factor of 10^7 conversion from V to our units; 10^5 for E field)
+
+cap_fav (in LowMachFHD/staggered_grid/exec/rtil/test/scripts/cap_fav.f90)
+cap_fav needs to be compiled in FBoxLib/Tools/Postprocessing/F_Src
+so copy cap_fav.f90 to  FBoxLib/Tools/Postprocessing/F_Src for compilation
+This computes the average phi as a function of y, including an extra line
+with the y=0 boundary conditions (this is the -w <EPot_call>) flag
+
+First, write a script to call cap_fav.ex on a series of plotfiles
+by create a text file with the number of files and contents, e.g.
+"compute_cap.ex"
+
+ cap_fav.Linux.gfortran.exe -o Epot0.dat -d 2 -v 1 Epot -p plt03900000 -w 1e7
+ cap_fav.Linux.gfortran.exe -o Epot1.dat -d 2 -v 1 Epot -p plt03800000 -w 1e7
+ cap_fav.Linux.gfortran.exe -o Epot2.dat -d 2 -v 1 Epot -p plt03700000 -w 1e7
+ cap_fav.Linux.gfortran.exe -o Epot3.dat -d 2 -v 1 Epot -p plt03600000 -w 1e7
+ cap_fav.Linux.gfortran.exe -o Epot4.dat -d 2 -v 1 Epot -p plt03500000 -w 1e7
+ cap_fav.Linux.gfortran.exe -o Epot5.dat -d 2 -v 1 Epot -p plt03400000 -w 1e7
+ cap_fav.Linux.gfortran.exe -o Epot6.dat -d 2 -v 1 Epot -p plt03300000 -w 1e7
+ cap_fav.Linux.gfortran.exe -o Epot7.dat -d 2 -v 1 Epot -p plt03200000 -w 1e7
+ cap_fav.Linux.gfortran.exe -o Epot8.dat -d 2 -v 1 Epot -p plt03100000 -w 1e7
+ cap_fav.Linux.gfortran.exe -o Epot9.dat -d 2 -v 1 Epot -p plt03000000 -w 1e7
+
+Run this script.  Then, create a text file "Epot_all.dat" with the number of data files, and the data files themselves
+
+ 10
+ Epot0.dat
+ Epot1.dat
+ ...
+
+phi_stats.f90 (in LowMachFHD/staggered_grid/exec/rtil/test/scripts/phi_stats.f90)
+computes the average and error bar of phi given a set of files
+Run phi_stats.ex < Epot_all.dat | tee phi.txt
+
+Then, dphidn.ex computes sigma and the associated errorbar of an phi.txt file.
+Run "dphidn.ex < phi.txt | tee dphidn.txt"
+
+Assemble output into a text file, dphidn_all.txt (the first line should be the number of files)
+
+6
+40000000.000000000        1.2915459185319731E-004   1.0287484372317635E-006
+80000000.000000000        1.5616902288873011E-004   1.3915529866782815E-007
+160000000.00000000        1.9585726514957435E-004   4.0617164558557161E-008
+320000000.00000000        2.5706500563444550E-004   3.7776540196835958E-008
+640000000.00000000        3.4841135286273130E-004   4.8612325373393689E-008
+1280000000.0000000        4.8223242815754645E-004   6.4651214697645766E-008
+
+cap.ex computes the final capacitance and errorbar
+
+cap.ex < dphidn_all.txt | tee cap.txt

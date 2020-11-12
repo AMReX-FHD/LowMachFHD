@@ -954,7 +954,7 @@ subroutine main_driver()
   ! but I do not see how one can avoid that
   ! From this perspective it may be useful to keep initial_projection even in overdamped
   ! because different gmres tolerances may be needed in the first step than in the rest
-  if (algorithm_type .ne. 2) then
+  if (algorithm_type .ne. 2 .and. algorithm_type .ne. 6) then
      call initial_projection(mla,umac,rho_old,rhotot_old,gradp_baro, &
                              diff_mass_fluxdiv, &
                              stoch_mass_fluxdiv,stoch_mass_flux,chem_rate, &
