@@ -370,8 +370,19 @@ contains
           end do
        end do
 
-       ! compute div (epsilon*E_ext) and add it to solver rhs
+       ! compute div (epsilon*E_ext) and SUBTRACT it to solver rhs
+       ! this needs to be tested with spatially-varying E_ext OR epsilon
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_mult_mult_s(permittivity_fc(n,i),-1.d0,0)
+          end do
+       end do
        call compute_div(mla,permittivity_fc,rhs,dx,1,1,1,increment_in=.true.)
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_mult_mult_s(permittivity_fc(n,i),-1.d0,0)
+          end do
+       end do
 
     end if
 

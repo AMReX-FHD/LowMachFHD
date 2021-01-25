@@ -778,7 +778,7 @@ contains
 
     end if
 
-    ! temporary multifab to hold div(eps*E)
+    ! temporary multifab to hold div(-eps*E)
     do n=1,nlevs
        call multifab_build(temp_cc(n),mla%la(n),1,1)
     end do
@@ -805,27 +805,27 @@ contains
 
     end if
 
-    ! multiply by E to get eps*E on faces
+    ! multiply by grad_Epot = -E to get eps*E on faces
     do n=1,nlevs
        do i=1,dm
           call multifab_mult_mult_c(Lorentz_force(n,i),1,grad_Epot(n,i),1,1,0)
        end do
     end do
 
-    ! take divergence of eps*E and put it in cc_temp
+    ! take divergence of -eps*E and put it in cc_temp
     call compute_div(mla,Lorentz_force,temp_cc,dx,1,1,1)
 
-    ! fill ghost cells for eps*E
+    ! fill ghost cells for div(-eps*E)
     do n=1,nlevs
        call multifab_fill_boundary(temp_cc(n))
        call multifab_physbc(temp_cc(n),1,c_bc_comp,1,the_bc_tower%bc_tower_array(n))
     end do
 
-    ! average div(eps*E) to faces, store in Lorentz_force
+    ! average div(-eps*E) to faces, store in Lorentz_force
     call average_cc_to_face(nlevs,temp_cc,Lorentz_force,1,c_bc_comp,1, &
                             the_bc_tower%bc_tower_array)
 
-    ! multiply by E to get E*div(eps*E) on faces
+    ! multiply by -E to get E*div(eps*E) on faces
     do n=1,nlevs
        do i=1,dm
           call multifab_mult_mult_c(Lorentz_force(n,i),1,grad_Epot(n,i),1,1,0)
