@@ -190,8 +190,8 @@ contains
           call multifab_build_edge(                dumac(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(               gradpi(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(               rho_fc(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(        rhotot_fc_old(n,i),mla%la(n),nspecies,1,i)
-          call multifab_build_edge(        rhotot_fc_new(n,i),mla%la(n),nspecies,1,i)
+          call multifab_build_edge(        rhotot_fc_old(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(        rhotot_fc_new(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(       diff_mass_flux(n,i),mla%la(n),nspecies,0,i)
        end do
     end do
