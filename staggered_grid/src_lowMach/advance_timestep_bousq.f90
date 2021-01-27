@@ -110,7 +110,6 @@ contains
     type(multifab) ::        rhotot_fc_old(mla%nlevel,mla%dim)
     type(multifab) ::        rhotot_fc_new(mla%nlevel,mla%dim)
     type(multifab) ::       diff_mass_flux(mla%nlevel,mla%dim)
-    type(multifab) ::       mom_grav_force(mla%nlevel,mla%dim)    
 
     ! only used when variance_coef_mass>0 and midpoint_stoch_mass_flux_type=2
     type(multifab) :: stoch_mass_fluxdiv_old(mla%nlevel)
@@ -194,7 +193,6 @@ contains
           call multifab_build_edge(        rhotot_fc_old(n,i),mla%la(n),nspecies,1,i)
           call multifab_build_edge(        rhotot_fc_new(n,i),mla%la(n),nspecies,1,i)
           call multifab_build_edge(       diff_mass_flux(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(       mom_grav_force(n,i),mla%la(n),1       ,0,i)
        end do
     end do
 
@@ -1156,7 +1154,6 @@ contains
           call multifab_destroy(rhotot_fc_old(n,i))
           call multifab_destroy(rhotot_fc_new(n,i))
           call multifab_destroy(diff_mass_flux(n,i))
-          call multifab_destroy(mom_grav_force(n,i))
        end do
     end do
 
