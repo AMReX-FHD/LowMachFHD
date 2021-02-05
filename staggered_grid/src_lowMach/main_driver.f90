@@ -330,18 +330,21 @@ subroutine main_driver()
   dx(1,1:MAX_SPACEDIM) = (prob_hi(1:MAX_SPACEDIM)-prob_lo(1:MAX_SPACEDIM)) &
        / n_cells(1:MAX_SPACEDIM)
   ! check that the grid spacing is the same in each direction for the first dm dimensions
-  select case (dm) 
-  case(2)
-     if (dx(1,1) .ne. dx(1,2)) then
-        call bl_error('ERROR: main_driver.f90, in 2D we only support dx=dy')
+  if (dx(1,1) .ge. (1.d0 + 1.d-12)*dx(1,2) .or. &
+      dx(1,1) .le. (1.d0 - 1.d-12)*dx(1,2)) then
+     call bl_error('ERROR: main_driver.f90, we only support dx=dy')
+  end if
+
+  if (dm .eq. 3) then
+     if (dx(1,1) .ge. (1.d0 + 1.d-12)*dx(1,3) .or. &
+         dx(1,1) .le. (1.d0 - 1.d-12)*dx(1,3)) then
+        call bl_error('ERROR: main_driver.f90, we only support dx=dz')
      end if
-  case(3)
-     if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
-        call bl_error('ERROR: main_driver.f90, in 3D we only support dx=dy=dz')
-     end if
-  case default
+  end if
+
+  if (dm .ne. 2 .and. dm .ne. 3) then
      call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
-  end select
+  end if
 
   ! use refined dx for next level
   ! assume refinement ratio is the same in each direction
@@ -796,7 +799,7 @@ end if
   ! but I do not see how one can avoid that
   ! From this perspective it may be useful to keep initial_projection even in overdamped
   ! because different gmres tolerances may be needed in the first step than in the rest
-  if (algorithm_type .ne. 2) then
+  if (algorithm_type .ne. 2 .and. algorithm_type .ne. 6) then
      call initial_projection(mla,umac,rho_old,rhotot_old,gradp_baro, &
                              diff_mass_fluxdiv, &
                              stoch_mass_fluxdiv,stoch_mass_flux,chem_rate, &

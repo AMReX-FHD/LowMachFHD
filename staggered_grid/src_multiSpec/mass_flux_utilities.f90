@@ -344,10 +344,8 @@ contains
     ! local to define Gamma matrix
     real(kind=dp_t) :: w1,w2 
 
-    ! Identity matrix
-    if(use_multiphase) then
-       
-       ! Gama = I
+    if(use_multiphase .and. nspecies .eq. 2) then
+
        w1 = molarconc(1)
        w2 = molarconc(2)
        if(abs(w1+w2-1.d0).gt.1.d-14)then

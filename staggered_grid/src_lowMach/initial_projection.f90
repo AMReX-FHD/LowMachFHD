@@ -92,8 +92,12 @@ contains
     if (algorithm_type .eq. 2) then
        call bl_error("Should not call initial_projection for overdamped schemes")
     end if
+
+    if (algorithm_type .eq. 6) then
+       call bl_error("Should not call initial_projection for Boussinesq scheme 6")
+    end if
     
-    if (algorithm_type .eq. 5 .or. algorithm_type .eq. 6) then
+    if (algorithm_type .eq. 5) then
        allocate(weights(2))
        weights(1) = 1.d0
        weights(2) = 0.d0
@@ -107,10 +111,10 @@ contains
     end if
 
     if (nreactions > 0) then
-       if (algorithm_type .ne. 5 .and. algorithm_type .ne. 6) then
-          call bl_error('Error: only algorithm_type=(5 or 6) allowed for nreactions>0')
+       if (algorithm_type .ne. 5) then
+          call bl_error('Error: only algorithm_type=5 allowed for nreactions>0')
        else if (use_Poisson_rng .eq. 2) then
-          call bl_error('Error: currently use_Poisson_rng=2 not allowed for algorithm_type=(5 or 6) and nreactions>0')
+          call bl_error('Error: currently use_Poisson_rng=2 not allowed for algorithm_type=5 and nreactions>0')
        end if
     end if
 
@@ -184,9 +188,7 @@ contains
     end if
 
     ! set the Dirichlet velocity value on reservoir faces
-    if (algorithm_type .ne. 6) then
-       call reservoir_bc_fill(mla,total_mass_flux,vel_bc_n,the_bc_tower%bc_tower_array)
-    end if  
+    call reservoir_bc_fill(mla,total_mass_flux,vel_bc_n,the_bc_tower%bc_tower_array)
 
     if (restart .lt. 0) then
 
@@ -196,24 +198,20 @@ contains
           call setval(mac_rhs(n),0.d0)
        end do
 
-       if (algorithm_type .ne. 6) then
+       ! set mac_rhs to -S = sum_i div(F_i)/rhobar_i
+       do n=1,nlevs
 
-          ! set mac_rhs to -S = sum_i div(F_i)/rhobar_i
-          do n=1,nlevs
-
-             do i=1,nspecies
-                call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),diff_mass_fluxdiv(n),i,1)
-                if (variance_coef_mass .ne. 0.d0) then
-                   call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
-                end if
-                if (nreactions > 0) then
-                   ! if nreactions>0, also add sum_i -(m_i*R_i)/rhobar_i
-                   call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),chem_rate(n),i,1)
-                end if
-             end do
+          do i=1,nspecies
+             call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),diff_mass_fluxdiv(n),i,1)
+             if (variance_coef_mass .ne. 0.d0) then
+                call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+             end if
+             if (nreactions > 0) then
+                ! if nreactions>0, also add sum_i -(m_i*R_i)/rhobar_i
+                call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),chem_rate(n),i,1)
+             end if
           end do
-
-       end if
+       end do
 
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
        ! build rhs = div(v^init) - S^0
