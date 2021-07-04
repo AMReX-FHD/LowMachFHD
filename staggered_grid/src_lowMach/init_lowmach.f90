@@ -647,7 +647,7 @@ contains
           enddo
        enddo
 
-    case (15,16)
+    case (15)
 
        !=========================================================
        ! Discontinuous band in central 1/2 (type=15) or 1/3 (type=16) of domain

@@ -17,7 +17,7 @@ module analyze_spectra_module
   use utility_module
   use probin_common_module, only: n_cells, prob_lo, prob_hi, &
        hydro_grid_int, project_dir, max_grid_projection, stats_int, n_steps_save_stats, &
-       center_snapshots, analyze_conserved, histogram_unit, density_weights
+       center_snapshots, analyze_conserved, histogram_unit, density_weights,nspecies
 
   implicit none
 
@@ -60,6 +60,7 @@ contains
   subroutine initialize_hydro_grid(mla,s_in,dt,dx,namelist_file, &
                                    nspecies_in, nscal_in, exclude_last_species_in, &
                                    analyze_velocity, analyze_density, analyze_temperature, &
+                                   analyze_charge_fluxes, &
                                    heat_capacity_in,structFactMultiplier)
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: s_in(:) ! A cell-centered multifab on the desired grid (to grab layout and grid size from)
@@ -71,6 +72,7 @@ contains
     integer        , intent(in   ) :: nscal_in
       ! Additional number of scalar fields if any
     logical, intent(in) :: exclude_last_species_in, analyze_velocity, analyze_density, analyze_temperature
+    logical, intent(in) :: analyze_charge_fluxes
         ! Pass exclude_last_species=.false. if you want to analyze all nspecies densities/concentrations
         ! Or pass exclude_last_species=.true. if you want to pass total density rho as the first scalar and 
         !    then only include only n_species-1 additional partial densities/concentrations
@@ -108,6 +110,9 @@ contains
     if(analyze_temperature) nvar = nvar + 1
     nscal_analysis = nvar ! Total number of scalar variables to analyze
     if(analyze_velocity) nvar = nvar + dm
+    if (analyze_charge_fluxes) then 
+       nvar = nvar + dm*(nspecies+1)
+    endif
     if ( parallel_IOprocessor() ) then
        write(*,*) "Allocating storage for ", nvar, " variables to analyze using HydroGrid"
     end if
@@ -381,17 +386,19 @@ contains
   ! This routines collects a bunch of different variables into a single multifab for easier analysis
   ! The components are ordered as, whenever present:
   ! umac, rho, rho_k (analyze_conserved=T) or c_k=rho_k/rho, T, scalars
-  subroutine gather_hydro_grid(mla,la_s,s_hydro,umac,rho,temperature,scalars, variable_names)
+  subroutine gather_hydro_grid(mla,la_s,s_hydro,umac,rho,temperature,scalars,variable_names,charge_fluxes)
     type(ml_layout), intent(in   ) :: mla ! Layout of hydrodynamic arrays
     type(layout)   , intent(in   ) :: la_s ! Layout of s_hydro (changes depending on context)
     type(multifab) , intent(inout) :: s_hydro ! Output: collected grid data for analysis
     type(multifab) , intent(in), optional :: umac(:,:)
     type(multifab) , intent(in), dimension(:), optional :: rho, temperature, scalars
+    type(multifab) , intent(in), optional :: charge_fluxes(:,:)
     character(len=20), intent(out), optional :: variable_names(nvar)
   
     ! Local
     integer :: i, ii, jj, n, nlevs, dm, pdim, comp, n_passive_scals, species
     type(multifab) :: mac_cc(mla%nlevel)
+    type(multifab) :: charge_fluxes_cc(mla%nlevel)
  
     nlevs = mla%nlevel
     dm = mla%dim
@@ -496,7 +503,52 @@ contains
        comp=comp+1    
        n_passive_scals=n_passive_scals-1
     end if
-    
+
+    if (present(charge_fluxes)) then 
+       ! build cell centered multifab for charge_Fluxes
+       do n=1,nlevs
+          call multifab_build(charge_fluxes_cc(n), mla%la(n), dm*(nspecies+1), 0)
+       end do    
+       ! copy the data at the edges to the cell centers
+       do i=1,dm
+!          call shift_face_to_cc(mla,charge_fluxes(:,i),1,charge_fluxes_cc,i,nspecies+1)
+          ! AJN - I think you want this
+          call shift_face_to_cc(mla,charge_fluxes(:,i),1,charge_fluxes_cc,(i-1)*(nspecies+1)+1,nspecies+1)
+       enddo
+       ! copy cc data to s_hydro
+       call copy(s_hydro,comp,charge_fluxes_cc(1),1,dm*(nspecies+1))
+       ! destroy the cc multifab
+       do n=1,nlevs
+          call multifab_destroy(charge_fluxes_cc(n))
+       end do
+       ! write variable names
+       if (present(variable_names)) then 
+          ! write variable names in x
+          do species=1,nspecies
+             write(variable_names(comp+species-1),"(A,I0)") "chrg_flx_x_", species
+          end do
+          write(variable_names(comp+nspecies),"(A,I0)") "tot_chrg_flx_x"
+          comp = comp + (nspecies+1)
+
+          ! write variable names in y
+          do species=1,nspecies
+             write(variable_names(comp+species-1),"(A,I0)") "chrg_flx_y_", species
+          end do
+          write(variable_names(comp+nspecies),"(A,I0)") "tot_chrg_flx_y"
+          comp = comp + (nspecies+1)
+
+          if (dm>2) then
+             ! write variable names in z
+             do species=1,nspecies
+                write(variable_names(comp+species-1),"(A,I0)") "chrg_flx_z_", species
+             end do
+             write(variable_names(comp+nspecies),"(A,I0)") "tot_chrg_flx_z"
+             comp = comp + (nspecies+1)
+          endif
+       endif
+    endif
+
+
     if(present(scalars)) then
        if(n_passive_scals<1) then
          call parallel_abort("No room left to store passive scalars, nscal_analysis too small")
@@ -820,13 +872,14 @@ contains
   !
   ! Next, it writes out "horizontal" averages.
   ! Thus, in both 2D and 3D, it writes out a 1D text file called "hstatXXXXXX"
-  subroutine print_stats(mla,dx,step,time,umac,rho,temperature,scalars)
+  subroutine print_stats(mla,dx,step,time,umac,rho,temperature,scalars,charge_fluxes)
     type(ml_layout), intent(in   ) :: mla
     real(dp_t)     , intent(in   ) :: dx(:,:)
     integer        , intent(in   ) :: step
     real(kind=dp_t), intent(in   ) :: time
     type(multifab) , intent(in), optional :: umac(:,:)
     type(multifab) , intent(in), dimension(:), optional :: rho,temperature,scalars
+    type(multifab) , intent(in), optional :: charge_fluxes(:,:)
   
     ! Local
     integer nlevs,dm,pdim,qdim,qdim2,i,n,comp
@@ -869,7 +922,8 @@ contains
     ! Re-distribute the full grid into a grid of "tall skinny boxes"
     ! These boxes are not distributed along project_dim so we can do local analysis easily
     ! -------------------------
-    call gather_hydro_grid(mla,la_dir,s_dir,umac,rho,temperature,scalars, variable_names(1:nvar))
+    call gather_hydro_grid(mla,la_dir,s_dir,umac,rho,temperature,scalars, &
+                           variable_names(1:nvar),charge_fluxes)
 
     ! Compute s_projected (average) and s_var (variance)
     ! -------------------------
