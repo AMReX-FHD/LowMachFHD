@@ -1,3 +1,10 @@
+! debye ~ 8.2e-8
+! time step contraints
+! electro: 3.5e-10
+! mass diff: 5.6e-12
+! advective: 2e-9? (based on max_vel=10)
+
+
 ! WARNING: gfortran has shown some issues reading matrices of rank higher than 2 from namelists
 ! be careful and check values are read correctly (e.g., c_bc)
 
@@ -14,7 +21,7 @@
 
   ! Time-step control
   !----------------------
-  fixed_dt = 1.d-12                  ! time step (if positive, fixed)
+  fixed_dt = 5.d-12                  ! time step (if positive, fixed)
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
