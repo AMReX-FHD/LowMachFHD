@@ -25,9 +25,9 @@
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 1000                 ! maximum number of time steps
-  plot_int = 5                    ! Interval for writing a plotfile (for visit/amrvis)
-  chk_int = 100                   ! Interval for writing a checkpoint
+  max_step = 10000                ! maximum number of time steps
+  plot_int = 50                   ! Interval for writing a plotfile (for visit/amrvis)
+  chk_int = -1                    ! Interval for writing a checkpoint
   prob_type = 2                   ! sets scalars, m, coefficients (see init.f90)
   restart = -1                    ! checkpoint restart number
   print_int = 10                  ! how often to output EOS drift and sum of conserved quantities
