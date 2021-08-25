@@ -25,13 +25,13 @@
 
   n_cells(1:2) = 256 64                       ! number of cells in domain
   max_grid_size(1:2) = 64 64                  ! max number of cells in a box
-  fixed_dt = 1.d-12                           ! time step (if positive, fixed)
+  fixed_dt = 1.25d-12                         ! time step (if positive, fixed)
   max_step = 50000                            ! maximum number of time steps
   plot_int = 500                              ! Interval for writing a plotfile (for visit/amrvis)
 
   n_cells(1:2) = 512 128                      ! number of cells in domain
   max_grid_size(1:2) = 128 128                ! max number of cells in a box
-  fixed_dt = 2.d-13                           ! time step (if positive, fixed)
+  fixed_dt = 3.125d-13                        ! time step (if positive, fixed)
   max_step = 250000                           ! maximum number of time steps
   plot_int = 2500                             ! Interval for writing a plotfile (for visit/amrvis)
 
