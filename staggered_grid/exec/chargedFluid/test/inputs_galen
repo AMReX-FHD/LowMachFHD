@@ -16,17 +16,30 @@
   dim_in = 2                                  ! 2D or 3D  
   prob_lo(1:3) = 0.d0 0.d0 0.d0               ! physical lo coordinate
   prob_hi(1:3) = 2.636d-6 6.59d-7 2.059375d-8 ! physical hi coordinate
+
   n_cells(1:2) = 128 32                       ! number of cells in domain
   max_grid_size(1:2) = 32 32                  ! max number of cells in a box
+  fixed_dt = 5.d-12                           ! time step (if positive, fixed)
+  max_step = 10000                            ! maximum number of time steps
+  plot_int = 100                              ! Interval for writing a plotfile (for visit/amrvis)
+
+  n_cells(1:2) = 256 64                       ! number of cells in domain
+  max_grid_size(1:2) = 64 64                  ! max number of cells in a box
+  fixed_dt = 1.d-12                           ! time step (if positive, fixed)
+  max_step = 50000                            ! maximum number of time steps
+  plot_int = 500                              ! Interval for writing a plotfile (for visit/amrvis)
+
+  n_cells(1:2) = 512 128                      ! number of cells in domain
+  max_grid_size(1:2) = 128 128                ! max number of cells in a box
+  fixed_dt = 2.d-13                           ! time step (if positive, fixed)
+  max_step = 250000                           ! maximum number of time steps
+  plot_int = 2500                             ! Interval for writing a plotfile (for visit/amrvis)
 
   ! Time-step control
   !----------------------
-  fixed_dt = 5.d-12                  ! time step (if positive, fixed)
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 10000                ! maximum number of time steps
-  plot_int = 50                   ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = -1                    ! Interval for writing a checkpoint
   prob_type = 2                   ! sets scalars, m, coefficients (see init.f90)
   restart = -1                    ! checkpoint restart number
@@ -198,7 +211,16 @@
   zero_eps_on_wall_left_end = 0.40d0               ! eg if set to 0.25, then eps will be set to 0 on the wall from 0*Lx --> 0.25*Lx
   zero_eps_on_wall_right_start = 0.60d0            ! eg if set to 0.75, then eps will be set to 0 on the wall from 0.75*Lx --> 1.*Lx
   E_ext_type = 1
+  E_ext_value(1:2) = -1.5d9  0.d0
+  E_ext_value(1:2) = -1.5d10 0.d0
+  E_ext_value(1:2) = -1.5d11 0.d0
+  E_ext_value(1:2) = -7.5d11 0.d0
+  E_ext_value(1:2) = -1.5d12 0.d0
   E_ext_value(1:2) = -2.5d12 0.d0
+  E_ext_value(1:2) = -3.0d12 0.d0
+  E_ext_value(1:2) = -5.0d12 0.d0
+  E_ext_value(1:2) = -1.0d13 0.d0
+  E_ext_value(1:2) = -1.5d13 0.d0
 /
 
 ! Stokes solver for velocity
