@@ -8,7 +8,7 @@
   !----------------------
   dim_in = 2                               ! 2D or 3D  
   prob_lo(1:3) = 0.d0 0.d0 0.d0            ! physical lo coordinate
-  prob_hi(1:3) = 0.75d-7 6d-7 6.d-7     ! physical hi coordinate
+  prob_hi(1:3) = 0.75d-7 6.d-7 6.d-7     ! physical hi coordinate
   n_cells(1:2) = 8 64                     ! number of cells in domain
   max_grid_size(1:2) = 16 16               ! max number of cells in a box
 
@@ -153,6 +153,8 @@
   c_init(1,1:3) = 0.047433 0.051471 1.
   c_init(2,1:3) = 0.047433 0.051471 1.
 
+  c_init(1,1:3) = 0.042328 0.059368 1.
+  c_init(2,1:3) = 0.042328 0.059368 1.
 
   ! Thermodynamic and transport properties:
   !----------------------
@@ -181,8 +183,12 @@
   ! 2 = Neumann (fixed charge density)
   Epot_wall_bc_type(1,2) = 2
   Epot_wall_bc_type(2,2) = 2
-  Epot_wall(1,2) = 32481111173748.42   ! take charge output by code, divide by (eps * 2 * Lx * Ly)
+
+  Epot_wall(1,2) = 32481111173748.42   ! take charge output by code, divide by (eps * 2 * Lx * Lz)
   Epot_wall(2,2) = 32481111173748.42
+
+  Epot_wall(1,2) = 8957158559806.732
+  Epot_wall(2,2) = 8957158559806.732
 
   E_ext_type = 1
   E_ext_value(1:2) = 5.5d13 0.d0
