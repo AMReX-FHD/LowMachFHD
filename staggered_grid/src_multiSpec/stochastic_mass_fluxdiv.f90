@@ -1,4 +1,4 @@
-module stochastic_mass_fluxdiv_module
+ module stochastic_mass_fluxdiv_module
 
   use bl_types
   use bl_space
@@ -17,18 +17,22 @@ module stochastic_mass_fluxdiv_module
   use BoxLibRNGs
   use bl_rng_module
   use probin_common_module, only: k_B, molmass, variance_coef_mass, use_bl_rng, nspecies
-  use probin_multispecies_module, only: correct_flux, is_nonisothermal
+  use probin_multispecies_module, only: correct_flux, is_nonisothermal, additive_noise
 
   implicit none
 
   private
 
   public :: init_mass_stochastic, destroy_mass_stochastic, &
-            stochastic_mass_fluxdiv, fill_mass_stochastic
+            stochastic_mass_fluxdiv, fill_mass_stochastic, &
+            init_additive_sqrtLonsager, destroy_additive_sqrtLonsager, &
+            additive_sqrtLonsager_fc
             
 
   ! stochastic fluxes for mass densities are face-centered
   type(multifab), allocatable, save :: stoch_W_fc(:,:,:)
+
+  type(multifab), allocatable, save :: additive_sqrtLonsager_fc(:,:)
 
   integer, save :: n_rngs ! how many random number stages
   
@@ -82,7 +86,11 @@ contains
     ! compute variance X sqrtLonsager-face X W(0,1) 
     do n=1,nlevs
        do i=1,dm
-          call matvec_mul(mla, stoch_mass_flux(n,i), sqrtLonsager_fc(n,i), nspecies)
+          if (additive_noise) then
+             call matvec_mul(mla, stoch_mass_flux(n,i), additive_sqrtLonsager_fc(n,i), nspecies)
+          else
+             call matvec_mul(mla, stoch_mass_flux(n,i), sqrtLonsager_fc(n,i), nspecies)
+          end if
           call multifab_mult_mult_s(stoch_mass_flux(n,i), variance, 0)
        end do
     end do  
@@ -366,5 +374,45 @@ contains
       end if
 
   end subroutine stoch_mass_bc_3d
+
+  subroutine init_additive_sqrtLonsager(mla)
+
+    type(ml_layout), intent(in   )   :: mla
+
+    ! local
+    integer n,nlevs,i,dm
+
+    nlevs = mla%nlevel
+    dm = mla%dim
+
+    allocate(additive_sqrtLonsager_fc(nlevs,dm))
+
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_build_edge(additive_sqrtLonsager_fc(n,i), mla%la(n), nspecies**2, 0, i)
+       end do
+    end do
+
+  end subroutine init_additive_sqrtLonsager
+
+  subroutine destroy_additive_sqrtLonsager(mla)
+
+    type(ml_layout), intent(in   )   :: mla
+
+    ! local
+    integer n,nlevs,i,dm
+
+    nlevs = mla%nlevel
+    dm = mla%dim
+
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_destroy(additive_sqrtLonsager_fc(n,i))
+       end do
+    end do
+
+    deallocate(additive_sqrtLonsager_fc)
+
+  end subroutine destroy_additive_sqrtLonsager
    
 end module stochastic_mass_fluxdiv_module

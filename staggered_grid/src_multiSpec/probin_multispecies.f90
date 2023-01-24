@@ -26,6 +26,7 @@ module probin_multispecies_module
   integer            :: midpoint_stoch_mass_flux_type
   integer            :: avg_type
   integer            :: mixture_type
+  logical            :: additive_noise
 
   real(kind=dp_t)    :: rhotot_bc(3,2)              ! used for boussinesq algorithm - not part of namelist
                                                     ! code sets this in src_lowMach/define_bc_tower.f90
@@ -81,6 +82,8 @@ module probin_multispecies_module
                                               ! See compute_mixture_properties.f90 for values supported at present
                                               ! The default mixture_type=0 means no dependence on composition
 
+  namelist /probin_multispecies/ additive_noise ! additive or multiplicative noise
+
 contains
 
   subroutine probin_multispecies_init()
@@ -126,6 +129,7 @@ contains
     midpoint_stoch_mass_flux_type = 1
     avg_type           = 1
     mixture_type       = 0
+    additive_noise     = .false.
  
     ! read from input file 
     need_inputs = .true.
@@ -267,6 +271,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) mixture_type
+
+       case ('--additive_noise')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) additive_noise
 
        case ('--')
           farg = farg + 1

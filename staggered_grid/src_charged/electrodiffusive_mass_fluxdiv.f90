@@ -32,7 +32,7 @@ contains
   subroutine electrodiffusive_mass_fluxdiv(mla,rho,Temp,rhoWchi, &
                                            diff_mass_flux,diff_mass_fluxdiv, &
                                            stoch_mass_flux, &
-                                           dx,the_bc_tower,charge, &
+                                           dx,stage_time,the_bc_tower,charge, &
                                            grad_Epot,Epot,permittivity,dt, &
                                            zero_initial_Epot)
 
@@ -47,6 +47,7 @@ contains
     type(multifab) , intent(inout)  :: diff_mass_fluxdiv(:)
     type(multifab) , intent(in   )  :: stoch_mass_flux(:,:)
     real(kind=dp_t), intent(in   )  :: dx(:,:)
+    real(kind=dp_t), intent(in   )  :: stage_time 
     type(bc_tower) , intent(in   )  :: the_bc_tower
     type(multifab) , intent(inout)  :: charge(:)
     type(multifab) , intent(inout)  :: grad_Epot(:,:)
@@ -80,7 +81,7 @@ contains
     ! compute the face-centered electro_mass_flux (each direction: cells+1 faces while 
     ! cells contain interior+2 ghost cells) 
     call electrodiffusive_mass_flux(mla,rho,Temp,rhoWchi,electro_mass_flux, &
-                                    diff_mass_flux,stoch_mass_flux,dx,the_bc_tower, &
+                                    diff_mass_flux,stoch_mass_flux,dx,stage_time,the_bc_tower, &
                                     charge,grad_Epot,Epot,permittivity,dt,zero_initial_Epot)
 
     ! add fluxes to diff_mass_flux
@@ -107,7 +108,7 @@ contains
  
   subroutine electrodiffusive_mass_flux(mla,rho,Temp,rhoWchi,electro_mass_flux, &
                                         diff_mass_flux,stoch_mass_flux, &
-                                        dx,the_bc_tower,charge,grad_Epot,Epot, &
+                                        dx,stage_time,the_bc_tower,charge,grad_Epot,Epot, &
                                         permittivity,dt,zero_initial_Epot)
 
     ! this computes "-F = A_Phi grad Phi"
@@ -120,6 +121,7 @@ contains
     type(multifab) , intent(in   ) ::    diff_mass_flux(:,:)
     type(multifab) , intent(in   ) ::   stoch_mass_flux(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
+    real(kind=dp_t), intent(in   ) :: stage_time 
     type(bc_tower) , intent(in   ) :: the_bc_tower
     type(multifab) , intent(inout) :: charge(:)
     type(multifab) , intent(inout) :: grad_Epot(:,:)
@@ -212,7 +214,7 @@ contains
 
        ! fill ghost cells for Epot at walls using Dirichlet value
        call multifab_physbc(Epot(n),1,Epot_bc_comp,1,the_bc_tower%bc_tower_array(n), &
-                            dx_in=dx(n,:))
+                            time_in = stage_time, dx_in=dx(n,:))
 
        ! set alpha=0
        call setval(alpha(n),0.d0,all=.true.)
@@ -361,7 +363,7 @@ contains
     if (E_ext_type .ne. 0) then
 
        ! compute external electric field on edges
-       call compute_E_ext(mla,E_ext)
+       call compute_E_ext(mla,E_ext,stage_time,dt)
 
        ! compute epsilon*E_ext
        do n=1,nlevs
@@ -448,7 +450,7 @@ contains
        ! homogeneous BC's, this routine will properly fill the ghost cells
        do n=1,nlevs
           call multifab_physbc(Epot(n),1,Epot_bc_comp,1,the_bc_tower%bc_tower_array(n), &
-                               dx_in=dx(n,:))
+                               time_in=stage_time, dx_in=dx(n,:))
           call multifab_fill_boundary(Epot(n))
        end do
 
