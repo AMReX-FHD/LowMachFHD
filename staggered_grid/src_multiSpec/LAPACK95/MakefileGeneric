@@ -17,6 +17,7 @@ YY = $(FC) $(OPTS0) -o $@ $(MODLIB) $@.$(SUF) $(OPTLIB) $(LIBS)
 .SUFFIXES: .f90 .f .o
 
 .$(SUF).o: 
+	$(FC) -v 2>&1 | grep "gcc version"
 	$(FC) $(OPTS3) $<
 
 

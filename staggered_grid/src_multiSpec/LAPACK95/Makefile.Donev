@@ -19,5 +19,4 @@ LAPACK95 = lapack95.a
 LAPACK77 = $(LAPACK_PATH)/liblapack.a
 BLAS     = $(LAPACK_PATH)/libblas64.a
 
-
 include $(SRC_LAPACK)/MakefileGeneric
