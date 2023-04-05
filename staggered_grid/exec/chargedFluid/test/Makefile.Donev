@@ -68,12 +68,14 @@ VPATH_LOCATIONS += $(FBOXLIB_HOME)/Src/MultiGrid/
 # $(MKLROOT)/lib/intel64/libmkl_lapack95_lp64.a 
 
 ifeq ($(findstring cims.nyu.edu, $(HOSTNAME)), cims.nyu.edu)
+   # Use Intel's LAPACK/BLAS on CIMS to avoid old gcc versions in the mix
    # Make sure to "source /opt/pkg/intel/oneapi/setvars.sh" for ifort (module load intel-oneapi)
    MKLHOME=/opt/pkg/intel/oneapi/mkl/latest
 else ifeq ($(findstring pop-os, $(HOSTNAME)), pop-os) 
    # ubuntu system76 pop-os   
    # Make sure to "source /home/donev/intel/oneapi/setvars.sh" for ifort
-   MKLHOME=/home/donev/intel/oneapi/mkl/latest
+   # If you have MKL installed and want to use it, uncomment this
+   #MKLHOME=/home/donev/intel/oneapi/mkl/latest
 endif
 
 ifeq ($(findstring gfortran, $(FC)), gfortran)
@@ -81,8 +83,12 @@ ifeq ($(findstring gfortran, $(FC)), gfortran)
    # Use instead the Intel MPI library
    # libraries += -llapack -lblas
    # Use the single-library dynamic interface of Intel meant for GNU compiler:
-   libraries += $(MKLHOME)/lib/intel64/libmkl_rt.so      
-   MKL_INTERFACE_LAYER=MKL_INTERFACE_LP64+MKL_INTERFACE_GNU
+   ifdef MKLHOME
+      libraries += $(MKLHOME)/lib/intel64/libmkl_rt.so      
+      MKL_INTERFACE_LAYER=MKL_INTERFACE_LP64+MKL_INTERFACE_GNU
+   else
+      libraries += -llapack -lblas
+   endif   
 else ifeq ($(findstring ifort, $(FC)), ifort)
    # The Intel compiler mkl flag should do everything on its own, including linking:
    F90FLAGS += -qmkl
