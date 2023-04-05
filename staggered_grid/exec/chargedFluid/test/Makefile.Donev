@@ -10,7 +10,7 @@ STAGGERED_HOME := ../../..
 # Important: Choose compilers (gfortran or ifort)
 
 NDEBUG    := t
-MPI       := t
+MPI       := 
 OMP       :=
 PROF      :=
 COMP      := gfortran
