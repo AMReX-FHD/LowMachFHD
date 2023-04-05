@@ -6,7 +6,7 @@ vpath %.f90 $(SRC_LAPACK)
 FC       = gfortran -ffree-form
 FC1      = gfortran -ffixed-form
 
-OPTS0    = -O3
+OPTS0    = -O3 -fPIC
 #MODLIB   = -I./lapack95_modules
 OPTS1    = -c $(OPTS0)
 OPTS3    = $(OPTS1) $(MODLIB)

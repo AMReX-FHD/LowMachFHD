@@ -49,16 +49,37 @@ VPATH_LOCATIONS += $(FBOXLIB_HOME)/Src/BaseLib
 include $(FBOXLIB_HOME)/Src/MultiGrid/GPackage.mak
 VPATH_LOCATIONS += $(FBOXLIB_HOME)/Src/MultiGrid/
 
+# Because module files are not portable, unless we use Intel for everything,
+# it is best to recompile LAPACK
 LAPACK95_DIR = $(STAGGERED_HOME)/src_multiSpec/LAPACK95
-
 F90FLAGS += -I$(LAPACK95_DIR)/lapack95_modules
-ifeq ($(findstring edison, $(HOST)), edison)
-  libraries += $(LAPACK95_DIR)/lapack95.a
-else ifeq ($(findstring cori, $(HOST)), cori)
-  libraries += $(LAPACK95_DIR)/lapack95.a
-else
-  libraries += $(LAPACK95_DIR)/lapack95.a -llapack -lblas
-endif
+
+# Linking lapack and blas, either default ones or Intel ones
+# Intel OneAPI is assumed to be installed, which it is on both CIMS and donevm laptop
+#ifeq ($(findstring cims.nyu.edu, $(HOSTNAME)), cims.nyu.edu)
+   # Make sure to "source /opt/pkg/intel/oneapi/setvars.sh" for ifort 
+   ifeq ($(findstring gfortran, $(FC)), gfortran)
+      libraries += $(LAPACK95_DIR)/liblapack95.a -llapack -lblas
+      # Use the single-library dynamic interface of Intel meant for GNU compiler
+      MKL_INTERFACE_LAYER=MKL_INTERFACE_LP64+MKL_INTERFACE_GNU
+      # This does not work though for LAPACK95 due to module versions:
+      #libraries += $(LAPACK95_DIR)/lapack95.a $(ONEAPI_ROOT)/mkl/latest/lib/intel64/libmkl_rt.so      
+   else ($(findstring ifort, $(FC)), ifort)
+      # Link in Intel MKL libs if available
+      # Best is to just link this dynamic "use all of MKL" shared library
+      # /opt/pkg/intel/oneapi/mkl/latest/lib/intel64/libmkl_rt.so
+      # If you want static then link in
+      # $(MKLROOT)/mkl/latest/lib/intel64/libmkl_blas95_lp64.a
+      # $(MKLROOT)/latest/lib/intel64/libmkl_lapack95_lp64.a 
+      # The Intel compiler mkl flag should do everything on its own, including linking:
+      MKL_INTERFACE_LAYER=MKL_INTERFACE_LP64
+      F90FLAGS += -mkl
+   else
+      libraries += -L$(LAPACK95_DIR) -llapack95 -llapack -lblas     
+   endif
+#else ($(findstring pop-os, $(HOSTNAME)), pop-os) # system76 laptop   
+   # Make sure to "source /home/donev/intel/oneapi/setvars.sh" for ifort 
+#endif
 
 main.$(suf).exe: $(objects) 
 	$(LINK.f90) -o main.$(suf).exe $(objects) $(libraries)
