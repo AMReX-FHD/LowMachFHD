@@ -208,7 +208,7 @@ contains
     ! c1,c2,c3,u
     if (prob_type.eq.17) then 
        if (nspecies.ne.3) then 
-          call bl_error("Only nspecies = 3 is currently supported for prob_type 17")
+          call bl_error("Only nspecies = 3 is currently supported for prob_type=17")
        endif 
        open(unit=34,file="c1_1d_vals.txt")
        open(unit=35,file="c2_1d_vals.txt")
@@ -224,7 +224,12 @@ contains
        close(35)
        close(36)
        close(37)
-    end if     
+    else
+       c1_1d_arr=0.0d0   
+       c2_1d_arr=0.0d0   
+       c3_1d_arr=0.0d0   
+       u_1d_arr=0.0d0
+    end if
 
     ! looping over boxes 
     do n=1,nlevs

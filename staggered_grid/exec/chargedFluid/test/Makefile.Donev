@@ -10,14 +10,14 @@ STAGGERED_HOME := ../../..
 # Important: Choose compilers (gfortran or ifort)
 
 NDEBUG    := t
-MPI       := t
+MPI       := 
 OMP       :=
 PROF      :=
 COMP      := gfortran
 CCOMP     := gcc
 MKVERBOSE := t
 
-# For Intel compiler:
+# For Intel compiler (requires ifx+icc as of version 2023)
 COMP      := Intel
 CCOMP     := icc
 
