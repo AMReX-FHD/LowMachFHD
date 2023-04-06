@@ -18,8 +18,8 @@ CCOMP     := gcc
 MKVERBOSE := t
 
 # For Intel compiler:
-#COMP      := Intel
-#CCOMP     := icc
+COMP      := Intel
+CCOMP     := icc
 
 # need this to compile bl_rng.f90 (module to store random number engines and distributions)
 CXX11 = t
