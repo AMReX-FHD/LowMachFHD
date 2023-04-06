@@ -15,7 +15,7 @@
   ! Here dx=dy=h, and n_cells=[Nx, Ny]
   n_cells(1:2) = 4 128                        ! number of cells in domain
   max_grid_size(1:2) = 4 128                  ! max number of cells in a box (parallelization)
-  !max_grid_size(1:2) = 4 32                  ! Parallelize into 4 boxes = 128/32
+  max_grid_size(1:2) = 4 32                  ! Parallelize into 4 boxes = 128/32
 
   ! Grid size and time-step control
   !----------------------
