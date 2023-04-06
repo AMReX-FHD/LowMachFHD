@@ -75,7 +75,7 @@ ifeq ($(findstring cims.nyu.edu, $(HOSTNAME)), cims.nyu.edu)
 else ifeq ($(findstring pop-os, $(HOSTNAME)), pop-os) 
    # ubuntu system76 pop-os   
    # Make sure to "source /home/donev/intel/oneapi/setvars.sh" for ifort
-   #MKLROOT=/home/donev/intel/oneapi/mkl/latest
+   # MKLROOT=/home/donev/intel/oneapi/mkl/latest
 endif
 
 ifeq ($(findstring gfortran, $(FC)), gfortran)
@@ -88,7 +88,7 @@ ifeq ($(findstring gfortran, $(FC)), gfortran)
    else
       libraries += -llapack -lblas
    endif   
-else ifeq ($(findstring ifort, $(FC)), ifort)
+else ifeq ($(findstring if, $(FC)), if) # ifx or ifort (Intel)
    # The Intel compiler mkl flag should do everything on its own, including linking:
    F90FLAGS += -qmkl
    MKL_INTERFACE_LAYER=MKL_INTERFACE_LP64
