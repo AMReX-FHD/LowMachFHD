@@ -141,6 +141,7 @@ subroutine main_driver()
 
   ! misc
   real(kind=dp_t) :: max_charge, max_charge_abs, debye_len, sum_of_boundary_lens, delta_x
+  logical :: compute_and_save
 
   ! DONEV FIXME
   real(kind=dp_t) :: rho_temp, w_temp(1:5), w_mol(1:3)
@@ -1059,7 +1060,7 @@ subroutine main_driver()
   ! Begin time stepping loop
   !=======================================================
 
-  do istep=init_step,max_step
+  TimeLoop: do istep=init_step,max_step
 
      if (fixed_dt .le. 0.d0) then
         call estdt(mla,umac,dx,dt)
@@ -1070,8 +1071,10 @@ subroutine main_driver()
      end if
 
      if (parallel_IOProcessor()) then
-        if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
-             print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
+        if ( print_int .gt. 0 ) then
+           if (mod(istep,print_int) .eq. 0) &
+              print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
+        end if     
      end if
 
      runtime1 = parallel_wtime()
@@ -1203,6 +1206,7 @@ subroutine main_driver()
      if (reset_averages) then
 
         ! reset averages every n_steps_skip+1
+        if(n_steps_skip>0) then
         if (mod(istep,n_steps_skip) .eq. 1) then
            do n=1,nlevs
               call setval(rho_sum(n),0.d0)
@@ -1220,11 +1224,14 @@ subroutine main_driver()
               end do
            end do
         end if
+        end if
 
+        if(n_steps_skip>0) then 
         if (mod(istep,n_steps_skip) .eq. 0) then
            num_avg_snapshots = n_steps_skip
         else
            num_avg_snapshots = mod(istep,n_steps_skip)
+        end if
         end if
         
      else
@@ -1280,20 +1287,26 @@ subroutine main_driver()
 
      time = time + dt
 
-     if (parallel_IOProcessor()) then
-        if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
-             print*,"End Advance; istep =",istep,"DT =",dt,"TIME =",time
+     if (parallel_IOProcessor() .and. (print_int .gt. 0) ) then
+        if ( mod(istep,print_int) .eq. 0) &
+           print*,"End Advance; istep =",istep,"DT =",dt,"TIME =",time    
      end if
 
      runtime2 = parallel_wtime() - runtime1
      call parallel_reduce(runtime1, runtime2, MPI_MAX, proc=parallel_IOProcessorNode())
-     if (parallel_IOProcessor()) then
-        if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
+     if (parallel_IOProcessor() .and. (print_int .gt. 0) ) then
+        if ( mod(istep,print_int) .eq. 0 ) &
              print*,'Time to advance timestep: ',runtime1,' seconds'
      end if
 
-     if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) .or. &
-          (istep .eq. max_step) ) then
+     ! Compute conserved quantities periodically:
+     compute_and_save = .false.
+     if (istep .eq. max_step) compute_and_save = .true.
+     if ( (print_int .gt. 0) ) then
+        if ( (mod(istep,print_int) .eq. 0) ) compute_and_save = .true.
+     end if     
+     if(compute_and_save) then   
+     
         if (parallel_IOProcessor()) write(*,*) "After time step ", istep, " t=", time
         call sum_mass(rho_new, istep) ! print out the total mass to check conservation
         ! compute rhotot on faces
@@ -1321,12 +1334,16 @@ subroutine main_driver()
               endif
            end if
         end if
-
-
      end if
 
      ! write plotfile at specific intervals
-     if (plot_int.gt.0 .and. ( (mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) ) then
+     compute_and_save = .false.
+     if (istep .eq. max_step) compute_and_save = .true.
+     if ( (plot_int .gt. 0) ) then
+        if ( (mod(istep,plot_int) .eq. 0) ) compute_and_save = .true.
+     end if     
+     if(compute_and_save) then   
+
         if (parallel_IOProcessor()) then
            write(*,*) 'writing plotfiles after timestep =', istep 
         end if
@@ -1335,7 +1352,8 @@ subroutine main_driver()
      end if
 
      ! write checkpoint at specific intervals
-     if ((chk_int.gt.0 .and. mod(istep,chk_int).eq.0)) then
+     if ( chk_int.gt.0 ) then
+     if ( mod(istep,chk_int).eq.0 ) then
 
         if (parallel_IOProcessor()) then
            write(*,*) 'writing checkpoint after timestep =', istep 
@@ -1343,10 +1361,11 @@ subroutine main_driver()
         call checkpoint_write(mla,rho_new,rho_sum,rhotot_new,pi,umac,umac_sum,mass_fluxes,mass_fluxes_sum, &
                               Epot,Epot_sum,grad_Epot_new,time,dt,istep)
      end if
+     end if
 
      ! print out projection (average) and variance
-     if ( (stats_int > 0) .and. &
-          (mod(istep,stats_int) .eq. 0) ) then
+     if ( stats_int > 0 ) then
+     if ( mod(istep,stats_int) .eq. 0 ) then
 
         if (stat_save_type.eq.0) then  ! compute vertical/horizontal averages of instantaneous fields
            if (use_charged_fluid) then 
@@ -1372,12 +1391,13 @@ subroutine main_driver()
         end if  
         
      end if
+     end if
 
      if (istep .ge. n_steps_skip) then
 
         ! Add this snapshot to the average in HydroGrid
-        if ( (hydro_grid_int > 0) .and. &
-             ( mod(istep,hydro_grid_int) .eq. 0 ) ) then
+        if ( hydro_grid_int > 0 ) then
+        if ( mod(istep,hydro_grid_int) .eq. 0 ) then
            if (use_charged_fluid) then
               call analyze_hydro_grid(mla,dt,dx,istep,umac=umac,rho=rho_new,temperature=Temp, &
                                       scalars=Epot)
@@ -1385,11 +1405,12 @@ subroutine main_driver()
               call analyze_hydro_grid(mla,dt,dx,istep,umac=umac,rho=rho_new,temperature=Temp)
            end if
         end if
+        end if
 
-        if ( (hydro_grid_int > 0) .and. &
-             (n_steps_save_stats > 0) .and. &
-             ( mod(istep,n_steps_save_stats) .eq. 0 ) ) then
+        if ( (hydro_grid_int > 0) .and. (n_steps_save_stats > 0) ) then
+        if ( mod(istep,n_steps_save_stats) .eq. 0 ) then
            call save_hydro_grid(id=istep/n_steps_save_stats, step=istep)            
+        end if
         end if
 
      end if
@@ -1410,7 +1431,7 @@ subroutine main_driver()
         end do
      end if
 
-  end do
+  end do TimeLoop
 
   !=======================================================
   ! Destroy multifabs and layouts
