@@ -11,7 +11,7 @@ module checkpoint_module
   use fabio_module
   use probin_common_module, only: dim_in, use_bl_rng, nspecies, &
                                   seed_diffusion, seed_momentum, seed_reaction, &
-                                  check_base_name
+                                  check_base_name, advection_type
   use probin_chemistry_module, only: nreactions
   use probin_charged_module, only: use_charged_fluid
 
@@ -22,7 +22,8 @@ module checkpoint_module
   public :: checkpoint_write, checkpoint_read
 
 contains
-  subroutine checkpoint_write(mla,rho,rho_sum,rhotot,pi,umac,umac_sum,Epot,Epot_sum,grad_Epot,time,dt,istep_to_write) 
+  subroutine checkpoint_write(mla,rho,rho_sum,rhotot,pi,umac,umac_sum,mass_fluxes,mass_fluxes_sum, &
+                              Epot,Epot_sum,grad_Epot,time,dt,istep_to_write) 
     
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:)                ! cell-centered partial densities
@@ -34,6 +35,8 @@ contains
     type(multifab) , intent(in   ) :: grad_Epot(:,:)        ! edge-based electric force 
     type(multifab) , intent(in   ) :: umac(:,:)             ! edge-based velocities
     type(multifab) , intent(in   ) :: umac_sum(:,:)         ! edge-based sum of velocities
+    type(multifab) , intent(in   ) :: mass_fluxes(:,:)         ! edge-based mass fluxes of each species 
+    type(multifab) , intent(in   ) :: mass_fluxes_sum(:,:)      ! edge-based sum of mass fluxes of each species
     integer        , intent(in   ) :: istep_to_write
     real(kind=dp_t), intent(in   ) :: time,dt
 
@@ -116,20 +119,47 @@ contains
 
 
     ! staggered quantities (normal velocity)
+    ! only write the mass fluxes if advection type = 0 
     do n=1,nlevs
        do i=1,dm
           if (use_charged_fluid) then
-             call multifab_build_edge(chkdata_edge(n,i),mla%la(n),3,0,i)
-             call multifab_copy_c(chkdata_edge(n,i),1,umac(n,i),1,1)
-             call multifab_copy_c(chkdata_edge(n,i),2,umac_sum(n,i),1,1)  
-             call multifab_copy_c(chkdata_edge(n,i),3,grad_Epot(n,i),1,1) 
+             if (advection_type.eq.0) then 
+                ! <quantity>         <num comps>
+                ! umac               1
+                ! umac_sum           1
+                ! mass_fluxes        nspecies+1   <--mass fluxes contain a comp for each species flux, plus one comp for their sum
+                ! mass_fluxes_sum    nspecies+1
+                ! grad_Epot          1
+                call multifab_build_edge(chkdata_edge(n,i),mla%la(n),(nspecies+1)*2+3,0,i)
+                call multifab_copy_c(chkdata_edge(n,i),1,umac(n,i),1,1)
+                call multifab_copy_c(chkdata_edge(n,i),2,umac_sum(n,i),1,1)  
+                !call multifab_copy_c(chkdata_edge(n,i),3,mass_fluxes(n,i),nspecies+1,1)  
+                call multifab_copy_c(chkdata_edge(n,i),3,mass_fluxes(n,i),1,nspecies+1)  
+                call multifab_copy_c(chkdata_edge(n,i),(nspecies+1)+3,mass_fluxes_sum(n,i),1,nspecies+1)
+                call multifab_copy_c(chkdata_edge(n,i),2*(nspecies+1)+3,grad_Epot(n,i),1,1) 
+
+             else
+                call multifab_build_edge(chkdata_edge(n,i),mla%la(n),3,0,i)
+                call multifab_copy_c(chkdata_edge(n,i),1,umac(n,i),1,1)
+                call multifab_copy_c(chkdata_edge(n,i),2,umac_sum(n,i),1,1)  
+                call multifab_copy_c(chkdata_edge(n,i),3,grad_Epot(n,i),1,1) 
+             endif 
           else
-             call multifab_build_edge(chkdata_edge(n,i),mla%la(n),2,0,i)
-             call multifab_copy_c(chkdata_edge(n,i),1,umac(n,i),1,1)
-             call multifab_copy_c(chkdata_edge(n,i),2,umac_sum(n,i),1,1)  
+             if (advection_type.eq.0) then 
+                call multifab_build_edge(chkdata_edge(n,i),mla%la(n),(nspecies+1)*2+2,0,i)
+                call multifab_copy_c(chkdata_edge(n,i),1,umac(n,i),1,1)
+                call multifab_copy_c(chkdata_edge(n,i),2,umac_sum(n,i),1,1)  
+                call multifab_copy_c(chkdata_edge(n,i),3,mass_fluxes(n,i),1,nspecies+1)  
+                call multifab_copy_c(chkdata_edge(n,i),(nspecies+1)+3,mass_fluxes_sum(n,i),1,nspecies+1)
+             else
+                call multifab_build_edge(chkdata_edge(n,i),mla%la(n),2,0,i)
+                call multifab_copy_c(chkdata_edge(n,i),1,umac(n,i),1,1)
+                call multifab_copy_c(chkdata_edge(n,i),2,umac_sum(n,i),1,1)  
+             endif
           endif
        end do
     end do
+
 
     write(unit=check_index,fmt='(i8.8)') istep_to_write
     sd_name = trim(check_base_name) // check_index

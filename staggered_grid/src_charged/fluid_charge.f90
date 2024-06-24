@@ -6,6 +6,7 @@ module fluid_charge_module
   use div_and_grad_module
   use define_bc_module
   use bc_module
+  use inhomogeneous_bc_val_module
   use mass_flux_utilities_module
   use matvec_mul_module
   use compute_mixture_properties_module
@@ -15,7 +16,7 @@ module fluid_charge_module
   use probin_charged_module, only: charge_per_mass, dpdt_factor, &
                                    dielectric_const, dielectric_type, &
                                    E_ext_type, E_ext_value, zero_eps_on_wall_type, &
-                                   zero_eps_on_wall_left_end, zero_eps_on_wall_right_start
+                                   zero_eps_on_wall_left_end, zero_eps_on_wall_right_start,ac_iceo
 
   implicit none
 
@@ -959,10 +960,11 @@ contains
 
   end subroutine compute_Lorentz_force
 
-  subroutine compute_E_ext(mla,E_ext)
+  subroutine compute_E_ext(mla,E_ext,time,dt)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: E_ext(:,:)
+    real(kind=dp_t), intent(in   ) :: time,dt
 
     integer :: n, nlevs, dm, i
 
@@ -973,7 +975,13 @@ contains
 
        do n=1,nlevs
           do i=1,dm
-             call multifab_setval(E_ext(n,i),E_ext_value(i),all=.true.)
+             ! if we're doing alternating current iceo, the applied external electric field 
+             ! oscillates in time with amplitude = E_ext_value(i)
+             if (ac_iceo.and.(i.eq.1)) then
+                call multifab_setval(E_ext(n,i), alternating_current_efield(time),all=.true.)
+             else
+                call multifab_setval(E_ext(n,i),E_ext_value(i),all=.true.)
+             endif 
           end do
        end do
 

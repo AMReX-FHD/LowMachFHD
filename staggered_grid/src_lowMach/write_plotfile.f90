@@ -9,17 +9,18 @@ module write_plotfile_module
   use eos_check_module
   use probin_multispecies_module, only: plot_stag, is_nonisothermal
   use probin_common_module, only: prob_lo, prob_hi, nspecies, plot_base_name, &
-                                  algorithm_type, rho0, plot_umac_tavg, plot_Epot_tavg, &
-                                  plot_rho_tavg, plot_avg_gradPhiApprox, plot_shifted_vel, &
-                                  plot_gradEpot, plot_averaged_vel, plot_debug
+                                  algorithm_type, advection_type, rho0, plot_umac_tavg, plot_Epot_tavg, &
+                                  plot_rho_tavg, plot_avg_gradPhiApprox, plot_shifted_vel, plot_mass_fluxes, &
+                                  plot_mass_fluxes_tavg, plot_gradEpot, plot_averaged_vel, plot_debug, &
+                                  plot_charge_fluxes, plot_charge_fluxes_tavg
   use probin_charged_module, only: use_charged_fluid, electroneutral
 
   implicit none
 
 contains
   
-  subroutine write_plotfile(mla,rho,rho_avg,rhotot,Temp,umac,umac_avg,pres,Epot,Epot_avg, &  
-                              grad_Epot,gradPhiApprox,istep,dx,time)
+  subroutine write_plotfile(mla,rho,rho_avg,rhotot,Temp,umac,umac_avg,pres,mass_fluxes,mass_fluxes_avg,Epot,Epot_avg, &  
+                              grad_Epot,gradPhiApprox,charge_fluxes,charge_fluxes_avg,istep,dx,time)
 
     type(ml_layout),    intent(in)    :: mla
     type(multifab),     intent(inout) :: rho(:)
@@ -29,10 +30,14 @@ contains
     type(multifab),     intent(in)    :: umac(:,:)
     type(multifab),     intent(in)    :: umac_avg(:,:)
     type(multifab),     intent(in)    :: pres(:)
+    type(multifab),     intent(in)    :: mass_fluxes(:,:)
+    type(multifab),     intent(in)    :: mass_fluxes_avg(:,:)
     type(multifab),     intent(in)    :: Epot(:)
     type(multifab),     intent(in)    :: Epot_avg(:)
     type(multifab),     intent(in)    :: grad_Epot(:,:)
     type(multifab),     intent(in)    :: gradPhiApprox(:,:)
+    type(multifab),     intent(in)    :: charge_fluxes(:,:)
+    type(multifab),     intent(in)    :: charge_fluxes_avg(:,:)
     integer,            intent(in)    :: istep
     real(kind=dp_t),    intent(in)    :: dx(:,:),time
 
@@ -73,6 +78,8 @@ contains
     ! umac_avg averaged    :dm (optional)
     ! umac_avg shifted     :dm (optional)
     ! pressure             :1 (pressure)
+    ! mass_fluxes          :(nspecies+1)*dm (optional, default off)
+    ! mass_fluxes_avg      :(nspecies+1)*dm (optional, time-averaged mass fluxes, default off)
 
     ! rho_i and pressure
     nvarsCC = nspecies + 1
@@ -89,13 +96,21 @@ contains
     if (is_nonisothermal) then
        nvarsCC = nvarsCC + 1
     end if
+    ! cc velocity
     if (plot_averaged_vel) then
        nvarsCC = nvarsCC + dm
     end if
+    ! shifted velocity
     if (plot_shifted_vel) then
        nvarsCC = nvarsCC + dm
     end if
-    ! time-averaged rho
+    ! mass fluxes--for each individual species this is a vector of dimension dm, plus one vector
+    ! for the total flux (each individual contribution summed up). This quantity only makes sense
+    ! advection_type = 0
+    if (plot_mass_fluxes.and.(advection_type.eq.0)) then 
+       nvarsCC = nvarsCC + (nspecies+1)*dm
+    endif
+    ! time-averaged rho 
     if (plot_rho_tavg) then
        nvarsCC = nvarsCC + nspecies
     end if
@@ -108,6 +123,12 @@ contains
           nvarsCC = nvarsCC + dm
        end if
     end if
+    ! time-averaged mass fluxes--for each individual species this is a vector of dimension dm, plus one vector
+    ! for the total flux (each individual contribution summed up). This quantity only makes sense
+    ! advection_type = 0
+    if (plot_mass_fluxes_tavg.and.(advection_type.eq.0)) then 
+       nvarsCC = nvarsCC + (nspecies+1)*dm
+    endif
 
     if (use_charged_fluid) then
        ! charge                   :1 (don't write for electroneutral unless plot_debug=T)
@@ -115,6 +136,8 @@ contains
        ! Epot_avg                 :1  (optional)
        ! grad_Epot averaged       :dm (optional)
        ! gradPhiApprox averaged   :dm (optional)
+       ! charge_fluxes            :(nspecies+1)*dm
+       ! tavg_charge_fluxes       :(nspecies+1)*dm
 
        ! charge
        if (.not. (electroneutral .and. (.not. plot_debug))) then
@@ -134,6 +157,17 @@ contains
        if (plot_avg_gradPhiApprox) then
           nvarsCC = nvarsCC + dm
        end if
+       ! charge fluxes--for each individual species this is a vector of dimension dm, plus one vector
+       ! for the total flux (each individual contribution summed up). This quantity only makes sense
+       ! advection_type = 0
+       if (plot_charge_fluxes.and.(advection_type.eq.0)) then
+          nvarsCC = nvarsCC + (nspecies+1)*dm
+       endif
+       ! time-averaged charge fluxes
+       ! only makes sense for advection_type = 0
+       if (plot_charge_fluxes_tavg.and.(advection_type.eq.0)) then
+          nvarsCC = nvarsCC + (nspecies+1)*dm
+       endif
     end if
 
     if (boussinesq) then ! Boussinesq
@@ -220,6 +254,56 @@ contains
     plot_names(counter) = "pres"
     counter = counter + 1
 
+    ! mass fluxes
+    if (plot_mass_fluxes.and.(advection_type.eq.0)) then 
+       ! for each species
+       do n=1,nspecies
+          write(plot_names(counter),'(a,i0)') "mass_flx_x_", n
+          counter = counter + 1
+       enddo
+       plot_names(counter) = "tot_mass_flx_x"
+       counter = counter + 1
+       do n=1,nspecies
+          write(plot_names(counter),'(a,i0)') "mass_flx_y_", n
+          counter = counter + 1
+       enddo
+       plot_names(counter) = "tot_mass_flx_y"
+       counter = counter + 1
+       if (dm > 2) then
+          do n=1,nspecies
+             write(plot_names(counter),'(a,i0)') "mass_flx_z_", n
+             counter = counter + 1
+          enddo
+          plot_names(counter) = "tot_mass_flx_z"
+          counter = counter + 1
+       endif
+    endif
+ 
+    ! time-averaged mass fluxes
+    if (plot_mass_fluxes_tavg.and.(advection_type.eq.0)) then 
+       ! for each species
+       do n=1,nspecies
+          write(plot_names(counter),'(a,i0)') "tavg_mass_flx_x_", n
+          counter = counter + 1
+       enddo
+       plot_names(counter) = "tavg_tot_mass_flx_x"
+       counter = counter + 1
+       do n=1,nspecies
+          write(plot_names(counter),'(a,i0)') "tavg_mass_flx_y_", n
+          counter = counter + 1
+       enddo
+       plot_names(counter) = "tavg_tot_mass_flx_y"
+       counter = counter + 1
+       if (dm > 2) then
+          do n=1,nspecies
+             write(plot_names(counter),'(a,i0)') "tavg_mass_flx_z_", n
+             counter = counter + 1
+          enddo
+          plot_names(counter) = "tavg_tot_mass_flx_z"
+          counter = counter + 1
+       endif
+    endif
+
     if (use_charged_fluid) then
        if (.not. (electroneutral .and. (.not. plot_debug))) then
           plot_names(counter) = "charge_density"
@@ -255,6 +339,54 @@ contains
              counter = counter + 1
           end if
        end if
+
+       if (plot_charge_fluxes.and.(advection_type.eq.0)) then 
+          ! for each species
+          do n=1,nspecies
+             write(plot_names(counter),'(a,i0)') "chrg_flx_x_", n
+             counter = counter + 1
+          enddo
+          plot_names(counter) = "tot_chrg_flx_x"
+          counter = counter + 1
+          do n=1,nspecies
+             write(plot_names(counter),'(a,i0)') "chrg_flx_y_", n
+             counter = counter + 1
+          enddo
+          plot_names(counter) = "tot_chrg_flx_y"
+          counter = counter + 1
+          if (dm > 2) then
+             do n=1,nspecies
+                write(plot_names(counter),'(a,i0)') "chrg_flx_z_", n
+                counter = counter + 1
+             enddo
+             plot_names(counter) = "tot_chrg_flx_z"
+             counter = counter + 1
+          endif
+       endif
+
+       if (plot_charge_fluxes_tavg.and.(advection_type.eq.0)) then 
+          ! for each species
+          do n=1,nspecies
+             write(plot_names(counter),'(a,i0)') "tavg_chrg_flx_x_", n
+             counter = counter + 1
+          enddo
+          plot_names(counter) = "tavg_tot_chrg_flx_x"
+          counter = counter + 1
+          do n=1,nspecies
+             write(plot_names(counter),'(a,i0)') "tavg_chrg_flx_y_", n
+             counter = counter + 1
+          enddo
+          plot_names(counter) = "tavg_tot_chrg_flx_y"
+          counter = counter + 1
+          if (dm > 2) then
+             do n=1,nspecies
+                write(plot_names(counter),'(a,i0)') "tavg_chrg_flx_z_", n
+                counter = counter + 1
+             enddo
+             plot_names(counter) = "tavg_tot_chrg_flx_z"
+             counter = counter + 1
+          endif
+       endif
 
     end if
 
@@ -395,6 +527,22 @@ contains
     enddo
     counter = counter + 1
 
+    ! mass fluxes
+    if (plot_mass_fluxes.and.(advection_type.eq.0)) then 
+       do i=1,dm
+          call average_face_to_cc(mla,mass_fluxes(:,i),1,plotdata,counter,nspecies+1)
+          counter = counter + (nspecies+1)
+       end do
+    endif
+
+    ! time-averaged mass fluxes
+    if (plot_mass_fluxes_tavg.and.(advection_type.eq.0)) then 
+       do i=1,dm
+          call average_face_to_cc(mla,mass_fluxes_avg(:,i),1,plotdata,counter,nspecies+1)
+          counter = counter + (nspecies+1)
+       end do
+    endif
+
     if (use_charged_fluid) then
 
        ! compute total charge, then copy into the correct component
@@ -438,6 +586,21 @@ contains
              counter = counter + 1
           end do
        end if
+
+       ! charge fluxes
+       if (plot_charge_fluxes.and.(advection_type.eq.0)) then 
+          do i=1,dm
+             call average_face_to_cc(mla,charge_fluxes(:,i),1,plotdata,counter,nspecies+1)
+             counter = counter + (nspecies+1)
+          end do
+       endif
+       ! time-averaged charge fluxes
+       if (plot_charge_fluxes_tavg.and.(advection_type.eq.0)) then 
+          do i=1,dm
+             call average_face_to_cc(mla,charge_fluxes_avg(:,i),1,plotdata,counter,nspecies+1)
+             counter = counter + (nspecies+1)
+          end do
+       endif
     end if
 
     if (boussinesq) then

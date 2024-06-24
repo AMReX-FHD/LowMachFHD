@@ -1,0 +1,103 @@
+# FBOXLIB_HOME defines the directory in which we will find all the amrex code
+# If you set FBOXLIB_HOME as an environment variable, this line will be ignored
+FBOXLIB_HOME := ../../../../../FBoxLib
+HYDROLIB_HOME := ../../../../HydroGrid
+STAGGERED_HOME := ../../..
+
+# Instructions:
+# NDEBUG=t means optimize, not setting it means debug mode
+# MPI=t means use MPI, otherwise compile for serial execution
+# Important: Choose compilers (gfortran or ifort)
+
+NDEBUG    := t
+MPI       := 
+OMP       :=
+PROF      :=
+COMP      := gfortran
+CCOMP     := gcc
+MKVERBOSE := t
+
+# For Intel compiler (requires ifx+icc as of version 2023)
+#COMP      := Intel
+#CCOMP     := icc
+
+# need this to compile bl_rng.f90 (module to store random number engines and distributions)
+CXX11 = t
+
+include $(FBOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
+
+include $(STAGGERED_HOME)/src_lowMach/GPackage.mak
+VPATH_LOCATIONS += $(STAGGERED_HOME)/src_lowMach
+
+include $(STAGGERED_HOME)/src_charged/GPackage.mak
+VPATH_LOCATIONS += $(STAGGERED_HOME)/src_charged
+
+include $(STAGGERED_HOME)/src_multiSpec/GPackage.mak
+VPATH_LOCATIONS += $(STAGGERED_HOME)/src_multiSpec
+
+include $(STAGGERED_HOME)/src_chemistry/GPackage.mak
+VPATH_LOCATIONS += $(STAGGERED_HOME)/src_chemistry
+
+include $(STAGGERED_HOME)/src_gmres/GPackage.mak
+VPATH_LOCATIONS += $(STAGGERED_HOME)/src_gmres
+
+include $(STAGGERED_HOME)/src_common/GPackage.mak
+VPATH_LOCATIONS += $(STAGGERED_HOME)/src_common
+
+include $(HYDROLIB_HOME)/GPackage.mak
+VPATH_LOCATIONS += $(HYDROLIB_HOME)
+
+include $(FBOXLIB_HOME)/Src/BaseLib/GPackage.mak
+VPATH_LOCATIONS += $(FBOXLIB_HOME)/Src/BaseLib
+
+include $(FBOXLIB_HOME)/Src/MultiGrid/GPackage.mak
+VPATH_LOCATIONS += $(FBOXLIB_HOME)/Src/MultiGrid/
+
+# Because module files are not portable, we would need to recompile
+# LAPACK95 unless we use Intel for everything.
+# Therefore, Donev has disabled LAPACK95
+#LAPACK95_DIR = $(STAGGERED_HOME)/src_multiSpec/LAPACK95
+#F90FLAGS += -I$(LAPACK95_DIR)/lapack95_modules
+
+# Linking lapack and blas, either default ones or Intel ones
+# Intel OneAPI is assumed to be installed, which it is on both CIMS and donevm laptop
+# For Intel, best is to just link this dynamic "use all of MKL"
+# $(MKLROOT)/lib/intel64/libmkl_rt.so
+# If you want static then link in
+# $(MKLROOT)/lib/intel64/libmkl_blas95_lp64.a
+# $(MKLROOT)/lib/intel64/libmkl_lapack95_lp64.a 
+
+ifeq ($(findstring cims.nyu.edu, $(HOSTNAME)), cims.nyu.edu)
+   # Best to use Intel's LAPACK/BLAS on CIMS to avoid old gcc versions in the mix
+   # Make sure to "source /opt/pkg/intel/oneapi/setvars.sh" for ifort (module load intel-oneapi)
+   # This exports variables $(MKLROOT) and $(I_MPI_ROOT)
+   #MKLROOT=/opt/pkg/intel/oneapi/mkl/latest
+else ifeq ($(findstring pop-os, $(HOSTNAME)), pop-os) 
+   # ubuntu system76 pop-os   
+   # Make sure to "source /home/donev/intel/oneapi/setvars.sh" for ifort
+   # MKLROOT=/home/donev/intel/oneapi/mkl/latest
+endif
+
+ifeq ($(findstring gfortran, $(FC)), gfortran)
+   # Since LAPACK/BLAS are compiled with old gcc version
+   # Use instead the Intel MPI library
+   ifdef MKLROOT
+      # Use the single-library dynamic interface of Intel meant for GNU compiler:
+      libraries += $(MKLROOT)/lib/intel64/libmkl_rt.so      
+      MKL_INTERFACE_LAYER=MKL_INTERFACE_LP64+MKL_INTERFACE_GNU
+   else
+      libraries += -llapack -lblas
+   endif   
+else ifeq ($(findstring if, $(FC)), if) # ifx or ifort (Intel)
+   # The Intel compiler mkl flag should do everything on its own, including linking:
+   F90FLAGS += -qmkl
+   MKL_INTERFACE_LAYER=MKL_INTERFACE_LP64
+else
+   libraries += -llapack -lblas     
+endif
+
+main.$(suf).exe: $(objects) 
+	$(LINK.f90) -o main.$(suf).exe $(objects) $(libraries)
+
+include $(FBOXLIB_HOME)/Tools/F_mk/GMakerules.mak
+

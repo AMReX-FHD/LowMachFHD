@@ -358,6 +358,7 @@ subroutine main_driver()
                                        analyze_velocity=.false., &
                                        analyze_density=.true., &
                                        analyze_temperature=.false., &
+                                       analyze_Epot=.false., &
                                        structFactMultiplier = volume_factor)
 
             close(unit=un)

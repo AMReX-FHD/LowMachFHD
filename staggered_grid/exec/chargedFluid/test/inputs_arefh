@@ -1,0 +1,303 @@
+! Options for low Mach / Boussinesq equations
+&probin_common
+ 
+  ! Geometry specification
+  !----------------------
+  dim_in = 2                                  ! 2D or 3D  
+  prob_lo(1:3) = 0.d0 0.d0 0.d0               ! physical lo coordinate
+  prob_hi(1:3) = 4.0 128.0 ! physical hi coordinate = [Nx*h, Ny*h]
+  ! Here dx=dy=h, and n_cells=[Nx, Ny]
+  n_cells(1:2) = 4 128                        ! number of cells in domain
+  ! max number of cells in a box:
+  !max_grid_size(1:2) = 4 1024                  !  Disable parallelization
+  max_grid_size(1:2) = 4 32                  ! Parallelize into 4 boxes = 128/32
+
+  prob_type = 2                   ! Sets up physical problem (see src_lowMach/init_lowmach.f90)
+  ! case 2:
+  ! constant concentration gradient along y
+  ! c=c_init(1,:) on bottom, c=c_init(2,:) on top
+  !----------
+  ! case 17: For electro-osmotic and other channel flows (2D and 3D)
+  ! Concentrations and streamwise vel. u only depend on wall normal variable y, 
+  ! ie the fields are homogeneous in the x and z directions. 
+  ! The values for the fields are read in from .txt files. Also, v = w = 0.
+  ! Files are: "c1_1d_vals.txt", "c2_1d_vals.txt", "c3_1d_vals.txt", "u_1d_vals.txt"
+  ! Note that currently only nspecies=3 is supported for prob_type=17 
+
+
+  ! Grid size and time-step control
+  !----------------------
+  fixed_dt = 0.05                             ! time step (if positive, fixed)
+  max_step = 100                             ! maximum number of time steps
+  plot_int = 1000                             ! Interval for writing a plotfile (for visit/amrvis)
+
+  ! Controls for number of steps between actions (for HydroGrid see below)
+  !----------------------
+  chk_int = -1                    ! Interval for writing a checkpoint
+  restart = -1                    ! checkpoint restart number
+  print_int = 10                 ! how often to output EOS drift and sum of conserved quantities
+  project_eos_int = 100          ! how often to call project_onto_eos
+
+  ! Physical parameters
+  !--------------------
+  nspecies = 3 ! Number of species (two ions and water)
+  molmass(1:3) = 1.0 1.0 1.0 ! molecular masses (in some units, make all equal for simplicity)
+  rhobar(1:3)  = 1.d0 1.d0 1.d0 ! density, keep at 1, only used in low Mach codes, not here
+  grav(1:2) = 0.d0 0.d0               ! gravity vector (negative is downwards)
+
+  ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
+  variance_coef_mom = 0.d0  ! Multiplier for stochastic momentum flux
+  variance_coef_mass = 0.d0 ! Multiplier for stochastic mass flux
+  k_B = 1                   ! Boltzmann's constant, true = 1.38064852d-16
+
+
+  ! Algorithm control / selection
+  !----------------------
+  algorithm_type = 6     ! Select type of temporal integration
+                         ! In low Mach codes:
+                         ! 0 = Inertial trapezoidal lowMach
+                         ! 2 = Overdamped lowMach with 2 RNGs
+                         ! 3 = Iterative w/implicit electrodiffusion
+                         ! 4 = Boussinesq w/implicit electrodiffusion
+                         ! 5 = Inertial midpoint lowMach
+                         ! 6 = Boussinesq inertial midpoint (electroneutral or electro-explicit)
+
+
+   ! Controls for deciding whether to plot various quantities (eg averaged, time averaged)
+   !----------------------
+   plot_gradEpot =           T
+   plot_umac_tavg =          T
+   plot_Epot_tavg =          T
+   plot_rho_tavg =           F
+
+  ! random number seed
+  ! 0        = unpredictable seed based on clock
+  ! positive = fixed seed
+  ! negative = (only for a restart) RNGs status is restored from checkpoint data
+  use_bl_rng = T
+  seed_momentum = 0
+  seed_diffusion= 0
+  seed_reaction = 0
+
+  ! Viscous friction L phi operator
+  ! if abs(visc_type) = 1, L = div beta grad
+  ! if abs(visc_type) = 2, L = div [ beta (grad + grad^T) ]
+  ! if abs(visc_type) = 3, L = div [ beta (grad + grad^T) + I (gamma - (2/3)*beta) div ]
+  ! positive = assume constant coefficients
+  ! negative = assume spatially-varying coefficients
+  visc_type = 1
+  visc_coef = 1       ! momentum diffusion coefficient 'eta' (dynamic viscosity), water=0.9d-2
+
+  advection_type = 0 ! 0 = centered explicit
+                     ! 1 = unlimited bilinear bds in space and time
+                     ! 2 = limited bliniear bds in space and time
+                     ! 3 = unlimited quadratic bds in space and time
+                     ! 4 = limited quadratic bds in space and time
+
+  ! Stochastic momentum flux controls:
+  filtering_width = 0   ! If positive the *momentum* stochastic fluxes will be filtered (smoothed)
+                        ! Stochastic *mass* fluxes are not filtered
+  stoch_stress_form = 1 ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
+
+  ! Initial conditions
+  !----------------------
+  u_init(1:2) = 0.d0 0.d0  ! controls initial velocity
+  smoothing_width = 0.d0   ! scale factor for smoothing initial profile
+  initial_variance_mom = 0.d0   ! multiplicative factor for initial fluctuations
+                            ! (if negative, total momentum is set to zero)
+
+  ! Boundary conditions
+  !----------------------
+  ! BC specifications:
+  ! -1 = periodic
+  ! 100 = no-slip wall      (Dir condition for normal vel; Dir velocity condition for trans vel)
+  ! 101 = no-slip reservoir (Dir condition for normal vel; Dir velocity condition for trans vel)
+  ! 200 = slip wall         (Dir condition for normal vel; Dir traction condition for trans vel)
+  ! 201 = slip reservoir    (Dir condition for normal vel; Dir traction condition for trans vel)
+  ! For a complete list see bc.f90
+  bc_lo(1:2) = -1 100   ! periodic on left, no slip on bottom 
+  bc_hi(1:2) = -1 100   ! periodic on right, no slip on top
+
+  ! Control for analyze_spectra.90 for calling HydroGrid
+  !----------------------
+  hydro_grid_int =   0  ! How often to call updateHydroGrid
+                        ! 0 if never
+                        ! negative for projectHydroGrid custom analysis
+                        ! positive for updateHydroGrid
+
+  project_dir = 2        ! Projection direction (1=x, 2=y, 3=z)
+  ! Meaning: 0=analyze 3D data only (no projection needed for HydroGrid, 
+  !          but still need projection if stats_int>0)
+  ! +dim=project along dim then analyze 2D only,
+  ! -dim=analyze 3D and then project along dim so we also analyze 2D data
+  ! It is better to use the conserved variables but it does not quite work for staggered
+
+  !max_grid_projection(1:1) = 1024 ! parallelization box size for grid projection
+  max_grid_projection(1:1) = 32 ! parallelization box size for grid projection  
+  stats_int = 10 ! Project grid for analysis
+                 ! If positive, how often to compute mean and 
+                 ! standard deviation over reduced dimensions
+  stat_save_type = 0 ! Save instantaneous fields if = 0, otherwise time averages            
+                 
+  n_steps_save_stats = -1 ! How often to dump hstat/vstat and/or HydroGrid output files
+  n_steps_skip = 0        ! How many steps to skip at the beginning
+  analyze_conserved = F   ! Should we use conserved variables for the analysis
+                          ! (does not work well)
+  center_snapshots = F    ! Should we use cell-centered momenta for the analysis
+                          ! (will smooth fluctuations)
+
+/
+
+&probin_chemistry
+
+/
+
+&probin_multispecies
+
+  ! Physical properties:
+  !----------------------
+  fraction_tolerance = 1.d-12 ! For roundoff errors in mass and mole fractions
+  start_time = 0.d0
+
+  inverse_type = 1       ! Only for LAPACK:  1=inverse, 2=pseudo inverse
+  correct_flux = T       ! Manually ensure mass is conserved to roundoff 
+  print_error_norms = T
+  is_ideal_mixture = T   ! If T assume Gamma=I (H=0) and simplify
+  is_nonisothermal = F   ! If T Soret effect will be included
+  use_lapack = F         ! Use LAPACK or iterative method for diffusion matrix (recommend False)
+  chi_iterations = 10    ! number of iterations used in Dbar2chi_iterative
+  
+  ! Initial and boundary conditions 
+  !----------------------
+  T_init(1:2) = 1.0 1.0  ! initial values for temperature (bottom/top, inside/outside circle, etc.)
+  temp_type = 0 ! for initializing temperature
+
+  ! initial values for CONCENTRATIONS
+  c_init(1,1:3) = 0.005 0.005 0.99
+  c_init(2,1:3) = 0.005 0.005 0.99
+
+  ! Thermodynamic and transport properties:
+  !----------------------
+
+  ! These are lower-triangules of symmetric matrices represented as vectors
+  ! Number of elements is (nspecies*(nspecies-1)/2)
+  ! The values are read row by row starting from top going down (this allows easy addition/deletion of new species/rows)
+  ! So D_12; D_13, D_23; D_14, D_24, D_34; ...
+  ! At low dilution (classical PNP), with last species being solvent
+  ! The last row are the self diffusion coefficients of the dilute solutes
+  ! Other entries are set to: D_ij = D_i*D_j / D_solvent
+  Dbar(1:3) = 1.33333333, 1.0 3.0 ! Just an example: D_water=1.5, D_ion1=1, D_ion2=2, D_12=1*2/1.5=4/3
+
+  ! Other examples:
+   
+  ! species = (1=Na, 2=Cl, 3=H2O)
+  ! So D_12; D_13, D_23; D_14, D_24, D_34; ...
+  ! diffusion of Na: 13.3e-6 ; Cl: 20.3e-6; self-water: 2.3e-5
+  !Dbar(1:3) = D_12=1.17d-5,  1.33d-5 2.03d-5  
+
+  ! species = (1=HCl, 2=NaOH, 3=NaCl, 4=H2O)
+  ! Binary ambipolar self-diffusion: HCl=3.336000e-05 NaOH=2.129000e-05 NaCl=1.611000e-05
+  ! self-diffusion water = 2.3e-5
+  !Dbar(1:6) = D_12=3.087976e-05, D_13=2.336650e-05 D_23=1.491226e-05, D_14=3.336000e-05 D_24=2.129000e-05 D_34=1.611000e-05
+  
+  ! species = (1=Na+, 2=Cl-, 3=H+, 4=OH-, 5=H2O)
+  ! Self-diffusion: Na+ = 1.33e-5, Cl = 2.03e-5, H+ = 9.35e-5, OH = 5.33e-5, H20=2.3e-5
+  !Dbar(1:10) = 0.1173869565e-4, 0.5408879652e-4 0.8255658417e-4, 0.3083589699e-4 0.4706531648e-4 0.2168644968e-3, 0.133e-4, 0.203e-4, 0.9353701657e-4, 0.5332523540e-4  
+
+  plot_stag = F            ! plot staggered velocities in separate plotfile
+
+/
+
+&probin_charged
+ 
+  use_charged_fluid = T
+  print_debye_len = T
+  dielectric_const = 1 ! epsilon (absolute units) water=708.01d-21
+  charge_per_mass(1:3) = 1.0d0 -1.0d0 0.0d0 ! charge of each species
+  
+  ! 1 = Dirichlet (fixed potential)
+  ! 2 = Neumann (fixed charge density)
+  Epot_wall_bc_type(1,2) = 2
+  Epot_wall_bc_type(2,2) = 2
+  Epot_wall(1:2,2) = 1.d0 -1.d0 ! Potential or charge density at boundary
+
+  ! Applied field along x:
+  E_ext_type = 1
+  E_ext_value(1:2) = -1.0d0  0.d0
+
+  ! Notes from Andy Nonaka for Neumann:
+  ! The sign convention is a bit wonky as it represents dphi/dn (n is inward normal so that's why they are always the same sign).
+  ! The magnitude you want for solvability is equal to q^tot / (epsilon * L^tot) where L^tot is the total surface area of top and bottom walls.
+  ! q^tot can be found from the report at the beginning of standard out - doing this calculation analytically gives you results that are off in the 10th digit or so which is often enough to prevent the system from being solvable.
+
+  electroneutral = F ! Use electroneutral formulation or PNP?
+
+  epot_mg_verbose = 0
+  epot_mg_abs_tol = 0
+  epot_mg_rel_tol = 1.d-6
+
+  
+/
+
+! Stokes solver for velocity
+&probin_gmres
+
+  ! preconditioner type
+  ! 1 = projection preconditioner
+  !-1 = projection preconditioner with expensive pressure update
+  ! 2 = lower triangular preconditioner
+  !-2 = lower triangular preconditioner with negative sign
+  ! 3 = upper triangular preconditioner
+  !-3 = upper triangular preconditioner with negative sign
+  ! 4 = Block diagonal preconditioner
+  !-4 = Block diagonal preconditioner with negative sign
+  precon_type = 1
+
+  ! weighting of pressure when computing norms and inner products
+  p_norm_weight = 1.d0
+
+  ! scale theta_alpha, beta, gamma, and b_u by this, and then scale x_p by the inverse
+  scale_factor = 1.d0
+
+  ! MAC projection solver parameters:
+  mg_verbose = 0        ! multigrid verbosity
+  cg_verbose = 0        ! BiCGStab (mg_bottom_solver=1) verbosity
+  mg_max_vcycles = 1    ! maximum number of V-cycles
+  mg_minwidth = 2       ! length of box at coarsest multigrid level
+  mg_bottom_solver = 4  ! bottom solver type
+                        ! 0 = smooths only, controlled by mg_nsmooths_bottom
+                        ! 1 = BiCGStab
+                        ! 4 = Fancy bottom solve that coarsens down additionally
+                        !     and then applies mg_nsmooths_bottom smooths
+  mg_nsmooths_down = 2       ! number of smooths at each level on the way down
+  mg_nsmooths_up = 2         ! number of smooths at each level on the way up
+  mg_nsmooths_bottom = 8     ! number of smooths at the bottom (only if mg_bottom_solver=0)
+  mg_max_bottom_nlevels = 10 ! for mg_bottom_solver=4, number of additional levels of multigrid
+  mg_rel_tol = 1.d-6        ! relative tolerance stopping criteria
+
+  ! Staggered multigrid solver parameters
+  stag_mg_verbosity = 0       ! verbosity (set to 1 for debugging the gmres solver!)
+  stag_mg_max_vcycles = 1     ! max number of v-cycles
+  stag_mg_minwidth = 2        ! length of box at coarsest multigrid level
+  stag_mg_bottom_solver = 4   ! bottom solver type
+                              ! 0 = smooths only, controlled by mg_nsmooths_bottom
+                              ! 4 = Fancy bottom solve that coarsens additionally
+                              !     and then applies stag_mg_nsmooths_bottom smooths
+  stag_mg_nsmooths_down = 2   ! number of smooths at each level on the way down
+  stag_mg_nsmooths_up = 2     ! number of smooths at each level on the way up
+  stag_mg_nsmooths_bottom = 8 ! number of smooths at the bottom
+  stag_mg_max_bottom_nlevels = 10 ! for stag_mg_bottom_solver=4, number of additional levels of multigrid
+  stag_mg_omega = 1.d0        ! weighted-jacobi omega coefficient
+  stag_mg_smoother = 1        ! 0 = jacobi; 1 = 2*dm-color Gauss-Seidel
+  stag_mg_rel_tol = 1.d-6    ! relative tolerance stopping criteria
+
+  ! GMRES solver parameters
+  gmres_rel_tol = 1.d-4 ! relative tolerance stopping criteria
+  gmres_abs_tol = 0.d0  ! absolute tolerance stopping criteria
+  gmres_verbose = 0     ! gmres verbosity; if greater than 1, more residuals will be printed out
+  gmres_max_outer = 20  ! max number of outer iterations
+  gmres_max_inner = 5   ! max number of inner iterations, or restart number
+  gmres_max_iter = 50  ! max number of gmres iterations
+  gmres_min_iter = 1    ! min number of gmres iterations
+
+/

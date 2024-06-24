@@ -307,7 +307,7 @@ contains
        call multifab_setval(Epot(n),0.d0,all=.true.)
        ! fill ghost cells for Epot at walls using Dirichlet value
        call multifab_physbc(Epot(n),1,Epot_bc_comp,1,the_bc_tower%bc_tower_array(n), &
-                            dx_in=dx(n,:))
+                            time_in=time, dx_in=dx(n,:))
     end do
 
     ! for inhomogeneous Neumann bc's for electric potential, put in homogeneous form
@@ -344,7 +344,7 @@ contains
        call multifab_sub_sub_s(Epot(1),sum)
        do n=1,nlevs
           call multifab_physbc(Epot(n),1,Epot_bc_comp,1,the_bc_tower%bc_tower_array(n), &
-                               dx_in=dx(n,:))
+                               time_in=time, dx_in=dx(n,:))
           call multifab_fill_boundary(Epot(n))
        end do
     end if
@@ -663,7 +663,7 @@ contains
        call multifab_setval(Epot(n),0.d0,all=.true.)
        ! fill ghost cells for Epot at walls using Dirichlet value
        call multifab_physbc(Epot(n),1,Epot_bc_comp,1,the_bc_tower%bc_tower_array(n), &
-                            dx_in=dx(n,:))
+                            time_in=time, dx_in=dx(n,:))
     end do
 
     ! for inhomogeneous Neumann bc's for electric potential, put in homogeneous form
@@ -700,7 +700,7 @@ contains
        call multifab_sub_sub_s(Epot(1),sum)
        do n=1,nlevs
           call multifab_physbc(Epot(n),1,Epot_bc_comp,1,the_bc_tower%bc_tower_array(n), &
-                               dx_in=dx(n,:))
+                               time_in=time, dx_in=dx(n,:))
           call multifab_fill_boundary(Epot(n))
        end do
     end if
