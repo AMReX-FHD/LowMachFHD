@@ -114,7 +114,7 @@ contains
                 case(2)
                    ! Rate ~ N*(N-1)
                    reaction_rates(reaction) = &
-                        reaction_rates(reaction)*n_nonneg(species)*(n_nonneg(species)-1.0d0/dv) 
+                        reaction_rates(reaction)*n_nonneg(species)*max(n_nonneg(species)-1.0d0/dv,0.d0)
                 case(3)   
                    ! Rate ~ N*(N-1)*(N-2)
                    reaction_rates(reaction) = &
