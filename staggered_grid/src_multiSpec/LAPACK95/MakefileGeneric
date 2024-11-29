@@ -5,6 +5,7 @@
 #
 LIBS     = $(LAPACK95) $(TMG77) $(LAPACK77) $(BLAS)
 SUF      = f90
+LIBNAME  = liblapack95
 
 XX = 'rm' -f $@; \
         'rm' -f $@.res; \
@@ -17,6 +18,7 @@ YY = $(FC) $(OPTS0) -o $@ $(MODLIB) $@.$(SUF) $(OPTLIB) $(LIBS)
 .SUFFIXES: .f90 .f .o
 
 .$(SUF).o: 
+	$(FC) -v 2>&1 | grep "gcc version"
 	$(FC) $(OPTS3) $<
 
 
@@ -154,9 +156,9 @@ ZOBJS = la_zgesv.o la_zgesv1.o la_zgesvx.o la_zgesvx1.o \
 default: la_auxmod.o single_double
 
 single: $(SOBJSS)
-	rm -f lapack95.a
-	ar cr lapack95.a $(SOBJSS)
-	ranlib lapack95.a
+	rm -f $(LIBNAME).a
+	ar cr $(LIBNAME).a $(SOBJSS)
+	ranlib $(LIBNAME).a
 	rm -fr lapack95_modules
 	mkdir lapack95_modules
 	cp *.mod lapack95_modules/
@@ -164,9 +166,9 @@ single: $(SOBJSS)
 	rm -f *_lapack_single.o
 
 double: $(DOBJSS)
-	rm -f lapack95.a
-	ar cr lapack95.a $(DOBJSS)
-	ranlib lapack95.a
+	rm -f $(LIBNAME).a
+	ar cr $(LIBNAME).a $(DOBJSS)
+	ranlib $(LIBNAME).a
 	rm -fr lapack95_modules
 	mkdir lapack95_modules
 	cp *.mod lapack95_modules/
@@ -174,9 +176,11 @@ double: $(DOBJSS)
 	rm -f *_lapack_double.o
 
 single_double: $(SDOBJS)
-	rm -f lapack95.a
-	ar cr lapack95.a $(SDOBJS)
-	ranlib lapack95.a
+	rm -f $(LIBNAME).a
+	ar cr $(LIBNAME).a $(SDOBJS)
+	ranlib $(LIBNAME).a
+	echo gcc -shared -fPIC -o $(LIBNAME).so $(SDOBJS)
+	gcc -shared -fPIC -o $(LIBNAME).so $(SDOBJS)
 	rm -fr lapack95_modules
 	mkdir lapack95_modules
 	cp *.mod lapack95_modules/
@@ -184,9 +188,9 @@ single_double: $(SDOBJS)
 	rm -f *_lapack_single_double.o
 
 single_complex: $(SCOBJS)
-	rm -f lapack95.a
-	ar cr lapack95.a $(SCOBJS)
-	ranlib lapack95.a
+	rm -f $(LIBNAME).a
+	ar cr $(LIBNAME).a $(SCOBJS)
+	ranlib $(LIBNAME).a
 	rm -fr lapack95_modules
 	mkdir lapack95_modules
 	cp *.mod lapack95_modules/
@@ -194,9 +198,9 @@ single_complex: $(SCOBJS)
 	rm -f *_lapack_single_complex.o
 
 double_dcomplex: $(DZOBJS)
-	rm -f lapack95.a
-	ar cr lapack95.a $(DZOBJS)
-	ranlib lapack95.a
+	rm -f $(LIBNAME).a
+	ar cr $(LIBNAME).a $(DZOBJS)
+	ranlib $(LIBNAME).a
 	rm -fr lapack95_modules
 	mkdir lapack95_modules
 	cp *.mod lapack95_modules/
@@ -204,9 +208,9 @@ double_dcomplex: $(DZOBJS)
 	rm -f *_lapack_double_dcomplex.o
 
 single_double_complex: $(SCDOBJS)
-	rm -f lapack95.a
-	ar cr lapack95.a $(SCDOBJS)
-	ranlib lapack95.a
+	rm -f $(LIBNAME).a
+	ar cr $(LIBNAME).a $(SCDOBJS)
+	ranlib $(LIBNAME).a
 	rm -fr lapack95_modules
 	mkdir lapack95_modules
 	cp *.mod lapack95_modules/
@@ -214,9 +218,9 @@ single_double_complex: $(SCDOBJS)
 	rm -f *_lapack_single_double_complex.o
 
 single_double_complex_dcomplex: $(SCDZOBJS)
-	rm -f lapack95.a
-	ar cr lapack95.a $(SCDZOBJS)
-	ranlib lapack95.a
+	rm -f $(LIBNAME).a
+	ar cr $(LIBNAME).a $(SCDZOBJS)
+	ranlib $(LIBNAME).a
 	rm -fr lapack95_modules
 	mkdir lapack95_modules
 	'cp' *.mod lapack95_modules/

@@ -45,6 +45,7 @@ contains
   subroutine advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                        gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                        diff_mass_fluxdiv,stoch_mass_fluxdiv,stoch_mass_flux, &
+                                       total_mass_flux_w_adv, &
                                        dx,dt,time,the_bc_tower,istep, &
                                        grad_Epot_old,grad_Epot_new,charge_old,charge_new, &
                                        Epot,permittivity)
@@ -66,6 +67,8 @@ contains
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: stoch_mass_flux(:,:)
+    type(multifab) , intent(inout) :: total_mass_flux_w_adv(:,:) ! the actual total mass fluxes, including advective part. different than the 
+                                                                 ! (somewhat confusingly named) total_mass_flux defined locally below
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
     integer        , intent(in   ) :: istep
@@ -103,11 +106,14 @@ contains
     ! only used when variance_coef_mom>0
     type(multifab) :: stoch_mom_fluxdiv(mla%nlevel,mla%dim)
 
+    ! only used when advection_type = 0 ie centered explicit
+    type(multifab) ::     adv_mass_flux(mla%nlevel,mla%dim) !SC
+
     ! only used when use_charged_fluid=T
     type(multifab) :: Lorentz_force_old(mla%nlevel,mla%dim)
     type(multifab) :: Lorentz_force_new(mla%nlevel,mla%dim)
     
-    integer :: i,dm,n,nlevs
+    integer :: i,dm,n,nlevs,comp
 
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
 
@@ -154,6 +160,14 @@ contains
           end do
        end do
     end if
+    
+    if (advection_type.eq.0) then !SC
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_build_edge(   adv_mass_flux(n,i),mla%la(n),nspecies,0,i)
+          enddo
+       enddo
+    endif
 
     if (use_charged_fluid) then
        do n=1,nlevs
@@ -374,7 +388,7 @@ contains
           end if
        end do
     end do
-
+    
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,total_mass_flux,vel_bc_n,the_bc_tower%bc_tower_array)
 
@@ -734,6 +748,54 @@ contains
        end do
     end do
 
+    
+    ! compute advective mass flux to be added to total_mass_flux
+    if (advection_type.eq.0) then 
+       do n=1,nlevs 
+          do i=1,dm
+             do comp=1,nspecies
+                call multifab_copy_c(adv_mass_flux(n,i),comp,umac(n,i),1,1,0)
+             end do 
+             call multifab_mult_mult_c(adv_mass_flux(n,i),1,rho_fc(n,i),1,nspecies,0)
+          enddo
+       enddo
+     
+       ! Now say (total_mass_flux_w_adv = total_mass_flux - advective_mass_flux)
+       !
+       ! total_mass_flux_w_adv = +[stuff]*grad(rho) + [stuff]*grad(epot) + [stochastic flux] - rho_tot*v
+       !
+       ! BUT we flip the sign below, see the comment there. 
+       do n=1,nlevs
+          do i=1,dm
+             ! first copy [diffusive_flux] + [stoch_flux] from above to total_mass_flux_w_adv
+             call multifab_copy_c(total_mass_flux_w_adv(n,i),1,total_mass_flux(n,i),1,nspecies,0)
+
+             ! now subtract off the advective flux from the diffusive and stochastic fluxes to get total mass flux
+             call multifab_sub_sub_c(total_mass_flux_w_adv(n,i),1,adv_mass_flux(n,i),1,nspecies,0)
+          end do 
+       end do 
+      
+       ! now that we have all the individual species mass fluxes--add them all up to get the total mass flux
+       do n=1,nlevs 
+          do i=1,dm
+             call multifab_copy_c(total_mass_flux_w_adv(n,i),nspecies+1,total_mass_flux_w_adv(n,i),1,1,0)
+             do comp=2,nspecies
+                call multifab_plus_plus_c(total_mass_flux_w_adv(n,i),nspecies+1,total_mass_flux_w_adv(n,i),comp,1,0)
+             enddo
+          enddo
+       enddo
+
+       ! multiply the total mass flux w adv by -1, so that we take the convention that
+       ! the mass flux has the same sign as the fluid flow 
+       do n=1,nlevs
+          do i=1,dm
+                call multifab_mult_mult_s_c(total_mass_flux_w_adv(n,i),1,-1.d0,nspecies+1,0)
+          enddo
+       enddo        
+
+    endif
+    
+
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,total_mass_flux,vel_bc_n,the_bc_tower%bc_tower_array)
 
@@ -905,6 +967,14 @@ contains
        do n=1,nlevs
           do i=1,dm
              call multifab_destroy(stoch_mom_fluxdiv(n,i))
+          end do
+       end do
+    end if
+
+    if (advection_type.eq.0) then
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_destroy(adv_mass_flux(n,i))
           end do
        end do
     end if

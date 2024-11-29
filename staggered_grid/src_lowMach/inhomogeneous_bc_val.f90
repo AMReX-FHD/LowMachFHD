@@ -8,13 +8,13 @@ module inhomogeneous_bc_val_module
   use probin_common_module, only: prob_lo, prob_hi, wallspeed_lo, wallspeed_hi, prob_type, &
                                   nspecies, algorithm_type, rho0, n_cells
   use probin_charged_module, only: Epot_wall, Epot_wall_bc_type, zero_charge_on_wall_type, bc_function_type, &
-                                   L_pos, L_trans, L_zero, induced_charge_eo, E_ext_value
+                                   L_pos, L_trans, L_zero, induced_charge_eo, E_ext_value, ac_iceo
 
   implicit none
 
   private
 
-  public :: scalar_bc, transport_bc, inhomogeneous_bc_val_2d, inhomogeneous_bc_val_3d
+  public :: scalar_bc, transport_bc, inhomogeneous_bc_val_2d, inhomogeneous_bc_val_3d, alternating_current_efield
 
 contains
 
@@ -201,7 +201,11 @@ contains
              ! phi_periodic = x*E_0. 
              !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
              if (induced_charge_eo) then 
-                val = 1.d0*(x-(prob_lo(1)+prob_hi(1))/2.d0)*E_ext_value(1)  
+                if (ac_iceo) then 
+                   val = 1.d0*(x-(prob_lo(1)+prob_hi(1))/2.d0)*alternating_current_efield(time)
+                else
+                   val = 1.d0*(x-(prob_lo(1)+prob_hi(1))/2.d0)*E_ext_value(1)  
+                endif 
              else 
                 val = Epot_wall(1,2) 
              end if 
@@ -218,41 +222,41 @@ contains
           else
              val = 0.d0
           end if
-       else if (bc_function_type.eq.1) then  ! Piecewise cubic potential--note we were lazy and assumed prob_lo(1) = 0.d0
-          if (y .eq. prob_lo(2)) then 
-             if (x .lt. L_pos) then  ! we're in first positive region
+       else if (bc_function_type.eq.1) then                        ! Piecewise cubic potential--note we were lazy and assumed prob_lo(1) = 0.d0
+          if (y .eq. prob_lo(2)) then                              ! lower boundary 
+             if (x .lt. L_pos) then                                ! we're in first positive region
                 val = Epot_wall(1,2)
-             else if (x .lt. (L_pos + L_trans)) then ! we're in first transition region
+             else if (x .lt. (L_pos + L_trans)) then               ! we're in first transition region
                 delta_x = prob_hi(1)/n_cells(1)
                 s_j = x - L_pos
                 val = 1.d0/delta_x*(0.5d0*Epot_wall(1,2)/L_trans**3*((s_j + delta_x/2.d0)**4 - (s_j - delta_x/2.d0)**4) - & 
                                Epot_wall(1,2)/L_trans**2*((s_j + delta_x/2.d0)**3 - (s_j - delta_x/2.d0)**3)) + Epot_wall(1,2)
-             else if (x .lt. (L_pos + L_trans + L_zero)) then ! we're in zero region
+             else if (x .lt. (L_pos + L_trans + L_zero)) then      ! we're in zero region
                 val = 0.d0 
              else if (x .lt. (L_pos + 2.d0*L_trans + L_zero)) then !we're in second transition region
                 delta_x = prob_hi(1)/n_cells(1)
                 s_j = x - (L_pos + L_trans + L_zero)
                 val = 1.d0/delta_x*(-0.5d0*Epot_wall(1,2)/L_trans**3*((s_j + delta_x/2.d0)**4 - (s_j - delta_x/2.d0)**4) + & 
                                Epot_wall(1,2)/L_trans**2*((s_j + delta_x/2.d0)**3 - (s_j - delta_x/2.d0)**3))
-             else ! we're in second positive region
+             else                                                  ! we're in second positive region
                 val = Epot_wall(1,2)
              end if 
-          else if (y .eq. prob_hi(2)) then 
-             if (x .lt. L_pos) then  ! we're in first positive region
+          else if (y .eq. prob_hi(2)) then                         ! upper boundary
+             if (x .lt. L_pos) then                                ! we're in first positive region
                 val = Epot_wall(2,2)
-             else if (x .lt. (L_pos + L_trans)) then ! we're in first transition region
+             else if (x .lt. (L_pos + L_trans)) then               ! we're in first transition region
                 delta_x = prob_hi(1)/n_cells(1)
                 s_j = x - L_pos
                 val = 1.d0/delta_x*(0.5d0*Epot_wall(2,2)/L_trans**3*((s_j + delta_x/2.d0)**4 - (s_j - delta_x/2.d0)**4) - & 
                                Epot_wall(2,2)/L_trans**2*((s_j + delta_x/2.d0)**3 - (s_j - delta_x/2.d0)**3)) + Epot_wall(2,2)
-             else if (x .lt. (L_pos + L_trans + L_zero)) then ! we're in zero region
+             else if (x .lt. (L_pos + L_trans + L_zero)) then      ! we're in zero region
                 val = 0.d0 
              else if (x .lt. (L_pos + 2.d0*L_trans + L_zero)) then !we're in second transition region
                 delta_x = prob_hi(1)/n_cells(1)
                 s_j = x - (L_pos + L_trans + L_zero)
                 val = 1.d0/delta_x*(-0.5d0*Epot_wall(2,2)/L_trans**3*((s_j + delta_x/2.d0)**4 - (s_j - delta_x/2.d0)**4) + & 
                                Epot_wall(2,2)/L_trans**2*((s_j + delta_x/2.d0)**3 - (s_j - delta_x/2.d0)**3))
-             else ! we're in second positive region
+             else                                                  ! we're in second positive region
                 val = Epot_wall(2,2)
              end if 
           else 
@@ -270,6 +274,39 @@ contains
 
 
   end function inhomogeneous_bc_val_2d
+
+  ! This function allows us to specify an external electric field that oscillates in time. 
+  ! The current field is a mollified square wave made by stitching together hyperbolic tangents. 
+  !
+  ! Currently the period and frequency of the wave is hard-coded in this function. 
+  function alternating_current_efield(time) result(val)
+
+    ! inputs/output
+    real(kind=dp_t), intent(in)    :: time
+    real(kind=dp_t)                :: val
+
+    ! local variables 
+    real(kind=dp_t) :: omega, T, shift ! omega controls how quickly the applied field goes from 
+                                       ! positive to negative, and vice-versa. The larger the value,
+                                       ! the less quickly it transitions.
+                                       ! T is the period of oscillation. 
+    integer         :: branch                
+
+    ! initialize T and omega 
+    T = 1.0d-4               ! these values were selected for a proof of concept AC-ICEO simulation. 
+    omega = 0.05d0*T        
+
+
+    branch = modulo(int(floor(time/T)), 2) !tells us if we use tanh or -1*tanh
+    shift = floor(time/T)*T
+
+    if (branch.eq.0) then 
+       val = -1.d0*E_ext_value(1)*tanh(((time-shift) - T/2.d0)/omega)
+    else 
+       val =       E_ext_value(1)*tanh(((time-shift) - T/2.d0)/omega)
+    endif  
+
+  end function alternating_current_efield
 
   function inhomogeneous_bc_val_3d(comp,x,y,z,time_in) result(val)
 

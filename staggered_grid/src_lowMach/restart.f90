@@ -22,7 +22,8 @@ module restart_module
 
 contains
 
-  subroutine initialize_from_restart(mla,time,dt,rho,rho_sum,rhotot,pi,umac,umac_sum,pmask,Epot,Epot_sum,grad_Epot)
+  subroutine initialize_from_restart(mla,time,dt,rho,rho_sum,rhotot,pi,umac,umac_sum,pmask,mass_fluxes,mass_fluxes_sum, &
+                                     Epot,Epot_sum,grad_Epot)
  
      type(ml_layout),intent(out)   :: mla
      real(dp_t)    , intent(  out) :: time,dt
@@ -34,6 +35,8 @@ contains
      type(multifab), intent(inout) :: Epot_sum(:) 
      type(multifab), intent(inout) :: umac(:,:)
      type(multifab), intent(inout) :: umac_sum(:,:)
+     type(multifab), intent(inout) :: mass_fluxes(:,:)
+     type(multifab), intent(inout) :: mass_fluxes_sum(:,:)
      type(multifab), intent(inout) :: grad_Epot(:,:)
      logical       , intent(in   ) :: pmask(:)
 
@@ -85,6 +88,17 @@ contains
            call setval(umac(n,i),0.d0,all=.true.)
            call setval(umac_sum(n,i),0.d0,all=.true.)
 
+           if (advection_type.eq.0) then 
+              call multifab_build_edge(mass_fluxes(n,i), mla%la(n), nspecies+1, 1, i)
+              call multifab_build_edge(mass_fluxes_sum(n,i), mla%la(n), nspecies+1, 0, i)  !SC: Q: what should num_ghost_cell be here??
+
+              ! with mixed boundary conditions some of the corner umac ghost cells that
+              ! never affect the solution aren't filled, causing segfaults on some compilers
+              ! this prevents segfaults
+              call setval(mass_fluxes(n,i),0.d0,all=.true.)
+              call setval(mass_fluxes_sum(n,i),0.d0,all=.true.)
+           endif
+
            if (use_charged_fluid) then
               call multifab_build_edge(grad_Epot(n,i), mla%la(n), 1, 1, i)
               call setval(grad_Epot(n,i),0.d0,all=.true.)                     ! for ghost cells as well
@@ -105,23 +119,73 @@ contains
         endif
      end do
 
+
      ! edge data
+     ! 
+     ! if use_charged_fluid is on, we build grad_Epot
+     ! if advection_type = 0, we build mass fluxes (both instantaneous and sum) 
      do n=1,nlevs
-        call multifab_copy_c(umac(n,1),1,chkdata_edgex(n),1,1)
-        call multifab_copy_c(umac(n,2),1,chkdata_edgey(n),1,1)
-        call multifab_copy_c(umac_sum(n,1),1,chkdata_edgex(n),2,1)      
-        call multifab_copy_c(umac_sum(n,2),1,chkdata_edgey(n),2,1)
-        if (use_charged_fluid) then
-           call multifab_copy_c(grad_Epot(n,1),1,chkdata_edgex(n),3,1)  
-           call multifab_copy_c(grad_Epot(n,2),1,chkdata_edgey(n),3,1)
-        endif
-        if (dm .eq. 3) then
-           call multifab_copy_c(umac(n,3),1,chkdata_edgez(n),1,1)
-           call multifab_copy_c(umac_sum(n,3),1,chkdata_edgez(n),2,1)   
-           if (use_charged_fluid) then
-              call multifab_copy_c(grad_Epot(n,3),1,chkdata_edgez(n),3,1)  
+        if (use_charged_fluid) then 
+           if (advection_type.eq.0) then 
+              call multifab_copy_c(umac(n,1),           1,chkdata_edgex(n),1,               1)
+              call multifab_copy_c(umac(n,2),           1,chkdata_edgey(n),1,               1)
+              call multifab_copy_c(umac_sum(n,1),       1,chkdata_edgex(n),2,               1)      
+              call multifab_copy_c(umac_sum(n,2),       1,chkdata_edgey(n),2,               1)
+
+              call multifab_copy_c(mass_fluxes(n,1),    1,chkdata_edgex(n),3,               nspecies+1)
+              call multifab_copy_c(mass_fluxes(n,2),    1,chkdata_edgey(n),3,               nspecies+1)
+              call multifab_copy_c(mass_fluxes_sum(n,1),1,chkdata_edgex(n),(nspecies+1)+3,  nspecies+1)
+              call multifab_copy_c(mass_fluxes_sum(n,2),1,chkdata_edgey(n),(nspecies+1)+3,  nspecies+1)
+              call multifab_copy_c(grad_Epot(n,1),      1,chkdata_edgex(n),(nspecies+1)*2+3,1)  
+              call multifab_copy_c(grad_Epot(n,2),      1,chkdata_edgey(n),(nspecies+1)*2+3,1)  
+              if (dm .eq. 3) then
+                 call multifab_copy_c(umac(n,3),           1,chkdata_edgez(n),1,               1)
+                 call multifab_copy_c(umac_sum(n,3),       1,chkdata_edgez(n),2,               1)   
+                 call multifab_copy_c(mass_fluxes(n,3),    1,chkdata_edgez(n),3,               nspecies+1)
+                 call multifab_copy_c(mass_fluxes_sum(n,3),1,chkdata_edgez(n),(nspecies+1)+3,  nspecies+1)
+                 call multifab_copy_c(grad_Epot(n,3),      1,chkdata_edgez(n),(nspecies+1)*2+3,1)  
+              end if
+           else ! advection_type \ne 0 
+              call multifab_copy_c(umac(n,1),           1,chkdata_edgex(n),1,               1)
+              call multifab_copy_c(umac(n,2),           1,chkdata_edgey(n),1,               1)
+              call multifab_copy_c(umac_sum(n,1),       1,chkdata_edgex(n),2,               1)      
+              call multifab_copy_c(umac_sum(n,2),       1,chkdata_edgey(n),2,               1)
+              call multifab_copy_c(grad_Epot(n,1),      1,chkdata_edgex(n),3,               1)  
+              call multifab_copy_c(grad_Epot(n,2),      1,chkdata_edgey(n),3,               1)  
+              if (dm .eq. 3) then
+                 call multifab_copy_c(umac(n,3),           1,chkdata_edgez(n),1,               1)
+                 call multifab_copy_c(umac_sum(n,3),       1,chkdata_edgez(n),2,               1)   
+                 call multifab_copy_c(grad_Epot(n,3),      1,chkdata_edgez(n),3,               1)  
+              end if
            endif
-        end if
+        else ! use_charged_fluid == F 
+           if (advection_type.eq.0) then 
+              call multifab_copy_c(umac(n,1),           1,chkdata_edgex(n),1,               1)
+              call multifab_copy_c(umac(n,2),           1,chkdata_edgey(n),1,               1)
+              call multifab_copy_c(umac_sum(n,1),       1,chkdata_edgex(n),2,               1)      
+              call multifab_copy_c(umac_sum(n,2),       1,chkdata_edgey(n),2,               1)
+
+              call multifab_copy_c(mass_fluxes(n,1),    1,chkdata_edgex(n),3,               nspecies+1)
+              call multifab_copy_c(mass_fluxes(n,2),    1,chkdata_edgey(n),3,               nspecies+1)
+              call multifab_copy_c(mass_fluxes_sum(n,1),1,chkdata_edgex(n),(nspecies+1)+3,  nspecies+1)
+              call multifab_copy_c(mass_fluxes_sum(n,2),1,chkdata_edgey(n),(nspecies+1)+3,  nspecies+1)
+              if (dm .eq. 3) then
+                 call multifab_copy_c(umac(n,3),           1,chkdata_edgez(n),1,               1)
+                 call multifab_copy_c(umac_sum(n,3),       1,chkdata_edgez(n),2,               1)   
+                 call multifab_copy_c(mass_fluxes(n,3),    1,chkdata_edgez(n),3,               nspecies+1)
+                 call multifab_copy_c(mass_fluxes_sum(n,3),1,chkdata_edgez(n),(nspecies+1)+3,  nspecies+1)
+              end if
+           else ! advection_type \ne 0 
+              call multifab_copy_c(umac(n,1),           1,chkdata_edgex(n),1,               1)
+              call multifab_copy_c(umac(n,2),           1,chkdata_edgey(n),1,               1)
+              call multifab_copy_c(umac_sum(n,1),       1,chkdata_edgex(n),2,               1)      
+              call multifab_copy_c(umac_sum(n,2),       1,chkdata_edgey(n),2,               1)
+              if (dm .eq. 3) then
+                 call multifab_copy_c(umac(n,3),           1,chkdata_edgez(n),1,               1)
+                 call multifab_copy_c(umac_sum(n,3),       1,chkdata_edgez(n),2,               1)   
+              end if
+           endif
+        endif
      end do
 
      do n=1,nlevs

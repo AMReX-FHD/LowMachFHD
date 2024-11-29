@@ -9,7 +9,8 @@ module mass_flux_utilities_module
                                         chi_iterations, avg_type, use_multiphase, alpha_gex, n_gex
   use matrix_utilities 
   use compute_mixture_properties_module
-  use F95_LAPACK ! Donev: Disabled LAPACK so this builds more easily on different systems
+  !use F95_LAPACK ! Donev: Disabled LAPACK so this builds more easily on different systems
+     ! The routines needed from LAPACK are now inside matrix_utilities
 
   implicit none
 
@@ -872,12 +873,13 @@ contains
       !==========================================================
  
       ! compute chilocal inverse
-      call dgetrf(nspecies_in, nspecies_in, chilocal, nspecies_in, ipiv, info)
-      call dgetri(nspecies_in, chilocal, nspecies_in, ipiv, work, nspecies_in, info)
-      !stop "LAPACK95 dget? disabled"
+      ! This code uses LAPACK95 but this causes problems so just use old school LAPACK77 instead
+      !call dgetrf(nspecies_in, nspecies_in, chilocal, nspecies_in, ipiv, info)
+      !call dgetri(nspecies_in, chilocal, nspecies_in, ipiv, work, nspecies_in, info)
+      !chi = chilocal   
 
       ! populate chi with B^(-1)
-      chi = chilocal   
+      chi = mat_inv(chilocal)
  
       case(2) 
       !==========================================================
@@ -887,7 +889,8 @@ contains
       ! SVD decomposition of chilocal = U * S * VTranspose; note that chilocal 
       ! is changed. also V=(VT)T, UT = (U)T are needed for pseudoinverse of chilocal.
       !stop "LAPACK95 la_gesvd disabled"
-      call la_gesvd(chilocal, S, U, VT)
+      call mat_svd(chilocal, S, U, VT)
+                  
       V = transpose(VT)
       UT = transpose(U)
    
@@ -1507,7 +1510,7 @@ contains
 
       integer :: row, column
        
-      call dpotrf_f95(sqrtL,'L', rcond, 'I', info)
+      call mat_chol(sqrtL,'L', rcond, 'I', info)
       !stop "LAPACK95 dpotrf_f95 disabled"
     
       ! remove all upper-triangular entries and NXN entry that lapack doesn't set to zero 

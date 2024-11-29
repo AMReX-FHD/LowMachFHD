@@ -25,8 +25,9 @@ module probin_common_module
   real(dp_t),save :: wallspeed_lo(MAX_SPACEDIM-1,MAX_SPACEDIM)
   real(dp_t),save :: wallspeed_hi(MAX_SPACEDIM-1,MAX_SPACEDIM)
   integer,save    :: hydro_grid_int,project_dir,max_grid_projection(2)
-  integer,save    :: stats_int,n_steps_save_stats,n_steps_skip,histogram_unit,reset_tavg_step,stat_save_type
-  logical,save    :: analyze_conserved,center_snapshots,reset_tavg_vals
+  integer,save    :: stats_int,n_steps_save_stats,n_steps_skip,histogram_unit,stat_save_type
+  logical,save    :: reset_averages
+  logical,save    :: analyze_conserved,center_snapshots
   real(dp_t),save :: variance_coef_mom,variance_coef_mass,initial_variance_mom,initial_variance_mass
   real(dp_t),save :: k_B,Runiv,visc_coef
   integer,save    :: stoch_stress_form,filtering_width,max_step
@@ -38,6 +39,8 @@ module probin_common_module
   real(dp_t),save :: density_weights(0:MAX_SPECIES)
   integer,save    :: shift_cc_to_boundary(MAX_SPACEDIM,2)
   logical,save    :: plot_avg_gradPhiApprox, plot_gradEpot
+  logical,save    :: plot_mass_fluxes, plot_mass_fluxes_tavg
+  logical,save    :: plot_charge_fluxes, plot_charge_fluxes_tavg
   logical,save    :: plot_averaged_vel, plot_shifted_vel 
   logical,save    :: plot_umac_tavg, plot_Epot_tavg, plot_rho_tavg
   logical,save    :: plot_debug
@@ -122,6 +125,10 @@ module probin_common_module
   namelist /probin_common/ plot_averaged_vel            ! Write spatially-averaged velocities
   namelist /probin_common/ plot_avg_gradPhiApprox       ! Write ambipolar approximation to gradPhi or not  
   namelist /probin_common/ plot_gradEpot                ! Write out gradient of electric potential     
+  namelist /probin_common/ plot_mass_fluxes             ! Write out mass fluxes of individual species, plus the total mass flux     
+  namelist /probin_common/ plot_charge_fluxes           ! Write out charge fluxes of individual species, plus the total charge flux     
+  namelist /probin_common/ plot_mass_fluxes_tavg        ! Write out mass fluxes of individual species, plus the total mass flux, time_averaged
+  namelist /probin_common/ plot_charge_fluxes_tavg      ! Write out charge fluxes of individual species, plus the total charge flux, time_averaged     
   namelist /probin_common/ plot_debug                   ! for boussinesq, print out rho.  for electroneutral, print out charge
                                          
 
@@ -220,8 +227,7 @@ module probin_common_module
                                                ! it's set to 0, we save instantaneous fields; else, we save time averaged fields
   namelist /probin_common/ n_steps_save_stats  ! How often to dump HydroGrid output files
   namelist /probin_common/ n_steps_skip        ! How many steps to skip
-  namelist /probin_common/ reset_tavg_vals     ! Boolean to indicate if we want to reset the time averaged vals or not
-  namelist /probin_common/ reset_tavg_step     ! If reset_tavg_vals = T, at what timestep do we reset
+  namelist /probin_common/ reset_averages      ! reset time-averaged quantities every n_steps_skip
   namelist /probin_common/ analyze_conserved   ! Should we use conserved variables for the analysis
                                                ! (does not work well)
   namelist /probin_common/ center_snapshots    ! Should we use cell-centered momenta for the analysis
@@ -310,6 +316,10 @@ contains
     plot_avg_gradPhiApprox = .false.
     plot_gradEpot = .false.
     plot_debug = .false.
+    plot_mass_fluxes = .false.
+    plot_charge_fluxes = .false.
+    plot_mass_fluxes_tavg = .false.
+    plot_charge_fluxes_tavg = .false.
 
     barodiffusion_type = 0
 
@@ -349,8 +359,7 @@ contains
     stat_save_type = 0 ! by default, vstat/hstat files contain instantaneous fields, not time-averaged ones. 
     n_steps_save_stats = -1
     n_steps_skip = 0
-    reset_tavg_vals = .false.
-    reset_tavg_step = 0 
+    reset_averages = .false.
     analyze_conserved = .false.
     center_snapshots = .false.
     analyze_cuts = 0
@@ -614,6 +623,26 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) plot_debug
 
+       case ('--plot_mass_fluxes')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) plot_mass_fluxes
+
+       case ('--plot_charge_fluxes')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) plot_charge_fluxes
+
+       case ('--plot_mass_fluxes_tavg')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) plot_mass_fluxes_tavg
+
+       case ('--plot_charge_fluxes_tavg')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) plot_charge_fluxes_tavg
+ 
        case ('--barodiffusion_type')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
@@ -822,6 +851,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) n_steps_skip
+
+       case ('--reset_averages')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) reset_averages
 
        case ('--analyze_conserved')
           farg = farg + 1

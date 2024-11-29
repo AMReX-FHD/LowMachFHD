@@ -1,22 +1,22 @@
-SRC_LAPACK=${HPC_SRC}/FluctHydro/FluctHydro/staggered_grid/src_multiSpec/LAPACK95
+#SRC_LAPACK=~/src/FluctHydro/LowMachFHD/staggered_grid/src_multiSpec/LAPACK95
+SRC_LAPACK=.
 
 vpath %.f90 $(SRC_LAPACK)
 
 FC       = gfortran -ffree-form
 FC1      = gfortran -ffixed-form
 
-OPTS0    = -O3
+OPTS0    = -O3 -fPIC
 #MODLIB   = -I./lapack95_modules
 OPTS1    = -c $(OPTS0)
 OPTS3    = $(OPTS1) $(MODLIB)
 OPTL     = -o 
 OPTLIB   =
 
-LAPACK_PATH = /usr/lib64
+LAPACK_PATH = /usr/lib/x86_64-linux-gnu
 
 LAPACK95 = lapack95.a
-LAPACK77 = $(LAPACK_PATH)/lapack.a
-TMG77    = $(LAPACK_PATH)/tmglib.a
-BLAS     = $(LAPACK_PATH)/blas.a
+LAPACK77 = $(LAPACK_PATH)/liblapack.a
+BLAS     = $(LAPACK_PATH)/libblas64.a
 
 include $(SRC_LAPACK)/MakefileGeneric

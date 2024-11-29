@@ -1,3 +1,11 @@
+NEW -- two directories 
+
+electro_osmosis_case1
+electro_osmosis_case2
+
+are examples that run by reading in a pnp profile
+
+
 Supported Problems (./inputs_files/):
 
 ----------------------------------

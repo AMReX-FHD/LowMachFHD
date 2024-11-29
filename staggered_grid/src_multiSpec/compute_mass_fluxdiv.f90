@@ -144,7 +144,7 @@ contains
           call electrodiffusive_mass_fluxdiv(mla,rho,Temp,rhoWchi, &
                                              diff_mass_flux,diff_mass_fluxdiv, &
                                              stoch_mass_flux, &
-                                             dx,the_bc_tower, &
+                                             dx,stage_time,the_bc_tower, &
                                              charge,grad_Epot,Epot, &
                                              permittivity,dt,zero_initial_Epot)
        end if
